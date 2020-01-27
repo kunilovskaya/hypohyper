@@ -1,10 +1,11 @@
 import csv
 
+import os
 from xml.dom import minidom
 from collections import defaultdict
 from collections import Counter
 import pandas as pd
-
+import logging
 from gensim.models import KeyedVectors
 
 
@@ -118,15 +119,23 @@ def read_train(tsv_in):
 
 
 def load_embeddings(modelfile):
-    if modelfile.endswith('.txt.gz') or modelfile.endswith('.txt') or modelfile.endswith('.vec.gz'):
-        model = KeyedVectors.load_word2vec_format(modelfile, binary=False, encoding='utf-8', unicode_errors='ignore')
-    elif modelfile.endswith('.bin.gz') or modelfile.endswith('.bin') or modelfile.endswith('.w2v'):
-        model = KeyedVectors.load_word2vec_format(modelfile, binary=True, encoding='utf-8', unicode_errors='ignore', limit=4000000)
-    else:
-        model = KeyedVectors.load(modelfile)  # For newer models
-    model.init_sims(replace=True)
+    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    if not os.path.isfile(modelfile):
+        raise FileNotFoundError("No file called {file}".format(file=modelfile))
+    # Determine the model format by the file extension
+    if modelfile.endswith('.bin.gz') or modelfile.endswith('.bin'):  # Binary word2vec file
+        emb_model = KeyedVectors.load_word2vec_format(modelfile, binary=True,
+                                                      unicode_errors='replace', limit=4000000)
+    elif modelfile.endswith('.txt.gz') or modelfile.endswith('.txt') \
+            or modelfile.endswith('.vec.gz') or modelfile.endswith('.vec'):  # Text word2vec file
+        emb_model = KeyedVectors.load_word2vec_format(modelfile, binary=False,
+                                                      unicode_errors='replace', limit=4000000)
+    else:  # Native Gensim format?
+        emb_model = KeyedVectors.load(modelfile)
+    emb_model.init_sims(replace=True)
     print('Success! Vectors loaded')
-    return model
+
+    return emb_model
 
 
 def get_vector(word, emb=None):
