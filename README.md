@@ -26,10 +26,11 @@ can we reduce ruWordNet items to single word entries only to identify hypernym s
 ### Training data preparation
 (1) download the embeddings to the input/resources folder
 
-**suggested options**
+**suggested options (pre-selected based on coverage and/or specialisation): 69913 and 84705 pairs respectively out of 94115 single word pairs)**
 
 * codename: [araneum](https://rusvectores.org/static/models/araneum_upos_skipgram_600_2_2017.bin.gz) (419 MB, tags=True, binary=False); 
-* codename: [rdt](http://panchenko.me/data/dsl-backup/w2v-ru/all.norm-sz500-w10-cb0-it3-min5.w2v (13 GiB, tags=False, binary=True, embeddings from Russian Distributional Thesaurus)); 
+* codename: [rdt](http://panchenko.me/data/dsl-backup/w2v-ru/all.norm-sz500-w10-cb0-it3-min5.w2v) (13 GiB, tags=False, binary=True, embeddings from Russian Distributional Thesaurus, limit=3500000);
+ 
 (2) to run with the default araneum embeddings, from the main folder run _python3 format\_train.py_ (to change to RDT embeddings run _python3 format\_train.py --emb rdt_)
 
 ### Produce the output file, given a list of hypernym vectors for each test word
