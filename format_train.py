@@ -1,11 +1,9 @@
 import argparse
 import time
 from itertools import repeat
-
 import os
 import sys
 from sklearn.model_selection import train_test_split
-
 from hyper_import_functions import read_xml, read_train, load_embeddings, id2wds_dict, wd2id_dict, \
     filter_dataset, write_hyp_pairs
 
@@ -94,5 +92,5 @@ hypohyper_train, hypohyper_test = train_test_split(filtered_pairs, test_size=.2,
 print('Train entries:', len(hypohyper_train), file=sys.stderr)
 print('Test entries:', len(hypohyper_test), file=sys.stderr)
 
-write_hyp_pairs(hypohyper_train, 'outputs/%s-upos_hypohyper_train.tsv' % args.emb.split('/')[-1])
-write_hyp_pairs(hypohyper_test, 'outputs/%s-upos_hypohyper_test.tsv' % args.emb.split('/')[-1])
+write_hyp_pairs(hypohyper_train, 'outputs/%s-upos_hypohyper_train.tsv.gz' % args.emb.split('/')[-1])
+write_hyp_pairs(hypohyper_test, 'outputs/%s-upos_hypohyper_test.tsv.gz' % args.emb.split('/')[-1])

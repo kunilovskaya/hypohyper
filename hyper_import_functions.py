@@ -8,6 +8,7 @@ import logging
 from gensim.models import KeyedVectors
 import numpy as np
 from gensim.matutils import unitvec
+from smart_open import open
 
 
 # parse ruwordnet
