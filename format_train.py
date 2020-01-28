@@ -94,5 +94,5 @@ hypohyper_train, hypohyper_test = train_test_split(filtered_pairs, test_size=.2,
 print('Train entries:', len(hypohyper_train), file=sys.stderr)
 print('Test entries:', len(hypohyper_test), file=sys.stderr)
 
-write_hyp_pairs(hypohyper_train, 'outputs/%s-upos_hypohyper_train.txt' % args.emb.split('/')[-1])
-write_hyp_pairs(hypohyper_test, 'outputs/%s-upos_hypohyper_test.txt' % args.emb.split('/')[-1])
+write_hyp_pairs(hypohyper_train, 'outputs/%s-upos_hypohyper_train.tsv' % args.emb.split('/')[-1])
+write_hyp_pairs(hypohyper_test, 'outputs/%s-upos_hypohyper_test.tsv' % args.emb.split('/')[-1])

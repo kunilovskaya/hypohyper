@@ -6,6 +6,8 @@ from collections import Counter
 import pandas as pd
 import logging
 from gensim.models import KeyedVectors
+import numpy as np
+from gensim.matutils import unitvec
 
 
 # parse ruwordnet
@@ -194,9 +196,64 @@ def filter_dataset(pairs, embedding, tags=None, mwe=None):
 
 def write_hyp_pairs(data, filename):
     with open(filename, 'w') as f:
-        writer = csv.writer(f, dialect='excel-tab', lineterminator='\n')
+        writer = csv.writer(f, dialect='unix', delimiter='\t', lineterminator='\n')
+        writer.writerow(['hyponym', 'hypernym'])
         for pair in data:
             writer.writerow(pair)
+
+
+def learn_projection(dataset, embedding, lmbd=1.0, save2file=None, from_df=False):
+    if from_df:
+        source_vectors = dataset['hyponym'].T
+        target_vectors = dataset['hypernym'].T
+    else:
+        source_vectors = dataset[0]
+        target_vectors = dataset[1]
+    source_vectors = np.mat([[i for i in vec] for vec in source_vectors])
+    target_vectors = np.mat([[i for i in vec] for vec in target_vectors])
+    m = len(source_vectors)
+    x = np.c_[np.ones(m), source_vectors]  # Adding bias term to the source vectors
+
+    num_features = embedding.vector_size
+
+    # Build initial zero transformation matrix
+    learned_projection = np.zeros((num_features, x.shape[1]))
+    learned_projection = np.mat(learned_projection)
+
+    for component in range(0, num_features):  # Iterate over input components
+        y = target_vectors[:, component]  # True answers
+        # Computing optimal transformation vector for the current component
+        cur_projection = normalequation(x, y, lmbd, num_features)
+
+        # Adding the computed vector to the transformation matrix
+        learned_projection[component, :] = cur_projection.T
+
+    if save2file:
+        # Saving matrix to file:
+        np.savetxt(save2file, learned_projection, delimiter=',')
+    return learned_projection
+
+
+def normalequation(data, target, lambda_value, vector_size):
+    regularizer = 0
+    if lambda_value != 0:  # Regularization term
+        regularizer = np.eye(vector_size + 1)
+        regularizer[0, 0] = 0
+        regularizer = np.mat(regularizer)
+    # Normal equation:
+    theta = np.linalg.pinv(data.T * data + lambda_value * regularizer) * data.T * target
+    return theta
+
+
+def estimate_sims(source, targets, projection, model):
+    #  Finding how far away are true targets from transformed sources
+    test = np.mat(model[source])
+    test = np.c_[1.0, test]  # Adding bias term
+    predicted_vector = np.dot(projection, test.T)
+    predicted_vector = np.squeeze(np.asarray(predicted_vector))
+    target_vecs = [model[target] for target in targets]
+    sims = [np.dot(unitvec(predicted_vector), unitvec(target_vec)) for target_vec in target_vecs]
+    return sims
 
 
 # python3 mappings.py --relations /home/u2/resources/ruwordnet/synset_relations.N.xml
