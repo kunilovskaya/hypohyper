@@ -24,13 +24,16 @@ parser.add_argument('--synsets', default='input/resources/ruwordnet/synsets.N.xm
 parser.add_argument('--train', default='input/data/training_nouns.tsv',
                     help="training_nouns.tsv: SYNSET_ID\tTEXT\tPARENTS\tPARENT_TEXTS",
                     type=os.path.abspath)
-# araneum or rdt
+parser.add_argument('--tags', dest='tags', action='store_true', help="POS tags in embeddings?")
+parser.add_argument('--mwe', dest='mwe', action='store_true', help="MWE in embeddings?")
 parser.add_argument('--emb',
                     help="path to embeddings file, pay attention to tags and mwe to "
                          "True/False accordingly")
 
 start = time.time()
 
+parser.set_defaults(tags=False)
+parser.set_defaults(mwe=True)
 args = parser.parse_args()
 
 parsed_syns = read_xml(args.synsets)
@@ -80,7 +83,7 @@ print('Checksum: expected  %d; returned: %d' % (tot_pairs, len(all_pairs)))
 
 
 # limit to the pairs that are found in the embeddings
-filtered_pairs = filter_dataset(all_pairs, emb, tags=True, mwe=True)
+filtered_pairs = filter_dataset(all_pairs, emb, tags=args.tags, mwe=args.mwe)
 print('Number of word pairs where both items are in embeddings:', len(filtered_pairs))
 
 print(filtered_pairs[:3])
@@ -88,8 +91,8 @@ print(filtered_pairs[:3])
 hypohyper_train, hypohyper_test = train_test_split(filtered_pairs, test_size=.2,
                                                    random_state=RANDOM_SEED)
 
-print(len(hypohyper_train))
-print(len(hypohyper_test))
+print('Train entries:', len(hypohyper_train), file=sys.stderr)
+print('Test entries:', len(hypohyper_test), file=sys.stderr)
 
 write_hyp_pairs(hypohyper_train, 'outputs/%s-upos_hypohyper_train.txt' % args.emb.split('/')[-1])
 write_hyp_pairs(hypohyper_test, 'outputs/%s-upos_hypohyper_test.txt' % args.emb.split('/')[-1])
