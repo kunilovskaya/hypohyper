@@ -1,0 +1,76 @@
+#! python3
+# coding: utf-8
+
+from hyper_import_functions import load_embeddings, predict
+from argparse import ArgumentParser
+import pandas as pd
+import sys
+from smart_open import open
+import pickle
+from evaluate import get_score
+
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument('--testfile', required=True)
+    parser.add_argument('--projection', required=True)
+    parser.add_argument('--embedding', required=True)
+    parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
+    args = parser.parse_args()
+
+    datafile = args.testfile
+    modelfile = args.embedding
+    data = pd.read_csv(datafile, sep='\t', header=0)
+    print(data.head(), file=sys.stderr)
+
+    hyponyms = data.hyponym.values
+    hypernyms = data.hypernym.values
+
+    print('We will make predictions for %d hyponyms' % len(set(hyponyms)), file=sys.stderr)
+
+    print('Current embedding model:', modelfile, file=sys.stderr)
+    model = load_embeddings(modelfile)
+
+    pickle_file = open(args.projection, 'rb')
+    pickle_data = pickle.load(pickle_file)
+
+    threshold = pickle_data['threshold']
+    print('Using threshold:', threshold, file=sys.stderr)
+    projection = pickle_data['projection']
+
+    ground_truth = {}  # Gold dictionary of hypernyms corresponding to each hyponym
+    predicted = {}  # Predicted dictionary of hypernyms corresponding to each hyponym
+
+    for hyponym, hypernym in zip(hyponyms, hypernyms):
+        if hyponym not in ground_truth:
+            ground_truth[hyponym] = []
+        ground_truth[hyponym].append(hypernym)
+
+    print('Making predictions...', file=sys.stderr)
+    counter = 0
+    for hyponym in hyponyms:
+        if hyponym in predicted:
+            continue
+        candidates, predicted_vector = predict(hyponym, model, projection, topn=args.nr)
+
+        if threshold:
+            # Filtering stage
+            # We allow only candidates which are not further from the projection
+            # than one sigma from the average similarity in the true set
+            rejected = [c for c in candidates if c[1] < threshold]
+            candidates = [c for c in candidates if c[1] >= threshold]
+        else:
+            rejected = []
+        # End filtering stage
+
+        candidates = [i[0] for i in candidates if i[0] != hyponym]
+        predicted[hyponym] = candidates
+
+        # Want to see predictions in real time?
+        print(hyponym, '\t', candidates)
+        if counter % 1000 == 0:
+            print('%d hyponyms processed out of %d total' % (counter, len(set(hyponyms))),
+                  file=sys.stderr)
+        counter += 1
+
+    mean_ap, mean_rr = get_score(ground_truth, predicted)
+    print("MAP: {0}\nMRR: {1}\n".format(mean_ap, mean_rr), file=sys.stderr)

@@ -202,7 +202,7 @@ def write_hyp_pairs(data, filename):
             writer.writerow(pair)
 
 
-def learn_projection(dataset, embedding, lmbd=1.0, save2file=None, from_df=False):
+def learn_projection(dataset, embedding, lmbd=1.0, from_df=False):
     if from_df:
         source_vectors = dataset['hyponym'].T
         target_vectors = dataset['hypernym'].T
@@ -228,9 +228,6 @@ def learn_projection(dataset, embedding, lmbd=1.0, save2file=None, from_df=False
         # Adding the computed vector to the transformation matrix
         learned_projection[component, :] = cur_projection.T
 
-    if save2file:
-        # Saving matrix to file:
-        np.savetxt(save2file, learned_projection, delimiter=',')
     return learned_projection
 
 
@@ -254,6 +251,16 @@ def estimate_sims(source, targets, projection, model):
     target_vecs = [model[target] for target in targets]
     sims = [np.dot(unitvec(predicted_vector), unitvec(target_vec)) for target_vec in target_vecs]
     return sims
+
+
+def predict(source, embedding, projection, topn=10):
+    test = np.mat(embedding[source])
+    test = np.c_[1.0, test]  # Adding bias term
+    predicted_vector = np.dot(projection, test.T)
+    predicted_vector = np.squeeze(np.asarray(predicted_vector))
+    # Our predictions:
+    nearest_neighbors = embedding.most_similar(positive=[predicted_vector], topn=topn)
+    return nearest_neighbors, predicted_vector
 
 
 # python3 mappings.py --relations /home/u2/resources/ruwordnet/synset_relations.N.xml
