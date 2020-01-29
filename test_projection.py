@@ -14,8 +14,10 @@ if __name__ == "__main__":
     parser.add_argument('--testfile', required=True)
     parser.add_argument('--projection', required=True)
     parser.add_argument('--embedding', required=True)
-    parser.add_argument('--oov', action='store_true', help='if true, OOV targets are skipped')
+    parser.add_argument('--oov', action='store_true', help='If true, OOV targets are skipped')
     parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
+    parser.add_argument('--restrict',
+                        help='Path to the file containing a list of allowed hypernyms')
     args = parser.parse_args()
 
     datafile = args.testfile
@@ -25,7 +27,14 @@ if __name__ == "__main__":
 
     hyponyms = data.hyponym.values
     hypernyms = data.hypernym.values
+    allowed = set()
 
+    if args.restrict:
+        with open(args.restrict, 'r') as f:
+            for line in f:
+                lemma = line.strip()
+                allowed.add(lemma)
+        print('Using %d lemmas as possible candidates' % len(allowed), file=sys.stderr)
 
     print('Current embedding model:', modelfile, file=sys.stderr)
     model = load_embeddings(modelfile)
@@ -56,6 +65,9 @@ if __name__ == "__main__":
         if hyponym in predicted:
             continue
         candidates, predicted_vector = predict(hyponym, model, projection, topn=args.nr)
+
+        if args.restrict:
+            candidates = [w for w in candidates if w in allowed]
 
         if threshold:
             # Filtering stage
