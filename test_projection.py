@@ -29,15 +29,17 @@ if __name__ == "__main__":
     hypernyms = data.hypernym.values
     allowed = set()
 
+    print('Current embedding model:', modelfile, file=sys.stderr)
+    model = load_embeddings(modelfile)
+
+
     if args.restrict:
         with open(args.restrict, 'r') as f:
             for line in f:
                 lemma = line.strip()
                 allowed.add(lemma)
+        allowed = allowed & set(model.index2word)
         print('Using %d lemmas as possible candidates' % len(allowed), file=sys.stderr)
-
-    print('Current embedding model:', modelfile, file=sys.stderr)
-    model = load_embeddings(modelfile)
 
     pickle_file = open(args.projection, 'rb')
     pickle_data = pickle.load(pickle_file)
@@ -67,7 +69,7 @@ if __name__ == "__main__":
         candidates, predicted_vector = predict(hyponym, model, projection, topn=args.nr)
 
         if args.restrict:
-            candidates = [w for w in candidates if w in allowed]
+            candidates = [w for w in candidates if w[0] in allowed]
 
         if threshold:
             # Filtering stage
@@ -79,7 +81,7 @@ if __name__ == "__main__":
             rejected = []
         # End filtering stage
 
-        candidates = [i[0] for i in candidates if i[0] != hyponym]
+        candidates = [i[0] for i in candidates if i[0] != hyponym][:10]
         predicted[hyponym] = candidates
 
         if counter % 1000 == 0:
