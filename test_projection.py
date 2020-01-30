@@ -14,8 +14,12 @@ if __name__ == "__main__":
     parser.add_argument('--testfile', required=True)
     parser.add_argument('--projection', required=True)
     parser.add_argument('--embedding', required=True)
+<<<<<<< HEAD
     parser.add_argument('--oov', action='store_true', help='If true, OOV targets are skipped')
     parser.add_argument('--tags', action='store_true', help='If true, POS tags are used')
+=======
+    parser.add_argument('--oov', action='store_true', help='if true, OOV targets are skipped')
+>>>>>>> 43838a408c6e67298afc6d59d346d8ac7137bedd
     parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
     parser.add_argument('--restrict',
                         help='Path to the file containing a list of allowed hypernyms')
@@ -28,6 +32,7 @@ if __name__ == "__main__":
 
     hyponyms = data.hyponym.values
     hypernyms = data.hypernym.values
+
     allowed = set()
 
     print('Current embedding model:', modelfile, file=sys.stderr)
