@@ -59,8 +59,7 @@ def wd2id_dict(id2dict):
         for v in values:
             wd2id[v].append(k)
 
-    # get a dict of format, where values are lists of synset_ids for each word;
-    # ex. АУТИЗМ:[144031-N], АУТИСТИЧЕСКИЙ МЫШЛЕНИЕ:[144031-N]:
+    # ex. ЗНАК:[152660-N, 118639-N, 107519-N, 154560-N]
     return wd2id
 
 
@@ -134,13 +133,13 @@ def load_embeddings(modelfile):
     if not os.path.isfile(modelfile):
         raise FileNotFoundError("No file called {file}".format(file=modelfile))
     # Determine the model format by the file extension
-    if modelfile.endswith('.bin.gz') or modelfile.endswith('.bin'):  # Binary word2vec file
+    if modelfile.endswith('.bin.gz') or modelfile.endswith('.bin') or modelfile.endswith('.w2v'):  # Binary word2vec file
         emb_model = KeyedVectors.load_word2vec_format(modelfile, binary=True,
-                                                      unicode_errors='replace', limit=4000000)
+                                                      unicode_errors='replace', limit=3500000)
     elif modelfile.endswith('.txt.gz') or modelfile.endswith('.txt') \
             or modelfile.endswith('.vec.gz') or modelfile.endswith('.vec'):  # Text word2vec file
         emb_model = KeyedVectors.load_word2vec_format(modelfile, binary=False,
-                                                      unicode_errors='replace', limit=4000000)
+                                                      unicode_errors='replace', limit=3500000)
     else:  # Native Gensim format?
         emb_model = KeyedVectors.load(modelfile)
     emb_model.init_sims(replace=True)
@@ -171,26 +170,28 @@ def preprocess_mwe(item, tags=False):
 
     return item
 
-
+## now this function stores lowercased word pairs regardless of the combination of tags/mwe boolean options)
 def filter_dataset(pairs, embedding, tags=None, mwe=None):
     smaller_train = []
     for hypo, hyper in pairs:
         if tags:
-            if mwe:
+            if mwe: ## this returns lowercased words
                 hypo = preprocess_mwe(hypo, tags=True)
                 hyper = preprocess_mwe(hyper, tags=True)
                 if hypo in embedding and hyper in embedding:
                     smaller_train.append((hypo, hyper))
             else:
                 if hypo.lower() + '_NOUN' in embedding and hyper.lower() + '_NOUN' in embedding:
+                    ## what does the line below do?
                     if hypo in embedding and hyper in embedding:
-                        smaller_train.append((hypo, hyper))
+                        smaller_train.append((hypo.lower(), hyper.lower()))
         else:
-            if mwe:
+            if mwe: ## this returns lowercased words
                 hypo = preprocess_mwe(hypo)
                 hyper = preprocess_mwe(hyper)
+            ## there should be else below?
             if hypo.lower() in embedding and hyper.lower() in embedding:
-                smaller_train.append((hypo, hyper))
+                smaller_train.append((hypo.lower(), hyper.lower()))
 
     return smaller_train  # only the pairs that are found in the embeddings
 
@@ -208,6 +209,7 @@ def learn_projection(dataset, embedding, lmbd=1.0, from_df=False):
         source_vectors = dataset['hyponym'].T
         target_vectors = dataset['hypernym'].T
     else:
+        ## this gets a tuple of two lists of vectors: (source_vecs, target_vecs)
         source_vectors = dataset[0]
         target_vectors = dataset[1]
     source_vectors = np.mat([[i for i in vec] for vec in source_vectors])
@@ -255,7 +257,14 @@ def estimate_sims(source, targets, projection, model):
 
 
 def predict(source, embedding, projection, topn=10):
-    test = np.mat(embedding[source])
+    ## what happens when your test word is not in the embeddings? how do you get its vector?
+    ## skip for now!
+    ## TODO implement this
+    try:
+        test = np.mat(embedding[source])
+    except KeyError:
+        return None
+        
     test = np.c_[1.0, test]  # Adding bias term
     predicted_vector = np.dot(projection, test.T)
     predicted_vector = np.squeeze(np.asarray(predicted_vector))
@@ -264,8 +273,5 @@ def predict(source, embedding, projection, topn=10):
     return nearest_neighbors, predicted_vector
 
 
-# python3 mappings.py --relations /home/u2/resources/ruwordnet/synset_relations.N.xml
-# --synsets /home/u2/resources/ruwordnet/synsets.N.xml -
-# -train /home/u2/data/hypohyper/training_data/training_nouns.tsv
 if __name__ == '__main__':
     print('=== This is a modules script, it is not supposed to run as main ===')

@@ -8,18 +8,27 @@ import sys
 from smart_open import open
 import pickle
 from evaluate import get_score
+from numpy import save
+
+# python3 code/hypohyper/test_projection.py --testfile proj/hypohyper/output/araneum_hypohyper_test.tsv.gz
+# --projection proj/hypohyper/output/araneum_projection.pickle.gz --emb_name araneum
+# --emb_path resources/emb/araneum_upos_skipgram_300_2_2018.vec.gz
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--testfile', required=True)
-    parser.add_argument('--projection', required=True)
-    parser.add_argument('--embedding', required=True)
+    parser.add_argument('--testfile', default='output/araneum_hypohyper_test.tsv.gz', help='0.2 of the training data reserved for intrinsic testing')
+    parser.add_argument('--projection', default='output/araneum_projection.pickle.gz', help='.pickle.gz, the transformation matrix leanrt in the previous step')
+    parser.add_argument('--emb_name', default='araneum',
+                        help="arbitrary name of the embedding for output formatting purposes: rdt, araneum, cc, other")
+    parser.add_argument('--emb_path', default='input/resources/araneum_upos_skipgram_300_2_2018.vec.gz',
+                        help="path to embeddings file")
     parser.add_argument('--oov', action='store_true', help='if true, OOV targets are skipped')
     parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
+    
     args = parser.parse_args()
 
     datafile = args.testfile
-    modelfile = args.embedding
+    modelfile = args.emb_path
     data = pd.read_csv(datafile, sep='\t', header=0)
     print(data.head(), file=sys.stderr)
 
@@ -52,11 +61,14 @@ if __name__ == "__main__":
 
     print('Making predictions...', file=sys.stderr)
     counter = 0
+    hyper_collector = []
     for hyponym in ground_truth:
         if hyponym in predicted:
             continue
         candidates, predicted_vector = predict(hyponym, model, projection, topn=args.nr)
-
+        hyper_collector.append(predicted_vector)
+        
+        
         if threshold:
             # Filtering stage
             # We allow only candidates which are not further from the projection
@@ -79,3 +91,4 @@ if __name__ == "__main__":
 
     mean_ap, mean_rr = get_score(ground_truth, predicted)
     print("MAP: {0}\nMRR: {1}\n".format(mean_ap, mean_rr), file=sys.stderr)
+
