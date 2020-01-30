@@ -16,6 +16,8 @@ if __name__ == "__main__":
     parser.add_argument('--embedding', required=True)
     parser.add_argument('--oov', action='store_true', help='if true, OOV targets are skipped')
     parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
+    parser.add_argument('--restrict',
+                        help='Path to the file containing a list of allowed hypernyms')
     args = parser.parse_args()
 
     datafile = args.testfile
@@ -26,9 +28,19 @@ if __name__ == "__main__":
     hyponyms = data.hyponym.values
     hypernyms = data.hypernym.values
 
+    allowed = set()
 
     print('Current embedding model:', modelfile, file=sys.stderr)
     model = load_embeddings(modelfile)
+
+
+    if args.restrict:
+        with open(args.restrict, 'r') as f:
+            for line in f:
+                lemma = line.strip()
+                allowed.add(lemma)
+        allowed = allowed & set(model.index2word)
+        print('Using %d lemmas as possible candidates' % len(allowed), file=sys.stderr)
 
     pickle_file = open(args.projection, 'rb')
     pickle_data = pickle.load(pickle_file)
@@ -57,6 +69,9 @@ if __name__ == "__main__":
             continue
         candidates, predicted_vector = predict(hyponym, model, projection, topn=args.nr)
 
+        if args.restrict:
+            candidates = [w for w in candidates if w[0] in allowed]
+
         if threshold:
             # Filtering stage
             # We allow only candidates which are not further from the projection
@@ -67,7 +82,7 @@ if __name__ == "__main__":
             rejected = []
         # End filtering stage
 
-        candidates = [i[0] for i in candidates if i[0] != hyponym]
+        candidates = [i[0] for i in candidates if i[0] != hyponym][:10]
         predicted[hyponym] = candidates
 
         if counter % 1000 == 0:
