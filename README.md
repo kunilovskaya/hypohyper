@@ -82,4 +82,11 @@ python3 code/hypohyper/measure_sims.py
 * ratio of unigram senses to all senses 48.64% (total nounal 76817); 
 * ratio of synsets that have NO unigram representation 19.30%
 
+### The best intrinsic evaluation result on PoS-tagged araneum vectors
+
+MAP: 0.1168
+MRR: 0.1619
+
+### The output on the public_test results for nouns are to be found in output/
+
 
