@@ -62,7 +62,7 @@ python3 code/hypohyper/test_projection.py
 python3 code/hypohyper/get_hypernym_vectors.py
 ```
 ### Produce the output file, given a list of hypernym vectors for each test word
-(4) format the output: it is done in two steps to avoid uploading the embeddings yet again
+(5) format the output: it is done in two steps to avoid uploading the embeddings yet again
 
 * run a script to represent all (single word or multi-word) senses of NOUN synsets in ruWordNet and save the compressed index and vectors (as parts of .npz). Mind that if you want to include vectors for main\_words in MWE, replace single\_wd with main\_wd in the --mode option
 
