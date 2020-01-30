@@ -17,6 +17,7 @@ if __name__ == "__main__":
     parser.add_argument('--threshold', action='store_true')
     parser.add_argument('--embedding', required=True)
     parser.add_argument('--out', help="path to pickle with saved projection")
+    parser.add_argument('--skip_oov', action='store_true', help='Skip OOV entries?')
     args = parser.parse_args()
 
     datafile = args.trainfile
@@ -38,6 +39,9 @@ if __name__ == "__main__":
     mult_hypernyms = {}  # Dictionary of hypernyms corresponding to each hyponym
 
     for hyponym, hypernym in zip(hyponyms, hypernyms):
+        if args.skip_oov:
+            if hyponym not in model.vocab or hypernym not in model.vocab:
+                continue
         if hyponym not in mult_hypernyms:
             mult_hypernyms[hyponym] = []
 

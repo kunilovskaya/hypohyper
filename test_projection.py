@@ -15,6 +15,7 @@ if __name__ == "__main__":
     parser.add_argument('--projection', required=True)
     parser.add_argument('--embedding', required=True)
     parser.add_argument('--oov', action='store_true', help='If true, OOV targets are skipped')
+    parser.add_argument('--tags', action='store_true', help='If true, POS tags are used')
     parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
     parser.add_argument('--restrict',
                         help='Path to the file containing a list of allowed hypernyms')
@@ -37,7 +38,11 @@ if __name__ == "__main__":
         with open(args.restrict, 'r') as f:
             for line in f:
                 lemma = line.strip()
-                allowed.add(lemma)
+                if args.tags:
+                    allowed.add(lemma+'_NOUN')
+                    allowed.add(lemma+'_PROPN')
+                else:
+                    allowed.add(lemma)
         allowed = allowed & set(model.index2word)
         print('Using %d lemmas as possible candidates' % len(allowed), file=sys.stderr)
 
