@@ -14,6 +14,7 @@ if __name__ == "__main__":
     parser.add_argument('--testfile', required=True)
     parser.add_argument('--projection', required=True)
     parser.add_argument('--embedding', required=True)
+    parser.add_argument('--oov', action='store_true', help='if true, OOV targets are skipped')
     parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
     args = parser.parse_args()
 
@@ -25,7 +26,6 @@ if __name__ == "__main__":
     hyponyms = data.hyponym.values
     hypernyms = data.hypernym.values
 
-    print('We will make predictions for %d hyponyms' % len(set(hyponyms)), file=sys.stderr)
 
     print('Current embedding model:', modelfile, file=sys.stderr)
     model = load_embeddings(modelfile)
@@ -41,13 +41,18 @@ if __name__ == "__main__":
     predicted = {}  # Predicted dictionary of hypernyms corresponding to each hyponym
 
     for hyponym, hypernym in zip(hyponyms, hypernyms):
+        if args.oov:
+            if hypernym not in model.vocab:
+                continue
         if hyponym not in ground_truth:
             ground_truth[hyponym] = []
         ground_truth[hyponym].append(hypernym)
 
+    print('We will make predictions for %d hyponyms' % len(ground_truth), file=sys.stderr)
+
     print('Making predictions...', file=sys.stderr)
     counter = 0
-    for hyponym in hyponyms:
+    for hyponym in ground_truth:
         if hyponym in predicted:
             continue
         candidates, predicted_vector = predict(hyponym, model, projection, topn=args.nr)
@@ -65,11 +70,11 @@ if __name__ == "__main__":
         candidates = [i[0] for i in candidates if i[0] != hyponym]
         predicted[hyponym] = candidates
 
-        # Want to see predictions in real time?
-        print(hyponym, '\t', candidates)
         if counter % 1000 == 0:
-            print('%d hyponyms processed out of %d total' % (counter, len(set(hyponyms))),
+            print('%d hyponyms processed out of %d total' % (counter, len(ground_truth)),
                   file=sys.stderr)
+            # Want to see predictions in real time?
+            print(hyponym, '\t', candidates)
         counter += 1
 
     mean_ap, mean_rr = get_score(ground_truth, predicted)
