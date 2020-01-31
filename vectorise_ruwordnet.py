@@ -8,33 +8,29 @@ for vector comparison in the measure_sims.py script
         e.g. there are at least 10 synsets where ЗНАК is the head word of one of the senses lexicalized as a MWE (152660-N, 118639-N, 107519-N, 154560-N)
 '''
 
-# this script produces an index, i.e. list of (id, word) tuples and a list of vectors for each entry in this index
-
-# python3 code/hypohyper/vectorise_ruwordnet.py --mode single_wd --senses resources/hypohyper/ruwordnet/senses.N.xml
-# --out proj/hypohyper/output/ --emb_name araneum --emb_path resources/emb/araneum_upos_skipgram_300_2_2018.vec.gz
-
 from hyper_import_functions import load_embeddings, get_vector, preprocess_mwe
 import argparse
 from xml.dom import minidom
 import numpy as np
 
+
+from configs import VECTORS, TAGS, MWE, EMB, OUT, RUWORDNET, RANDOM_SEED
+
+vectors = VECTORS
+tags = TAGS
+mwe = MWE
+emb_path = EMB
+out = OUT
+ruWN = RUWORDNET
+RANDOM_SEED = RANDOM_SEED
+
 parser = argparse.ArgumentParser('Get identifiers and vectors for senses in ruWordNet')
 parser.add_argument('--mode', default='single_wd', type=str, help="if you want to include vectors for main_words in MWE, replace single_wd with main_wd")
-parser.add_argument('--senses', default='input/resources/ruwordnet/senses.N.xml', help="the file with 'main_word' and 'lemma' attibutes to sense tag")
-parser.add_argument('--out', default='output/', help="the folder where to store the results")
-parser.add_argument('--emb_name', default='araneum',
-                        help="arbitrary name of the embedding for output formatting purposes: rdt, araneum, cc, other")
-parser.add_argument('--emb_path', default='input/resources/araneum_upos_skipgram_300_2_2018.vec.gz',
-                        help="path to embeddings file")
-parser.add_argument('--tags', dest='tags', action='store_true', help="POS tags in embeddings?")
+parser.add_argument('--senses', default='%ssenses.N.xml' % ruWN, help="the file with 'main_word' and 'lemma' attibutes to sense tag")
 
-parser.set_defaults(tags=True)
 args = parser.parse_args()
 
-
 ########## LOAD resources ##########
-emb_path = args.emb_path
-tags = args.tags
 
 model = load_embeddings(emb_path)
 emb_voc = model.vocab
@@ -123,12 +119,12 @@ print('Ratio of senses not found in embeddings to all included in %s mode: %d%%'
 print('Absolute number of OOV senses', count_oov)
 
 if args.mode == 'single_wd':
-    outname = args.emb_name+'_single_ruwordnet_vectorized.npz'
+    outname = vectors+'_single_ruwordnet_vectorized.npz'
 elif args.mode == 'main_wd':
-    outname = args.emb_name+'_main_ruwordnet_vectorized.npz'
+    outname = vectors+'_main_ruwordnet_vectorized.npz'
 else:
     print('What do you want to do with sense lexicalised as MWE')
     outname = None
 
-np.savez_compressed(args.out+outname, senses_index=vectorized_sens_index,
+np.savez_compressed(out+outname, senses_index=vectorized_sens_index,
                     senses_vectors=vectorized_sens)

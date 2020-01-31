@@ -6,29 +6,32 @@ import numpy as np
 import csv
 import time
 
-# python3 code/hypohyper/measure_sims.py --preprocessed_test proj/hypohyper/output/araneum_preprocessed_test.npy
-# --hyper_vectors proj/hypohyper/output/araneum_hyper_collector.npy --sens_vectors proj/hypohyper/output/
-# -- mode single_wd --out proj/hypohyper/output/
+from configs import VECTORS, TAGS, MWE, EMB, OUT, RUWORDNET, RANDOM_SEED
+
+vectors = VECTORS
+tags = TAGS
+mwe = MWE
+emb_path = EMB
+out = OUT
+ruWN = RUWORDNET
+RANDOM_SEED = RANDOM_SEED
 
 
 parser = argparse.ArgumentParser('Detecting most similar synsets and formatting the output')
-parser.add_argument('--preprocessed_test', default='output/araneum_preprocessed_test.npy',
+parser.add_argument('--preprocessed_test', default='%s/%s_preprocessed_test.npy' % (out, vectors),
                     help='a list of hyponyms to attach to ruWordNet taxonomy', type=os.path.abspath)
-parser.add_argument('--hyper_vectors', default='output/araneum_hyper_collector.npy', help="vectors")
-parser.add_argument('--sens_vectors', default='proj/hypohyper/output/', help="folder where the output of vectorise_ruwordnet.py is")
+parser.add_argument('--hyper_vectors', default='%s/%s_hyper_collector.npy' % (out, vectors), help="vectors")
+parser.add_argument('--sens_vectors', default=out, help="folder where the output of vectorise_ruwordnet.py is")
 parser.add_argument('--mode', default='single_wd', help="if you want to include vectors for main_words in MWE, replace single_wd with main_wd in vectorise_ruwordnet.py and re-run it")
-parser.add_argument('--emb_name', default='araneum',
-                    help="arbitrary name of the embedding for output formatting purposes: rdt, araneum, cc, other")
-parser.add_argument('--out', default='output/', help="where to store the results")
 
 args = parser.parse_args()
 
 start = time.time()
 
 if args.mode == 'single_wd':
-    outname = 'araneum_single_ruwordnet_vectorized.npz'
+    outname = '%s_single_ruwordnet_vectorized.npz' % vectors
 elif args.mode == 'main_wd':
-    outname = 'araneum_main_ruwordnet_vectorized.npz'
+    outname = '%s_main_ruwordnet_vectorized.npz' % vectors
 else:
     print('What do you want to do with sense lexicalised as MWE')
     outname = None
@@ -39,6 +42,7 @@ with np.load(args.sens_vectors+outname) as npz:
 
 test = np.load(args.preprocessed_test)
 test = [i.strip() for i in test] ## this list of test items; it is UPPER, no tags and filtered for OOV
+print()
 
 hyper_vecs = np.load(args.hyper_vectors)
 
@@ -48,7 +52,7 @@ else:
     print(len(test),len(hyper_vecs))
 
 ## for word, measure cosine similarity from all (single word) sense vectors present in embeddings to the word's hypernym vector
-outfile = open(args.out+args.emb_name+'_kukupl_results.tsv', 'w')
+outfile = open(out+vectors+'_kukupl_results.tsv', 'w')
 writer = csv.writer(outfile, dialect='unix', delimiter='\t', lineterminator='\n')
 
 counter = 0
@@ -76,7 +80,7 @@ for hypo, hyper_vec in zip(test,hyper_vecs):
               file=sys.stderr)
         # Want to see predictions in real time?
         print(
-            '\nUnique synset ids for %s in test; one of its members vectors is found most similar to %s hypernym vector produced by the projection model:\n%s' % (hypo, hypo, this_hypo_res))
+            '\nHere comes a list of 10 unique synset ids for %s in test.\n One of the vectors (representing its lemmas) is found most similar to %s hypernym vector produced by the projection model:\n%s' % (hypo, hypo, this_hypo_res))
 
     counter += 1
     

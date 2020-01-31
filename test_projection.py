@@ -5,90 +5,85 @@ from hyper_import_functions import load_embeddings, predict
 from argparse import ArgumentParser
 import pandas as pd
 import sys
-from smart_open import open
-import pickle
 from evaluate import get_score
-from numpy import save
+import numpy as np
+import time
 
-# python3 code/hypohyper/test_projection.py --testfile proj/hypohyper/output/araneum_hypohyper_test.tsv.gz
-# --projection proj/hypohyper/output/araneum_projection.pickle.gz --emb_name araneum
-# --emb_path resources/emb/araneum_upos_skipgram_300_2_2018.vec.gz
+from configs import VECTORS, TAGS, MWE, EMB, OUT, RUWORDNET, RANDOM_SEED
 
-if __name__ == "__main__":
-    parser = ArgumentParser()
-    parser.add_argument('--testfile', default='output/araneum_hypohyper_test.tsv.gz', help='0.2 of the training data reserved for intrinsic testing')
-    parser.add_argument('--projection', default='output/araneum_projection.pickle.gz', help='.pickle.gz, the transformation matrix leanrt in the previous step')
-    parser.add_argument('--emb_name', default='araneum',
-                        help="arbitrary name of the embedding for output formatting purposes: rdt, araneum, cc, other")
-    parser.add_argument('--emb_path', default='input/resources/araneum_upos_skipgram_300_2_2018.vec.gz',
-                        help="path to embeddings file")
-    parser.add_argument('--oov', action='store_true', help='if true, OOV targets are skipped')
-    parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
-    
-    args = parser.parse_args()
+vectors = VECTORS
+tags = TAGS
+mwe = MWE
+emb_path = EMB
+out = OUT
+ruWN = RUWORDNET
+RANDOM_SEED = RANDOM_SEED
 
-    datafile = args.testfile
-    modelfile = args.emb_path
-    data = pd.read_csv(datafile, sep='\t', header=0)
-    print(data.head(), file=sys.stderr)
+parser = ArgumentParser()
+parser.add_argument('--testfile', default='%s%s_hypohyper_test.tsv.gz' % (out, vectors), help='0.2 of the training data reserved for intrinsic testing')
+parser.add_argument('--projection', default='%s%s_projection.npy' % (out, vectors), help='.npy, the transformation matrix leanrt in the previous step')
+parser.add_argument('--oov', action='store_true', help='if true, OOV targets are skipped')
+parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
 
-    hyponyms = data.hyponym.values
-    hypernyms = data.hypernym.values
+args = parser.parse_args()
 
+start = time.time()
 
-    print('Current embedding model:', modelfile, file=sys.stderr)
-    model = load_embeddings(modelfile)
+datafile = args.testfile
 
-    pickle_file = open(args.projection, 'rb')
-    pickle_data = pickle.load(pickle_file)
+data = pd.read_csv(datafile, sep='\t', header=0)
+print(data.head(), file=sys.stderr)
 
-    threshold = pickle_data['threshold']
-    print('Using threshold:', threshold, file=sys.stderr)
-    projection = pickle_data['projection']
+hyponyms = data.hyponym.values
+hypernyms = data.hypernym.values
 
-    ground_truth = {}  # Gold dictionary of hypernyms corresponding to each hyponym
-    predicted = {}  # Predicted dictionary of hypernyms corresponding to each hyponym
+print('Current embedding model:', emb_path.split('/')[-1], file=sys.stderr)
+model = load_embeddings(emb_path)
 
-    for hyponym, hypernym in zip(hyponyms, hypernyms):
-        if args.oov:
-            if hypernym not in model.vocab:
-                continue
-        if hyponym not in ground_truth:
-            ground_truth[hyponym] = []
-        ground_truth[hyponym].append(hypernym)
+projection = np.load(args.projection)
 
-    print('We will make predictions for %d hyponyms' % len(ground_truth), file=sys.stderr)
+ground_truth = {}  # Gold dictionary of hypernyms corresponding to each hyponym
+predicted = {}  # Predicted dictionary of hypernyms corresponding to each hyponym
 
-    print('Making predictions...', file=sys.stderr)
-    counter = 0
-    hyper_collector = []
-    for hyponym in ground_truth:
-        if hyponym in predicted:
+count_oov = 0
+count_duplicate_hypo = 0 ## polisemy
+
+for hyponym, hypernym in zip(hyponyms, hypernyms):
+    if args.oov:
+        if hypernym not in model.vocab or hyponym not in model.vocab:
+            count_oov += 1
             continue
-        candidates, predicted_vector = predict(hyponym, model, projection, topn=args.nr)
-        hyper_collector.append(predicted_vector)
+    if hyponym in ground_truth:
+        count_duplicate_hypo += 1
         
-        
-        if threshold:
-            # Filtering stage
-            # We allow only candidates which are not further from the projection
-            # than one sigma from the average similarity in the true set
-            rejected = [c for c in candidates if c[1] < threshold]
-            candidates = [c for c in candidates if c[1] >= threshold]
-        else:
-            rejected = []
-        # End filtering stage
+    if hyponym not in ground_truth:
+        ground_truth[hyponym] = []
+    ground_truth[hyponym].append(hypernym)
+    
+print('Duplicate hyponyms in test %d' % count_duplicate_hypo)
+print('OOV: %d' % count_oov)
+print('We will make predictions for %d hyponyms' % len(ground_truth), file=sys.stderr)
 
-        candidates = [i[0] for i in candidates if i[0] != hyponym]
-        predicted[hyponym] = candidates
+print('Making predictions...', file=sys.stderr)
+counter = 0
+hyper_collector = []
+for hyponym in ground_truth:
+    if hyponym in predicted:
+        continue
+    candidates, predicted_vector = predict(hyponym, model, projection, topn=args.nr)
+    hyper_collector.append(predicted_vector)
 
-        if counter % 1000 == 0:
-            print('%d hyponyms processed out of %d total' % (counter, len(ground_truth)),
-                  file=sys.stderr)
-            # Want to see predictions in real time?
-            print(hyponym, '\t', candidates)
-        counter += 1
+    if counter % 1000 == 0:
+        print('%d hyponyms processed out of %d total' % (counter, len(ground_truth)),
+              file=sys.stderr)
+        # Want to see predictions in real time?
+        print(hyponym, '\t', candidates)
+    counter += 1
 
-    mean_ap, mean_rr = get_score(ground_truth, predicted)
-    print("MAP: {0}\nMRR: {1}\n".format(mean_ap, mean_rr), file=sys.stderr)
+mean_ap, mean_rr = get_score(ground_truth, predicted)
+print("MAP: {0}\nMRR: {1}\n".format(mean_ap, mean_rr), file=sys.stderr)
+
+end = time.time()
+training_time = int(end - start)
+print('Intrinsic Evaluation: %s minutes' % str(round(training_time/60)))
 

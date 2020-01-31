@@ -140,10 +140,10 @@ def load_embeddings(modelfile):
             or modelfile.endswith('.vec.gz') or modelfile.endswith('.vec'):  # Text word2vec file
         emb_model = KeyedVectors.load_word2vec_format(modelfile, binary=False,
                                                       unicode_errors='replace', limit=3500000)
-    else:  # Native Gensim format?
+    else:  # Native Gensim format, inclufing for fasttext models (.model in a folder with the other support files)
         emb_model = KeyedVectors.load(modelfile)
     emb_model.init_sims(replace=True)
-    print('Success! Vectors loaded')
+    print('Success! FT Vectors loaded')
 
     return emb_model
 
