@@ -8,19 +8,15 @@ from smart_open import open
 import pickle
 import numpy as np
 
-from configs import VECTORS, TAGS, MWE, EMB, OUT, RUWORDNET, RANDOM_SEED
+from configs import VECTORS, TAGS, EMB, OUT, RANDOM_SEED, FT_EMB
 
-vectors = VECTORS
 tags = TAGS
-mwe = MWE
 emb_path = EMB
-out = OUT
-ruWN = RUWORDNET
-RANDOM_SEED = RANDOM_SEED
 
 parser = ArgumentParser()
 parser.add_argument('--provided_test', default='input/data/public_test/nouns_public.tsv', help='a list of hyponyms to attach to ruWordNet taxonomy', type=os.path.abspath)
-parser.add_argument('--projection', default='%s/%s_projection.npy' % (out, vectors), help='.npy, the transformation matrix leanrt in the previous step')
+parser.add_argument('--projection', default='%s%s_projection.npy' % (OUT, VECTORS), help='.npy, the transformation matrix leanrt in the previous step')
+parser.add_argument('--oov_buster', default=FT_EMB, help='path to fasttext model to get vectors for OOV in provided test')
 parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
 
 args = parser.parse_args()
@@ -70,7 +66,7 @@ print('Number of test words not in embeddings: %d (%d%%)' % (len(oov_in_test), l
 print('OOV in test\n%s' % oov_in_test)
 print('Saving the predicted vectors and the list of preprocessed %d test hyponyms that are found in vectors' % (len(test_hyponyms)-len(oov_in_test)))
 
-np.save('%s/%s_hyper_collector.npy' % (out, vectors), hyper_collector)
-np.save('%s/%s_preprocessed_test.npy' % (out, vectors), test_in_voc)
+np.save('%s%s_hyper_collector.npy' % (OUT, VECTORS), hyper_collector)
+np.save('%s%s_preprocessed_test.npy' % (OUT, VECTORS), test_in_voc)
 if len(hyper_collector) == len(test_in_voc):
     print('Sanity test: passed')

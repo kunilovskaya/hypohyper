@@ -22,7 +22,7 @@ RANDOM_SEED = RANDOM_SEED
 parser = ArgumentParser()
 parser.add_argument('--testfile', default='%s%s_hypohyper_test.tsv.gz' % (out, vectors), help='0.2 of the training data reserved for intrinsic testing')
 parser.add_argument('--projection', default='%s%s_projection.npy' % (out, vectors), help='.npy, the transformation matrix leanrt in the previous step')
-parser.add_argument('--oov', action='store_true', help='if true, OOV targets are skipped')
+# parser.add_argument('--oov', action='store_true', help='if true, OOV targets are skipped') # they are already skipped at preprocessing
 parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
 
 args = parser.parse_args()
@@ -49,15 +49,15 @@ count_oov = 0
 count_duplicate_hypo = 0 ## polisemy
 
 for hyponym, hypernym in zip(hyponyms, hypernyms):
-    if args.oov:
-        if hypernym not in model.vocab or hyponym not in model.vocab:
-            count_oov += 1
-            continue
+    # if args.oov:
+    if hypernym not in model.vocab or hyponym not in model.vocab:
+        count_oov += 1
+        continue
     if hyponym in ground_truth:
         count_duplicate_hypo += 1
         
     if hyponym not in ground_truth:
-        ground_truth[hyponym] = []
+        ground_truth[hyponym] = [] ## this is how i get the list of golden hypernyms
         
     ground_truth[hyponym].append(hypernym) ### we can end up with a list of hypernyms for one hypo
     
@@ -76,6 +76,7 @@ for hyponym in ground_truth:
     hyper_collector.append(predicted_vector)
     
     ## get a list of most the words most similar to the predicted hypernym vector
+    candidates = [i[0] for i in candidates if i[0] != hyponym][:10]
     predicted[hyponym] = candidates
 
     if counter % 1000 == 0:
