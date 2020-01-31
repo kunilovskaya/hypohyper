@@ -58,11 +58,12 @@ for hyponym, hypernym in zip(hyponyms, hypernyms):
         
     if hyponym not in ground_truth:
         ground_truth[hyponym] = []
-    ground_truth[hyponym].append(hypernym)
+        
+    ground_truth[hyponym].append(hypernym) ### we can end up with a list of hypernyms for one hypo
     
 print('Duplicate hyponyms in test %d' % count_duplicate_hypo)
 print('OOV: %d' % count_oov)
-print('We will make predictions for %d hyponyms' % len(ground_truth), file=sys.stderr)
+print('We will make predictions for %d unique hyponyms' % len(ground_truth), file=sys.stderr)
 
 print('Making predictions...', file=sys.stderr)
 counter = 0
@@ -70,16 +71,21 @@ hyper_collector = []
 for hyponym in ground_truth:
     if hyponym in predicted:
         continue
+        
     candidates, predicted_vector = predict(hyponym, model, projection, topn=args.nr)
     hyper_collector.append(predicted_vector)
+    
+    ## get a list of most the words most similar to the predicted hypernym vector
+    predicted[hyponym] = candidates
 
     if counter % 1000 == 0:
         print('%d hyponyms processed out of %d total' % (counter, len(ground_truth)),
               file=sys.stderr)
         # Want to see predictions in real time?
         print(hyponym, '\t', candidates)
+        print('GROUND TRUTH: %s' % ground_truth[hyponym])
     counter += 1
-
+## this is based on the intersection of lemmas, not synsets ids
 mean_ap, mean_rr = get_score(ground_truth, predicted)
 print("MAP: {0}\nMRR: {1}\n".format(mean_ap, mean_rr), file=sys.stderr)
 
