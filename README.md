@@ -9,20 +9,20 @@ KuKuPl team's contribution to the shared task at Dialogue Evaluation 2020: [Taxo
 ### NOUNS for each anti-OOV-in-test strategy
 FYI(Feb03): baseline MAP=0.1405; best competitor MAP=0.4282
 
-Table 1. Intrinsic evaluation on 0.2 test (publicMAP values)
+Table 1. Intrinsic evaluation on 0.2 test
 
 
         vectors      | coverage(wdpairs) | intrMAP | intrMRR | testOOV |
----------------------|-------------------|---------|---------|---------|
+    :----------------|------------------:|--------:|--------"|--------:|
      w2v\_RDT        |      84705        |  0.0994 | 0.0926  |      -- |
  w2v\_upos\_araneum  |      69916        |  0.1168 | 0.1619  |  32(4%) |
  araneum\_ft(full)   |     431937        |     --- |    ---  |     --  |
  araneum\_ft(no\_OOV)|      73384        |  0.1288 | 0.1047  |     --  |
- ruscorp\_ft(no\_OOV)|        ---        |     --- |    ---  |     --  |
- dedicated\_news\_ft |        ---        |     --- |    ---  |     --  |
+ ruscorp\_ft(no\_OOV)|        --         |     --  |    --   |     --  |
+ dedicated\_news\_ft |        --         |     --  |    ---  |     --  |
 
 
-Table 2. For some models we report results on the combination of approaches to (a) ruWordNet vectorisation and to (b) test OOV elimination
+Table 2. For some models we report results (publicMAP values) on the combination of approaches to (a) ruWordNet vectorisation and to (b) test OOV elimination 
 
                     |       single_wd          |         main_wd          |
     vectors         | ft\_vectors | top\_hyper | ft\_vectors | top\_hyper |
