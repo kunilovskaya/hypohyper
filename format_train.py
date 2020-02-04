@@ -17,7 +17,7 @@ if POS == 'NOUN':
 if POS == 'VERB':
     parser.add_argument('--synsets', default='%ssynsets.V.xml' % RUWORDNET, help="synsets files")
     parser.add_argument('--train', default='input/data/training_verbs.tsv', type=os.path.abspath)
-parser.add_argument('--skip_oov', default=True, help='Skip OOV entries?') # action = 'store_true'
+parser.add_argument('--skip_oov', default=False, help='Skip OOV entries?') # action = 'store_true'
 
 start = time.time()
 
