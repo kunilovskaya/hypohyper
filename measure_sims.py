@@ -20,7 +20,7 @@ if POS == 'VERB':
     parser.add_argument('--provided_test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
 parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_hyper_collector.npy' % (OUT, VECTORS, POS), help="predicted vectors") ## mind the OOV strategy!
 parser.add_argument('--sens_vectors', default='%sWordNet_vectorised/%s_%s_%s_ruwordnet_vectorised.npz' % (OUT,MODE,VECTORS,POS), help="folder where the output of vectorise_ruwordnet.py is")
-parser.add_argument('--emb', required=True help="Path to the embeddings file")
+parser.add_argument('--emb', required=True, help="Path to the embeddings file")
 
 
 args = parser.parse_args()
@@ -38,7 +38,7 @@ for i in sens_index:
     lemma = i[1]
     if not lemma in synsets_dict:
         synsets_dict[lemma] = set()
-    sysents_dict[lemma].add(synset)
+    synsets_dict[lemma].add(synset)
 
 if OOV_STRATEGY == 'top_hyper':
     rel_path = '%ssynset_relations.N.xml' % RUWORDNET
