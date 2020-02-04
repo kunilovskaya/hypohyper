@@ -9,36 +9,38 @@ KuKuPl team's contribution to the shared task at Dialogue Evaluation 2020: [Taxo
 ### NOUNS for each anti-OOV-in-test strategy
 FYI(Feb03): baseline MAP=0.1405; best competitor MAP=0.4282
 
-Table 1. For some models we report results on the combination of approaches to (a) ruWordNet vectorisation and to (b) test OOV elimination
+Table 1. Intrinsic evaluation on 0.2 test (publicMAP values)
+
+    vectors         |coverage (wdpairs)| intrMAP | intrMRR | pub/pr testOOV |
+--------------------|-----------------:|--------:|--------:|---------------:|
+     w2v_RDT        |      84705       |  0.0994 | 0.0926  |                |
+ w2v_upos_araneum   |      69916       |  0.1168 | 0.1619  |  32(4%)/       |
+ araneum_ft(full)   |     431937       |         |         |     --         |
+--------------------|-----------------:|--------:|--------:|---------------:|
+ araneum_ft(no_OOV) |      73384       |  0.1288 | 0.1047  |                |
+ ruscorp_ft(no_OOV) |                  |         |         |                |
+--------------------|-----------------:|--------:|--------:|---------------:|
+ dedicated_news_ft  |                  |         |         |                |
+
+Table 2. For some models we report results on the combination of approaches to (a) ruWordNet vectorisation and to (b) test OOV elimination
+
+                    |       single_wd          |         main_wd          |
+    vectors         | ft\_vectors | top\_hyper | ft\_vectors | top\_hyper |
+--------------------|------------:|-----------:|------------:|-----------:|
+     w2v_RDT        |             |            |             |            |
+ w2v\_upos_araneum  |    0.2464   |   0.2467   |   0.1679    |  0.1682    |
+--------------------|------------:|-----------:|------------:|-----------:|
+ araneum\_ft(full)  |             |            |             |            |
+ araneum_ft(no_OOV) |             |            |             |            |
+ ruscorp_ft(no_OOV) |             |            |             |            |
+--------------------|------------:|-----------:|------------:|-----------:|
+ dedicated_news_ft  |             |            |             |            |
 
 * **single_wd:** When selecting the hypernym synset, use only single-word lemmas of the synset (and ignore  16% of 76817 senses (for w2v_upos_araneum) that have not vectors in embeddings (OOV)); **31205 vectorised senses from 21188 synsets**
 * **main_wd:** Choosing from all synsets, including those with no single_word representations (by using main words of the MWE); **69951 vectorised senses from 27536 synsets**
 
 
-    vectors         |coverage (wdpairs)| intrMAP | intrMRR | pub/pr testOOV |  publicMAP  |
---------------------|-----------------:|--------:|--------:|---------------:|------------:|
-     w2v_RDT        |      84705       |  0.0994 | 0.0926  |                |
---------------------|-----------------:|--------:|--------:|---------------:|------------:|
-                                                           |                 **single_wd**|
-                                                           |          _ft_vectors for OOV_|
- w2v_upos_araneum   |      69916       |  0.1168 | 0.1619  |  32(4%)/       |    0.2464   |
 
-                                                                       _top_hyper for OOV_|
-                                                           |                |  **0.2467** |
---------------------|-----------------:|--------:|--------:|---------------:|------------:|
-                                                                               **main_wd**|
-                                                                      _ft_vectors for OOV_|
-                    |                  |         |         |                |   0.1679    |
-                                                                       _top_hyper for OOV_|
-                    |                  |         |         |                |   0.        |
---------------------|-----------------:|--------:|--------:|---------------:|------------:|
- araneum_ft(full)   |     431937       |         |         |
---------------------|-----------------:|--------:|--------:|---------------:|------------:|
- araneum_ft(no_OOV) |      73384       |  0.1288 | 0.1047  | 
- ruscorp_ft(no_OOV) | 
---------------------|-----------------:|--------:|--------:|---------------:|------------:|
- dedicated_news_ft
---------------------|-----------------:|--------:|--------:|---------------:|------------:|
                                                                
 
 
