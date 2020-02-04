@@ -12,8 +12,8 @@ FYI(Feb03): baseline MAP=0.1405; best competitor MAP=0.4282
 Table 1. Intrinsic evaluation on 0.2 test (publicMAP values)
 
     vectors          | coverage(wdpairs)| intrMAP | intrMRR | pub/pr testOOV 
----------------------|-----------------:|--------:|--------:|---------------:
-     w2v\_RDT        |      84705       |  0.0994 | 0.0926  |                
+---------------------|-----------------:|--------:|--------:|---------------
+     w2v\_RDT        |      84705       |  0.0994 | 0.0926  |       ---       
  w2v\_upos\_araneum  |      69916       |  0.1168 | 0.1619  |  32(4%)/       
  araneum\_ft(full)   |     431937       |     --- |    ---  |     --         
  araneum\_ft(no\_OOV)|      73384       |  0.1288 | 0.1047  |     --         
