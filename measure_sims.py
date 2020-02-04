@@ -7,6 +7,7 @@ import csv
 import time
 from hyper_imports import popular_generic_concepts
 import zipfile
+import gensim
 
 from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE
 
@@ -68,6 +69,9 @@ for hypo, hyper_vec in zip(test,hyper_vecs):
         deduplicated_sims = []
         for (id, word), vect in zip(sens_index, sens_vects): ## does zip allow set operation?
             vect = np.asarray(vect, dtype='float64')
+            ##### this is where the gensim.most_similar might fit id no assumptions are made internally abt embedding=sens_vects,
+            ## don't forget to sort the neighbours and link them to the respective (id,word)
+            # nearest_neighbors = sens_vects.most_similar(positive=[hyper_vec], topn=10)
             sims.append((id, word, (1 - distance.cosine(hyper_vec, vect))))
             
         ## sort the list of tuples (id, sim) by the 2nd element and deduplicate by rewriting the list while checking for duplicate synset ids
