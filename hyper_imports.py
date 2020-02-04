@@ -59,8 +59,7 @@ def wd2id_dict(id2dict):
         for v in values:
             wd2id[v].append(k)
 
-    # get a dict of format, where values are lists of synset_ids for each word;
-    # ex. АУТИЗМ:[144031-N], АУТИСТИЧЕСКИЙ МЫШЛЕНИЕ:[144031-N]:
+    # ex. ЗНАК:[152660-N, 118639-N, 107519-N, 154560-N]
     return wd2id
 
 
@@ -130,18 +129,18 @@ def read_train(tsv_in):
 
 
 def load_embeddings(modelfile):
-    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     if not os.path.isfile(modelfile):
         raise FileNotFoundError("No file called {file}".format(file=modelfile))
     # Determine the model format by the file extension
-    if modelfile.endswith('.bin.gz') or modelfile.endswith('.bin'):  # Binary word2vec file
+    if modelfile.endswith('.bin.gz') or modelfile.endswith('.bin') or modelfile.endswith('.w2v'):  # Binary word2vec file
         emb_model = KeyedVectors.load_word2vec_format(modelfile, binary=True,
-                                                      unicode_errors='replace', limit=4000000)
+                                                      unicode_errors='replace', limit=3500000)
     elif modelfile.endswith('.txt.gz') or modelfile.endswith('.txt') \
             or modelfile.endswith('.vec.gz') or modelfile.endswith('.vec'):  # Text word2vec file
         emb_model = KeyedVectors.load_word2vec_format(modelfile, binary=False,
-                                                      unicode_errors='replace', limit=4000000)
-    else:  # Native Gensim format?
+                                                      unicode_errors='replace', limit=3500000)
+    else:  # Native Gensim format, inclufing for fasttext models (.model in a folder with the other support files)
         emb_model = KeyedVectors.load(modelfile)
     emb_model.init_sims(replace=True)
     print('Success! Vectors loaded')
@@ -156,43 +155,87 @@ def get_vector(word, emb=None):
     return vector
 
 
-def preprocess_mwe(item, tags=False):
+def preprocess_mwe(item, tags=None, pos=None):
     # Alas, those bigrams are overwhelmingly proper names while we need multi-word concepts.
     # For example, in aranea: "::[а-я]+\_NOUN" 8369 item, while the freq of all "::" 8407
-    if len(item.split()) > 1:
-        item = '::'.join(item.lower().split())
-        if tags:
-            item = item + '_PROPN'
-        # print(item)
-    else:
-        item = item.lower()
-        if tags:
-            item = item + '_NOUN'
-
+    if pos == 'VERB':
+        if len(item.split()) > 1:
+            if tags:
+                item = '::'.join(item.lower().split())
+                item = item + '_VERB'
+            else:
+                item = '::'.join(item.lower().split())
+            # print(item)
+        else:
+            if tags:
+                item = item.lower()
+                item = item + '_VERB'
+            else:
+                item = item.lower()
+        
+    elif pos == 'NOUN':
+        if len(item.split()) > 1:
+            if tags:
+                item = '::'.join(item.lower().split())
+                item = item + '_PROPN'
+            else:
+                item = '::'.join(item.lower().split())
+            print('MWE example untagged:', item)
+        else:
+            if tags:
+                item = item.lower()
+                item = item + '_NOUN'
+            else:
+                item = item.lower()
+            
     return item
 
-
-def filter_dataset(pairs, embedding, tags=None, mwe=None):
+## now this function stores lowercased word pairs regardless of the combination of tags/mwe boolean options)
+def filter_dataset(pairs, embedding, tags=None, mwe=None, pos=None, skip_oov=None):
     smaller_train = []
     for hypo, hyper in pairs:
         if tags:
-            if mwe:
-                hypo = preprocess_mwe(hypo, tags=True)
-                hyper = preprocess_mwe(hyper, tags=True)
-                if hypo in embedding and hyper in embedding:
+            if mwe: ## this returns lowercased and tagged single words ot MWE
+                hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
+                hyper = preprocess_mwe(hyper, tags=tags, pos=pos)
+                
+                if hypo in embedding.vocab and hyper in embedding.vocab:
                     smaller_train.append((hypo, hyper))
             else:
-                if hypo.lower() + '_NOUN' in embedding and hyper.lower() + '_NOUN' in embedding:
-                    if hypo in embedding and hyper in embedding:
+                if pos == 'VERB':
+                    hypo = hypo.lower() + '_VERB'
+                    hyper = hyper.lower() + '_VERB'
+                    # if hypo in embedding.vocab and hyper in embedding.vocab:
+                    #     smaller_train.append((hypo, hyper))
+                elif pos == 'NOUN':
+                    hypo = hypo.lower() + '_NOUN'
+                    hyper = hyper.lower() + '_NOUN'
+                    
+                if skip_oov == False:
+                    smaller_train.append((hypo, hyper))
+                elif skip_oov == True:
+                    if hypo in embedding.vocab and hyper in embedding.vocab:
                         smaller_train.append((hypo, hyper))
+                            
+        ## this is only when I can afford to retain all items with untagged fasttext
         else:
-            if mwe:
-                hypo = preprocess_mwe(hypo)
-                hyper = preprocess_mwe(hyper)
-            if hypo.lower() in embedding and hyper.lower() in embedding:
-                smaller_train.append((hypo, hyper))
+            if mwe: ## this returns lowercased words
+                hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
+                hyper = preprocess_mwe(hyper, tags=tags, pos=pos)
+                if skip_oov == False:
+                    smaller_train.append((hypo, hyper))
+                elif skip_oov == True:
+                    if hypo in embedding.vocab and hyper in embedding.vocab:
+                        smaller_train.append((hypo, hyper)) ## preprocess_mwe returns lowercased items already
+            else:
+                ## this is tuned for ft vectors to filter out OOV (mostly MWE)
+                if skip_oov == False:
+                    smaller_train.append((hypo.lower(), hyper.lower()))
+                elif skip_oov == True:
+                    if hypo.lower() in embedding.vocab and hyper.lower() in embedding.vocab:
+                        smaller_train.append((hypo.lower(), hyper.lower()))
 
-    return smaller_train  # only the pairs that are found in the embeddings
+    return smaller_train  # only the pairs that are found in the embeddings if skip_oov=True
 
 
 def write_hyp_pairs(data, filename):
@@ -204,10 +247,12 @@ def write_hyp_pairs(data, filename):
 
 
 def learn_projection(dataset, embedding, lmbd=1.0, from_df=False):
+    print('Lambda: %d' % lmbd)
     if from_df:
         source_vectors = dataset['hyponym'].T
         target_vectors = dataset['hypernym'].T
     else:
+        ## this gets a tuple of two lists of vectors: (source_vecs, target_vecs)
         source_vectors = dataset[0]
         target_vectors = dataset[1]
     source_vectors = np.mat([[i for i in vec] for vec in source_vectors])
@@ -255,7 +300,14 @@ def estimate_sims(source, targets, projection, model):
 
 
 def predict(source, embedding, projection, topn=10):
-    test = np.mat(embedding[source])
+    ## what happens when your test word is not in the embeddings? how do you get its vector?
+    ## skip for now!
+    ## TODO implement this
+    try:
+        test = np.mat(embedding[source])
+    except KeyError:
+        return None
+        
     test = np.c_[1.0, test]  # Adding bias term
     predicted_vector = np.dot(projection, test.T)
     predicted_vector = np.squeeze(np.asarray(predicted_vector))
@@ -264,8 +316,42 @@ def predict(source, embedding, projection, topn=10):
     return nearest_neighbors, predicted_vector
 
 
-# python3 mappings.py --relations /home/u2/resources/ruwordnet/synset_relations.N.xml
-# --synsets /home/u2/resources/ruwordnet/synsets.N.xml -
-# -train /home/u2/data/hypohyper/training_data/training_nouns.tsv
+def popular_generic_concepts(relations_path):
+    ## how often an id has a name="hypernym" when "parent" in synset_relations.N.xml (aim for the ratio hypernym/hyponym > 1)
+    parsed_rels = read_xml(relations_path)
+    freq_hypo = defaultdict(int)
+    freq_hyper = defaultdict(int)
+    for rel in parsed_rels:
+        ## in WordNet relations the name of relations is assigned wrt the child, it is the name of a child twds the parent, it seems
+        id = rel.getAttributeNode('child_id').nodeValue
+        name = rel.getAttributeNode('name').nodeValue
+        if name == 'hypernym':
+            freq_hyper[id] += 1
+        elif name == 'hyponym':
+            freq_hypo[id] += 1
+    
+    all_ids = list(freq_hypo.keys()) + list(freq_hyper.keys())
+    print(all_ids[:5])
+    print(len(set(all_ids)))
+    
+    ratios = defaultdict(int)
+    for id in all_ids:
+        try:
+            ratios[id] = freq_hyper[id] / freq_hypo[id]
+        except ZeroDivisionError:
+            continue
+    
+    sort_it = {k: v for k, v in sorted(ratios.items(), key=lambda item: item[1], reverse=True)}
+    # for id in sort_it:
+    #     print(id, sort_it[id])
+    my_ten = []
+    for i, (k, v) in enumerate(sort_it.items()):
+        if i < 10:
+            my_ten.append(k)
+            print(k)
+    
+    
+    return my_ten # synset ids
+
 if __name__ == '__main__':
     print('=== This is a modules script, it is not supposed to run as main ===')
