@@ -160,25 +160,33 @@ def preprocess_mwe(item, tags=None, pos=None):
     # For example, in aranea: "::[а-я]+\_NOUN" 8369 item, while the freq of all "::" 8407
     if pos == 'VERB':
         if len(item.split()) > 1:
-            item = '::'.join(item.lower().split())
             if tags:
+                item = '::'.join(item.lower().split())
                 item = item + '_VERB'
+            else:
+                item = '::'.join(item.lower().split())
             # print(item)
         else:
-            item = item.lower()
             if tags:
+                item = item.lower()
                 item = item + '_VERB'
-                
+            else:
+                item = item.lower()
+        
     elif pos == 'NOUN':
         if len(item.split()) > 1:
-            item = '::'.join(item.lower().split())
             if tags:
+                item = '::'.join(item.lower().split())
                 item = item + '_PROPN'
-            # print('MWE example:', item)
+            else:
+                item = '::'.join(item.lower().split())
+            print('MWE example untagged:', item)
         else:
-            item = item.lower()
             if tags:
+                item = item.lower()
                 item = item + '_NOUN'
+            else:
+                item = item.lower()
             
     return item
 
@@ -203,14 +211,17 @@ def filter_dataset(pairs, embedding, tags=None, mwe=None, pos=None, skip_oov=Non
                     hypo = hypo.lower() + '_NOUN'
                     hyper = hyper.lower() + '_NOUN'
                     
-                if hypo in embedding.vocab and hyper in embedding.vocab:
+                if skip_oov == False:
                     smaller_train.append((hypo, hyper))
+                elif skip_oov == True:
+                    if hypo in embedding.vocab and hyper in embedding.vocab:
+                        smaller_train.append((hypo, hyper))
                             
         ## this is only when I can afford to retain all items with untagged fasttext
         else:
             if mwe: ## this returns lowercased words
-                hypo = preprocess_mwe(hypo)
-                hyper = preprocess_mwe(hyper)
+                hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
+                hyper = preprocess_mwe(hyper, tags=tags, pos=pos)
                 if skip_oov == False:
                     smaller_train.append((hypo, hyper))
                 elif skip_oov == True:
