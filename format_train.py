@@ -4,32 +4,26 @@ from itertools import repeat
 import os
 import sys
 from sklearn.model_selection import train_test_split
-from hyper_import_functions import read_xml, read_train, load_embeddings, id2wds_dict, wd2id_dict, \
+from hyper_imports import read_xml, read_train, load_embeddings, id2wds_dict, wd2id_dict, \
     filter_dataset, write_hyp_pairs
-from configs import VECTORS, TAGS, MWE, EMB, OUT, RUWORDNET, RANDOM_SEED
 
-vectors = VECTORS
-tags = TAGS
-mwe = MWE
-emb_path = EMB
-out = OUT
-ruWN = RUWORDNET
-RANDOM_SEED = RANDOM_SEED
+from configs import VECTORS, TAGS, MWE, EMB_PATH, OUT, RUWORDNET, RANDOM_SEED, POS
+
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--relations', default='%ssynset_relations.N.xml' % ruWN,
-                    help="synset_relations files from ruwordnet")
-parser.add_argument('--synsets', default='%ssynsets.N.xml' % ruWN, help="synsets files")
-parser.add_argument('--train', default='input/data/training_nouns.tsv',
-                    help="training_nouns.tsv: SYNSET_ID\tTEXT\tPARENTS\tPARENT_TEXTS",
-                    type=os.path.abspath)
+if POS == 'NOUN':
+    parser.add_argument('--synsets', default='%ssynsets.N.xml' % RUWORDNET, help="synsets files")
+    parser.add_argument('--train', default='input/data/training_nouns.tsv', type=os.path.abspath)
+if POS == 'VERB':
+    parser.add_argument('--synsets', default='%ssynsets.V.xml' % RUWORDNET, help="synsets files")
+    parser.add_argument('--train', default='input/data/training_verbs.tsv', type=os.path.abspath)
+parser.add_argument('--skip_oov', default=True, help='Skip OOV entries?') # action = 'store_true'
 
 start = time.time()
 
 args = parser.parse_args()
 
 parsed_syns = read_xml(args.synsets)
-parsed_rels = read_xml(args.relations)
 df_train = read_train(args.train)
 
 # strip of [] and ' in the strings:
@@ -37,8 +31,7 @@ df_train = read_train(args.train)
 df_train = df_train.replace(to_replace=r"[\[\]']", value='', regex=True)
 print('Datasets loaded', file=sys.stderr)
 
-
-emb = load_embeddings(emb_path)
+model = load_embeddings(EMB_PATH)
 
 my_TEXTS = df_train['TEXT'].tolist()
 my_PARENT_TEXTS = df_train['PARENT_TEXTS'].tolist()
@@ -59,14 +52,17 @@ for hypo, hyper in zip(my_TEXTS, my_PARENT_TEXTS):
         tot_pairs += len(wd_tuples)
         all_pairs.append(wd_tuples)
 all_pairs = [item for sublist in all_pairs for item in sublist]  # flatten the list
-print('======', all_pairs[:5])
+print('RAW:\n', all_pairs[:3])
 print('Checksum: expected  %d; returned: %d' % (tot_pairs, len(all_pairs)))
 
 # limit training_data to the pairs that are found in the embeddings
-filtered_pairs = filter_dataset(all_pairs, emb, tags=tags, mwe=mwe)
+filtered_pairs = filter_dataset(all_pairs, model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=args.skip_oov)
 print('Number of word pairs where both items are in embeddings:', len(filtered_pairs))
 
+print('\n!!! WYSIWYG !!!')
+print('Expecting: TAGS=%s; MWE=%s; %s' % (TAGS, MWE, POS))
 print(filtered_pairs[:3])
+print('!!!!!!!!!!!!!!!\n')
 
 hypohyper_train, hypohyper_test = train_test_split(filtered_pairs, test_size=.2,
                                                    random_state=RANDOM_SEED)
@@ -76,9 +72,15 @@ print('Test entries:', len(hypohyper_test), file=sys.stderr)
 
 ## if any of MWE are in embeddings they look like '::'.join(item.lower().split()) now regardless whether with PoS-tags or without
 ## this outputs the LOWERCASED words, too
-write_hyp_pairs(hypohyper_train, '%s/%s_hypohyper_train.tsv.gz' % (out, vectors))
-write_hyp_pairs(hypohyper_test, '%s/%s_hypohyper_test.tsv.gz' % (out, vectors))
+
+OUT = '%strains/' % OUT
+os.makedirs(OUT, exist_ok=True)
+
+write_hyp_pairs(hypohyper_train, '%s%s_%s_train.tsv.gz' % (OUT, VECTORS, POS))
+write_hyp_pairs(hypohyper_test, '%s%s_%s_test.tsv.gz' % (OUT, VECTORS, POS))
 
 end = time.time()
 training_time = int(end - start)
-print('Training data re-formatted in %s minutes' % str(round(training_time/60)))
+print('\n%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+print('DONE formatting train step 0.\n Training data re-formatted in %s minutes' % str(round(training_time/60)))
+print('%%%%%%%%%%%%%%%%%%%%%%%%%%%\n')

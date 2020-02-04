@@ -24,6 +24,7 @@ Table 1. Intrinsic evaluation on 0.2 test
 
 Table 2. For some models we report results (publicMAP values) on the combination of approaches to (a) ruWordNet vectorisation and to (b) test OOV elimination 
 
+
                     |       single_wd          |         main_wd          |
     vectors         | ft\_vectors | top\_hyper | ft\_vectors | top\_hyper |
 --------------------|------------:|-----------:|------------:|-----------:|
@@ -35,6 +36,7 @@ Table 2. For some models we report results (publicMAP values) on the combination
  ruscorp_ft(no_OOV) |             |            |             |            |
 --------------------|------------:|-----------:|------------:|-----------:|
  dedicated_news_ft  |             |            |             |            |
+
 
 * **single_wd:** When selecting the hypernym synset, use only single-word lemmas of the synset (and ignore  16% of 76817 senses (for w2v_upos_araneum) that have not vectors in embeddings (OOV)); **31205 vectorised senses from 21188 synsets**
 * **main_wd:** Choosing from all synsets, including those with no single_word representations (by using main words of the MWE); **69951 vectorised senses from 27536 synsets**

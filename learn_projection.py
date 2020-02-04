@@ -1,22 +1,17 @@
 #! python3
 # coding: utf-8
 
-from hyper_import_functions import learn_projection, load_embeddings, estimate_sims
+from hyper_imports import learn_projection, load_embeddings, estimate_sims
 from argparse import ArgumentParser
 import pandas as pd
 import sys, os
 import numpy as np
 import time
-from configs import VECTORS, TAGS, MWE, EMB, OUT
+from configs import VECTORS, EMB_PATH, OUT, POS
 
-vectors = VECTORS
-tags = TAGS
-mwe = MWE
-emb_path = EMB
-out = OUT
 
 parser = ArgumentParser()
-parser.add_argument('--trainfile', default='%s/%s_hypohyper_train.tsv.gz' % (out, vectors),
+parser.add_argument('--trainfile', default='%strains/%s_%s_train.tsv.gz' % (OUT, VECTORS, POS),
                     help="0.8 train of pre-processed training_data",
                     type=os.path.abspath)
 parser.add_argument('--lmbd', action='store', type=float, default=0.0)
@@ -36,8 +31,8 @@ print(data.head(), file=sys.stderr)
 hyponyms = data.hyponym.values
 hypernyms = data.hypernym.values
 
-print('Current embedding model:', emb_path.split('/')[-1], file=sys.stderr)
-model = load_embeddings(emb_path)
+print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
+model = load_embeddings(EMB_PATH)
 
 print('Inferring vectors...', file=sys.stderr)
 
@@ -50,9 +45,8 @@ target_vecs = []
 mult_hypernyms = {}  # Dictionary of hypernyms corresponding to each hyponym
 
 for hyponym, hypernym in zip(hyponyms, hypernyms):
-    if args.skip_oov:
-        if hyponym not in model.vocab or hypernym not in model.vocab:
-            continue
+    if hyponym not in model.vocab or hypernym not in model.vocab:
+        continue
     
     if hyponym not in mult_hypernyms:
         mult_hypernyms[hyponym] = []
@@ -72,8 +66,13 @@ print('Learning projection matrix...', file=sys.stderr)
 transforms = learn_projection((source_vecs, target_vecs), model, lmbd=args.lmbd) ## this returns the transformation matrix
 print('Transformation matrix created', transforms.shape, file=sys.stderr)
 
-np.save('%s/%s_projection.npy' % (out, vectors), transforms)
+OUT = '%sprojections/' % OUT
+os.makedirs(OUT, exist_ok=True)
+
+np.save('%s%s_%s_projection.npy' % (OUT, VECTORS, POS), transforms)
 
 end = time.time()
 training_time = int(end - start)
-print('Training data re-formated in %s minutes' % str(round(training_time/60)))
+print('\n%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+print('DONE learning (step 1). \nTraining data re-formated in %s minutes' % str(round(training_time/60)))
+print('%%%%%%%%%%%%%%%%%%%%%%%%%%%\n')

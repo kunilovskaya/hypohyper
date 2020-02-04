@@ -129,7 +129,7 @@ def read_train(tsv_in):
 
 
 def load_embeddings(modelfile):
-    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     if not os.path.isfile(modelfile):
         raise FileNotFoundError("No file called {file}".format(file=modelfile))
     # Determine the model format by the file extension
@@ -155,45 +155,76 @@ def get_vector(word, emb=None):
     return vector
 
 
-def preprocess_mwe(item, tags=False):
+def preprocess_mwe(item, tags=None, pos=None):
     # Alas, those bigrams are overwhelmingly proper names while we need multi-word concepts.
     # For example, in aranea: "::[а-я]+\_NOUN" 8369 item, while the freq of all "::" 8407
-    if len(item.split()) > 1:
-        item = '::'.join(item.lower().split())
-        if tags:
-            item = item + '_PROPN'
-        # print(item)
-    else:
-        item = item.lower()
-        if tags:
-            item = item + '_NOUN'
-
+    if pos == 'VERB':
+        if len(item.split()) > 1:
+            item = '::'.join(item.lower().split())
+            if tags:
+                item = item + '_VERB'
+            # print(item)
+        else:
+            item = item.lower()
+            if tags:
+                item = item + '_VERB'
+                
+    elif pos == 'NOUN':
+        if len(item.split()) > 1:
+            item = '::'.join(item.lower().split())
+            if tags:
+                item = item + '_PROPN'
+            # print('MWE example:', item)
+        else:
+            item = item.lower()
+            if tags:
+                item = item + '_NOUN'
+            
     return item
 
 ## now this function stores lowercased word pairs regardless of the combination of tags/mwe boolean options)
-def filter_dataset(pairs, embedding, tags=None, mwe=None):
+def filter_dataset(pairs, embedding, tags=None, mwe=None, pos=None, skip_oov=None):
     smaller_train = []
     for hypo, hyper in pairs:
         if tags:
-            if mwe: ## this returns lowercased words
-                hypo = preprocess_mwe(hypo, tags=True)
-                hyper = preprocess_mwe(hyper, tags=True)
-                if hypo in embedding and hyper in embedding:
+            if mwe: ## this returns lowercased and tagged single words ot MWE
+                hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
+                hyper = preprocess_mwe(hyper, tags=tags, pos=pos)
+                
+                if hypo in embedding.vocab and hyper in embedding.vocab:
                     smaller_train.append((hypo, hyper))
             else:
-                if hypo.lower() + '_NOUN' in embedding and hyper.lower() + '_NOUN' in embedding:
-                    ## what does the line below do?
-                    if hypo in embedding and hyper in embedding:
-                        smaller_train.append((hypo.lower(), hyper.lower()))
+                if pos == 'VERB':
+                    hypo = hypo.lower() + '_VERB'
+                    hyper = hyper.lower() + '_VERB'
+                    # if hypo in embedding.vocab and hyper in embedding.vocab:
+                    #     smaller_train.append((hypo, hyper))
+                elif pos == 'NOUN':
+                    hypo = hypo.lower() + '_NOUN'
+                    hyper = hyper.lower() + '_NOUN'
+                    
+                if hypo in embedding.vocab and hyper in embedding.vocab:
+                    smaller_train.append((hypo, hyper))
+                            
+        ## this is only when I can afford to retain all items with untagged fasttext
         else:
             if mwe: ## this returns lowercased words
                 hypo = preprocess_mwe(hypo)
                 hyper = preprocess_mwe(hyper)
-            ## there should be else below?
-            if hypo.lower() in embedding and hyper.lower() in embedding:
-                smaller_train.append((hypo.lower(), hyper.lower()))
+                if skip_oov == False:
+                    smaller_train.append((hypo, hyper))
+                elif skip_oov == True:
+                    if hypo in embedding.vocab and hyper in embedding.vocab:
+                        smaller_train.append((hypo, hyper)) ## preprocess_mwe returns lowercased items already
+            else:
+                ## this is tuned for ft vectors to filter out OOV (mostly MWE)
+                if skip_oov == False:
+                    smaller_train.append((hypo.lower(), hyper.lower()))
+                elif skip_oov == True:
+                    if hypo.lower() in embedding.vocab and hyper.lower() in embedding.vocab:
+                        smaller_train.append((hypo.lower(), hyper.lower()))
 
-    return smaller_train  # only the pairs that are found in the embeddings
+    return smaller_train  # only the pairs that are found in the embeddings if skip_oov=True
 
 
 def write_hyp_pairs(data, filename):
@@ -205,6 +236,7 @@ def write_hyp_pairs(data, filename):
 
 
 def learn_projection(dataset, embedding, lmbd=1.0, from_df=False):
+    print('Lambda: %d' % lmbd)
     if from_df:
         source_vectors = dataset['hyponym'].T
         target_vectors = dataset['hypernym'].T
@@ -272,13 +304,43 @@ def predict(source, embedding, projection, topn=10):
     nearest_neighbors = embedding.most_similar(positive=[predicted_vector], topn=topn)
     return nearest_neighbors, predicted_vector
 
-def popular_generic_concepts(synsets_path):
-    parsed_syns = read_xml(synsets_path)
-    id_dict = id2wds_dict(parsed_syns)
-    members
-    for id in id_dict:
-    
 
+def popular_generic_concepts(relations_path):
+    ## how often an id has a name="hypernym" when "parent" in synset_relations.N.xml (aim for the ratio hypernym/hyponym > 1)
+    parsed_rels = read_xml(relations_path)
+    freq_hypo = defaultdict(int)
+    freq_hyper = defaultdict(int)
+    for rel in parsed_rels:
+        ## in WordNet relations the name of relations is assigned wrt the child, it is the name of a child twds the parent, it seems
+        id = rel.getAttributeNode('child_id').nodeValue
+        name = rel.getAttributeNode('name').nodeValue
+        if name == 'hypernym':
+            freq_hyper[id] += 1
+        elif name == 'hyponym':
+            freq_hypo[id] += 1
+    
+    all_ids = list(freq_hypo.keys()) + list(freq_hyper.keys())
+    print(all_ids[:5])
+    print(len(set(all_ids)))
+    
+    ratios = defaultdict(int)
+    for id in all_ids:
+        try:
+            ratios[id] = freq_hyper[id] / freq_hypo[id]
+        except ZeroDivisionError:
+            continue
+    
+    sort_it = {k: v for k, v in sorted(ratios.items(), key=lambda item: item[1], reverse=True)}
+    # for id in sort_it:
+    #     print(id, sort_it[id])
+    my_ten = []
+    for i, (k, v) in enumerate(sort_it.items()):
+        if i < 10:
+            my_ten.append(k)
+            print(k)
+    
+    
+    return my_ten # synset ids
 
 if __name__ == '__main__':
     print('=== This is a modules script, it is not supposed to run as main ===')
