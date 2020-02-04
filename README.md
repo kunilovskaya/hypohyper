@@ -11,6 +11,7 @@ FYI(Feb03): baseline MAP=0.1405; best competitor MAP=0.4282
 
 Table 1. Intrinsic evaluation on 0.2 test (publicMAP values)
 
+
         vectors      | coverage(wdpairs) | intrMAP | intrMRR | testOOV |
 ---------------------|-------------------|---------|---------|---------|
      w2v\_RDT        |      84705        |  0.0994 | 0.0926  |      -- |
@@ -92,7 +93,7 @@ will run the pipeline of six scripts and print the results of each step, provide
 
 (1) to get compressed train and 0.2 test files (.tsv.gz) with all hypo-hyper wordpairs from train reduced to only those found in the given embedding file (of 431937 wordpairs available, the best coverage of 84705 is see in RDT, araneum is second best with 69913)
 
-```{r, engine='python3', count_lines}
+```
 python3 format_train.py 
 ```
 
