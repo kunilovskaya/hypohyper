@@ -14,12 +14,12 @@ Table 1. Intrinsic evaluation on 0.2 test
 
         vectors    | coverage(wdpairs) | intrMAP | intrMRR | testOOV |
     :--------------|------------------:|--------:|--------:|--------:|
-     w2v_RDT       |      84705        |  0.0994 | 0.0926  |      -- |
- w2v_upos_araneum  |      69916        |  0.1168 | 0.1619  |  32(4%) |
- araneum_ft(full)  |     431937        |     --- |    ---  |     --  |
- araneum_ft(no_OOV)|      73384        |  0.1288 | 0.1047  |     --  |
- ruscorp_ft(no_OOV)|        --         |     --  |    --   |     --  |
- dedicated_news_ft |        --         |     --  |    ---  |     --  |
+     w2v RDT       |      84705        |  0.0994 | 0.0926  |      -- |
+ w2v upos araneum  |      69916        |  0.1168 | 0.1619  |  32(4%) |
+ araneum ft(full)  |     431937        |     --- |    ---  |     --  |
+ araneum ft(no_OOV)|      73384        |  0.1288 | 0.1047  |     --  |
+ ruscorp ft(no_OOV)|        --         |     --  |    --   |     --  |
+ dedicated news ft |        --         |     --  |    ---  |     --  |
 
 
 Table 2. For some models we report results (publicMAP values) on the combination of approaches to (a) ruWordNet vectorisation and to (b) test OOV elimination 
