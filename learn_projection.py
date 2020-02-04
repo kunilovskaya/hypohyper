@@ -42,24 +42,27 @@ target_vecs = []
 ## in the train data, hyponym--hyperonym are not necessarily one2one correspondences
 ## multiple hypo-hypernymic relations are typical for polysemantic words,
 # e.g CASE -> example/instance; CASE -> container; CASE -> a piece of furniture; CASE -> a set of facts
-mult_hypernyms = {}  # Dictionary of hypernyms corresponding to each hyponym
+# mult_hypernyms = {}  # Dictionary of hypernyms corresponding to each hyponym which was used for threhold, but not anymore
 
 for hyponym, hypernym in zip(hyponyms, hypernyms):
     if SKIP_OOV == True:
         if hyponym not in model.vocab or hypernym not in model.vocab:
-            continue
-    elif SKIP_OOV == False:
-        if hyponym not in mult_hypernyms:
-            mult_hypernyms[hyponym] = []
-            
-        if hyponym in model and hypernym in model: ## this is kinda taken care of earlier but okey, just double-checking
-            mult_hypernyms[hyponym].append(hypernym)
             source_vec = model[hyponym]
             target_vec = model[hypernym]
             source_vecs.append(source_vec)
             target_vecs.append(target_vec)
-        else:
-            print(hyponym, hypernym, 'not found!', file=sys.stderr)
+            
+    elif SKIP_OOV == False:
+        # if hyponym not in mult_hypernyms:
+        #     mult_hypernyms[hyponym] = []
+        # if hyponym in model and hypernym in model: ## this is kinda taken care of earlier but okey, just double-checking
+        #     mult_hypernyms[hyponym].append(hypernym)
+        source_vec = model[hyponym]
+        target_vec = model[hypernym]
+        source_vecs.append(source_vec)
+        target_vecs.append(target_vec)
+    else:
+        print(hyponym, hypernym, 'not found!', file=sys.stderr)
 
 print('Whole train dataset shape:', len(source_vecs), file=sys.stderr)
 print('Learning projection matrix...', file=sys.stderr)
