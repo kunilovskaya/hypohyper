@@ -272,6 +272,13 @@ def predict(source, embedding, projection, topn=10):
     nearest_neighbors = embedding.most_similar(positive=[predicted_vector], topn=topn)
     return nearest_neighbors, predicted_vector
 
+def popular_generic_concepts(synsets_path):
+    parsed_syns = read_xml(synsets_path)
+    id_dict = id2wds_dict(parsed_syns)
+    members
+    for id in id_dict:
+    
+
 
 if __name__ == '__main__':
     print('=== This is a modules script, it is not supposed to run as main ===')
