@@ -15,7 +15,7 @@ parser.add_argument('--trainfile', default='%strains/%s_%s_train.tsv.gz' % (OUT,
                     help="0.8 train of pre-processed training_data",
                     type=os.path.abspath)
 parser.add_argument('--lmbd', action='store', type=float, default=0.0)
-# parser.add_argument('--skip_oov', default=False, help='Skip OOV entries?') # action = 'store_true'
+# parser.add_argument('--skip_oov', default=False, help='Skip OOV entries?')  # action = 'store_true'
 
 args = parser.parse_args()
 
