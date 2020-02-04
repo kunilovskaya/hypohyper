@@ -7,7 +7,7 @@ import pandas as pd
 import sys, os
 import numpy as np
 import time
-from configs import VECTORS, EMB_PATH, OUT, POS
+from configs import VECTORS, EMB_PATH, OUT, POS, SKIP_OOV
 
 
 parser = ArgumentParser()
@@ -15,7 +15,7 @@ parser.add_argument('--trainfile', default='%strains/%s_%s_train.tsv.gz' % (OUT,
                     help="0.8 train of pre-processed training_data",
                     type=os.path.abspath)
 parser.add_argument('--lmbd', action='store', type=float, default=0.0)
-parser.add_argument('--skip_oov', action='store_true', help='Skip OOV entries?')
+# parser.add_argument('--skip_oov', default=False, help='Skip OOV entries?') # action = 'store_true'
 
 args = parser.parse_args()
 
@@ -45,20 +45,21 @@ target_vecs = []
 mult_hypernyms = {}  # Dictionary of hypernyms corresponding to each hyponym
 
 for hyponym, hypernym in zip(hyponyms, hypernyms):
-    if hyponym not in model.vocab or hypernym not in model.vocab:
-        continue
-    
-    if hyponym not in mult_hypernyms:
-        mult_hypernyms[hyponym] = []
-        
-    if hyponym in model and hypernym in model: ## this is kinda taken care of earlier but okey, just double-checking
-        mult_hypernyms[hyponym].append(hypernym)
-        source_vec = model[hyponym]
-        target_vec = model[hypernym]
-        source_vecs.append(source_vec)
-        target_vecs.append(target_vec)
-    else:
-        print(hyponym, hypernym, 'not found!', file=sys.stderr)
+    if SKIP_OOV == True:
+        if hyponym not in model.vocab or hypernym not in model.vocab:
+            continue
+    elif SKIP_OOV == False:
+        if hyponym not in mult_hypernyms:
+            mult_hypernyms[hyponym] = []
+            
+        if hyponym in model and hypernym in model: ## this is kinda taken care of earlier but okey, just double-checking
+            mult_hypernyms[hyponym].append(hypernym)
+            source_vec = model[hyponym]
+            target_vec = model[hypernym]
+            source_vecs.append(source_vec)
+            target_vecs.append(target_vec)
+        else:
+            print(hyponym, hypernym, 'not found!', file=sys.stderr)
 
 print('Whole train dataset shape:', len(source_vecs), file=sys.stderr)
 print('Learning projection matrix...', file=sys.stderr)

@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from hyper_imports import read_xml, read_train, load_embeddings, id2wds_dict, wd2id_dict, \
     filter_dataset, write_hyp_pairs
 
-from configs import VECTORS, TAGS, MWE, EMB_PATH, OUT, RUWORDNET, RANDOM_SEED, POS
+from configs import VECTORS, TAGS, MWE, EMB_PATH, OUT, RUWORDNET, RANDOM_SEED, POS, SKIP_OOV
 
 
 parser = argparse.ArgumentParser()
@@ -17,7 +17,7 @@ if POS == 'NOUN':
 if POS == 'VERB':
     parser.add_argument('--synsets', default='%ssynsets.V.xml' % RUWORDNET, help="synsets files")
     parser.add_argument('--train', default='input/data/training_verbs.tsv', type=os.path.abspath)
-parser.add_argument('--skip_oov', default=False, help='Skip OOV entries?') # action = 'store_true'
+# parser.add_argument('--skip_oov', default=False, help='Skip OOV entries?') # action = 'store_true'
 
 start = time.time()
 
@@ -57,7 +57,7 @@ print('RAW:\n', all_pairs[:3])
 print('Checksum: expected  %d; returned: %d' % (tot_pairs, len(all_pairs)))
 
 # limit training_data to the pairs that are found in the embeddings
-filtered_pairs = filter_dataset(all_pairs, model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=args.skip_oov)
+filtered_pairs = filter_dataset(all_pairs, model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
 print('Number of word pairs where both items are in embeddings:', len(filtered_pairs))
 
 print('\n!!! WYSIWYG !!!')
