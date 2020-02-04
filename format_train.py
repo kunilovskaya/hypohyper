@@ -31,6 +31,7 @@ df_train = read_train(args.train)
 df_train = df_train.replace(to_replace=r"[\[\]']", value='', regex=True)
 print('Datasets loaded', file=sys.stderr)
 
+print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
 model = load_embeddings(EMB_PATH)
 
 my_TEXTS = df_train['TEXT'].tolist()
