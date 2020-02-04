@@ -9,31 +9,30 @@ KuKuPl team's contribution to the shared task at Dialogue Evaluation 2020: [Taxo
 ### NOUNS for each anti-OOV-in-test strategy
 FYI(Feb03): baseline MAP=0.1405; best competitor MAP=0.4282
 
-Table 1. Intrinsic evaluation on 0.2 test
-
+Table 1. NOUNS: Intrinsic evaluation on 0.2 test
 
         vectors    | coverage(wdpairs) | intrMAP | intrMRR | testOOV |
     :--------------|------------------:|--------:|--------:|--------:|
-     w2v RDT       |      84705        |  0.0994 | 0.0926  |      -- |
+     w2v rdt500    |      84705        |  0.0994 | 0.0926  |  31(4%) |
  w2v upos araneum  |      69916        |  0.1168 | 0.1619  |  32(4%) |
- araneum ft(full)  |     431937        |     --- |    ---  |     --  |
- araneum ft(no_OOV)|      73384        |  0.1288 | 0.1047  |     --  |
- ruscorp ft(no_OOV)|        --         |     --  |    --   |     --  |
+ araneum ft(full)  |     431937        |  0.1123 | 0.0904  |  22(2%) |
+ araneum ft(no_OOV)|      73384        |  0.1288 | 0.1047  |  22(2%) |
+ ruscorp ft(no_OOV)|      61213        |  0.0695 | 0.0615  |214(28%) |
  dedicated news ft |        --         |     --  |    ---  |     --  |
 
 
-Table 2. For some models we report results (publicMAP values) on the combination of approaches to (a) ruWordNet vectorisation and to (b) test OOV elimination 
+Table 2. NOUN: For some models we report results (publicMAP values) on the combination of approaches to (a) ruWordNet vectorisation and to (b) test OOV elimination 
 
 
                     |       single_wd          |         main_wd          |
-    vectors         | ft\_vectors | top\_hyper | ft\_vectors | top\_hyper |
+    vectors         | ft_vectors  | top_hyper  | ft_vectors  | top_hyper  |
+   :----------------|------------:|-----------:|------------:|-----------:|
+    w2v_rdt500      |             |   0.2103   |             |  0.1116    |
+ w2v_upos_araneum   |    0.2464   | **0.2467** |   0.1679    |  0.1682    |
 --------------------|------------:|-----------:|------------:|-----------:|
-     w2v_RDT        |             |            |             |            |
- w2v\_upos_araneum  |    0.2464   |   0.2467   |   0.1679    |  0.1682    |
---------------------|------------:|-----------:|------------:|-----------:|
- araneum\_ft(full)  |             |            |             |            |
- araneum_ft(no_OOV) |             |            |             |            |
- ruscorp_ft(no_OOV) |             |            |             |            |
+ araneum_ft(full)   |    --       |    --      |   0.0706    |            |
+ araneum_ft(no_OOV) |    0.1410   |  0.1435    |   0.0938    |            |
+ ruscorp_ft(no_OOV) |             |  0.0580    |             |            |
 --------------------|------------:|-----------:|------------:|-----------:|
  dedicated_news_ft  |             |            |             |            |
 
@@ -41,13 +40,34 @@ Table 2. For some models we report results (publicMAP values) on the combination
 * **single_wd:** When selecting the hypernym synset, use only single-word lemmas of the synset (and ignore  16% of 76817 senses (for w2v_upos_araneum) that have not vectors in embeddings (OOV)); **31205 vectorised senses from 21188 synsets**
 * **main_wd:** Choosing from all synsets, including those with no single_word representations (by using main words of the MWE); **69951 vectorised senses from 27536 synsets**
 
-
-
-                                                               
-
-
+                                         
 ### VERBS
 FYI: baseline MAP=0.0712; best competitor MAP=0.2756
+
+Table 3. VERBS: Intrinsic evaluation on 0.2 test
+
+        vectors    | coverage(wdpairs) | intrMAP | intrMRR | testOOV |
+    :--------------|------------------:|--------:|--------:|--------:|
+     w2v rdt500    |      ?????        |  ?????? | ??????  |  ?????? |
+ w2v upos araneum  |      ?????        |  ?????? | ??????  |  ?????? |
+ araneum ft(no_OOV)|      73384        |  ?????? | ??????  |  ?????? |
+ ruscorp ft(no_OOV)|      61213        |  ?????? | ??????  |  ?????? |
+ dedicated news ft |        --         |     --  |    ---  |     --  |
+
+Table 2. VERBS: Different approaches to process ruWordNet and OOV in test
+
+                   |       single_wd          |         main_wd          |
+    vectors         | ft_vectors  | top_hyper  | ft_vectors  | top_hyper  |
+   :----------------|------------:|-----------:|------------:|-----------:|
+    w2v_rdt500      |             |   0.2103   |             |            |
+ w2v_upos_araneum   |    0.2464   | **0.2467** |   0.1679    |  0.1682    |
+--------------------|------------:|-----------:|------------:|-----------:|
+ araneum_ft(full)   |    --       |    --      |   0.0706    |            |
+ araneum_ft(no_OOV) |    0.1410   |            |   0.0938    |            |
+ ruscorp_ft(no_OOV) |             |  0.0580    |             |            |
+--------------------|------------:|-----------:|------------:|-----------:|
+ dedicated_news_ft  |             |            |             |            |
+
 
 ## The task breakdown
 
@@ -135,6 +155,8 @@ python3 measure_sims.py
 ## FYI (some stats for Nouns): 
 * ratio of unigram senses to all senses 48.64% (total nounal 76817); 
 * ratio of synsets that have NO unigram representation 19.30%
+* Examples of OOV in testset: OOV in test
+['барьерист', 'букраннер', 'вэйп', 'гольмий', 'городошник', 'градобитие', 'дефлимпиада', 'дресс-код', 'зоман', 'краболов', 'лжеминирование', 'мукоед', 'начштаб', 'недоносительство', 'неизбрание', 'папамобиль', 'прет-а-порте', 'троеборец', 'химлаборатория', 'черлидерша', 'чирлидерша', 'элефантиаз']
 
 ## Ideas
 **possible strategies**

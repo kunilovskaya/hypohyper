@@ -91,7 +91,7 @@ for sense in parsed_senses:
             
         ## TODO: apply this condition only to synsets with no single_word representation;
         if len(name.split()) > 1:
-            item = preprocess_mwe(name, tags=TAGS) ## this is compatible with embeddings already (lower, tagged)
+            item = preprocess_mwe(name, tags=TAGS, pos=POS) ## this is compatible with embeddings already (lower, tagged)
             if item in emb_voc:
                 ### adding the few cases of MWE in embeddings vocabulary
                 all_id_senses.append((id, item))
@@ -114,7 +114,6 @@ for sense in parsed_senses:
     else:
         print('What do you want to do with senses that are lexicalised as MWE?')
 
-    
 count_oov = 0
 
 vectorized_senses_index = []
@@ -155,8 +154,7 @@ outname = '%s_%s_%s_ruwordnet_vectorised.npz' % (MODE,VECTORS,POS)
 OUT = '%sWordNet_vectorised/' % OUT
 os.makedirs(OUT, exist_ok=True)
 
-np.savez_compressed(OUT+outname, senses_index=vectorized_sens_index,
-                    senses_vectors=vectorized_sens)
+np.savez_compressed(OUT+outname, senses_index=vectorized_sens_index)
 
 end = time.time()
 training_time = int(end - start)
