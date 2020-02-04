@@ -14,7 +14,7 @@ from configs import VECTORS, EMB_PATH, OUT, POS
 parser = ArgumentParser()
 parser.add_argument('--testfile', default='%strains/%s_%s_test.tsv.gz' % (OUT, VECTORS, POS), help='0.2 of the training data reserved for intrinsic testing')
 parser.add_argument('--projection', default='%sprojections/%s_%s_projection.npy' % (OUT, VECTORS, POS), help='.npy, the transformation matrix leanrt in the previous step')
-parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
+parser.add_argument('--nr', type=int, default=10, help='Number of candidates.)
 
 args = parser.parse_args()
 
