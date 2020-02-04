@@ -5,7 +5,7 @@ from operator import itemgetter
 import numpy as np
 import csv
 import time
-from hyper_imports import popular_generic_concepts
+from hyper_imports import popular_generic_concepts, load_embeddings
 import zipfile
 import gensim
 
@@ -20,6 +20,8 @@ if POS == 'VERB':
     parser.add_argument('--provided_test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
 parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_hyper_collector.npy' % (OUT, VECTORS, POS), help="predicted vectors") ## mind the OOV strategy!
 parser.add_argument('--sens_vectors', default='%sWordNet_vectorised/%s_%s_%s_ruwordnet_vectorised.npz' % (OUT,MODE,VECTORS,POS), help="folder where the output of vectorise_ruwordnet.py is")
+parser.add_argument('--emb', required=True help="Path to the embeddings file")
+
 
 args = parser.parse_args()
 
@@ -28,12 +30,23 @@ start = time.time()
 with np.load(args.sens_vectors) as npz:
     sens_index = npz['senses_index']
     sens_vects = npz['senses_vectors']
+    
+synsets_dict = {}
+
+for i in sens_index:
+    synset = i[0]
+    lemma = i[1]
+    if not lemma in synsets_dict:
+        synsets_dict[lemma] = set()
+    sysents_dict[lemma].add(synset)
 
 if OOV_STRATEGY == 'top_hyper':
     rel_path = '%ssynset_relations.N.xml' % RUWORDNET
     top_ten = popular_generic_concepts(rel_path)
 else:
     top_ten = None
+
+model = load_embeddings(args.emb)
     
 test = [i.strip() for i in open(args.provided_test, 'r').readlines()]
 
@@ -64,16 +77,20 @@ for hypo, hyper_vec in zip(test,hyper_vecs):
             writer.writerow(row)
     else:
         hyper_vec = np.array(hyper_vec, dtype=float)
-        sims = []
         temp = set()
         deduplicated_sims = []
-        for (id, word), vect in zip(sens_index, sens_vects): ## does zip allow set operation?
-            vect = np.asarray(vect, dtype='float64')
-            ##### this is where the gensim.most_similar might fit id no assumptions are made internally abt embedding=sens_vects,
-            ## don't forget to sort the neighbours and link them to the respective (id,word)
-            # nearest_neighbors = sens_vects.most_similar(positive=[hyper_vec], topn=10)
-            sims.append((id, word, (1 - distance.cosine(hyper_vec, vect))))
-            
+        # for (id, word), vect in zip(sens_index, sens_vects): ## does zip allow set operation?
+        #    vect = np.asarray(vect, dtype='float64')
+        ##### this is where the gensim.most_similar might fit id no assumptions are made internally abt embedding=sens_vects,
+        ## don't forget to sort the neighbours and link them to the respective (id,word)
+        nearest_neighbors = model.most_similar(positive=[hyper_vec], topn=100)
+        sims = []
+        for res in nearest_neighbors:
+            word = res[0]
+            similarity = res[1]
+            for synset in synsets_dict[word]:
+                sims.append((synset, word, similarity))     
+          
         ## sort the list of tuples (id, sim) by the 2nd element and deduplicate by rewriting the list while checking for duplicate synset ids
         sims = sorted(sims, key=itemgetter(2), reverse=True)
     
