@@ -46,11 +46,13 @@ target_vecs = []
 
 for hyponym, hypernym in zip(hyponyms, hypernyms):
     if SKIP_OOV == True:
-        if hyponym not in model.vocab or hypernym not in model.vocab:
+        if hyponym in model.vocab or hypernym in model.vocab:
             source_vec = model[hyponym]
             target_vec = model[hypernym]
             source_vecs.append(source_vec)
             target_vecs.append(target_vec)
+        else:
+            continue
             
     elif SKIP_OOV == False:
         # if hyponym not in mult_hypernyms:
