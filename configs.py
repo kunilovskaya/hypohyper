@@ -39,9 +39,10 @@ else:
     SKIP_OOV = True
     
 OOV_STRATEGY = 'ft_vector' ##'ft_vector', 'top_hyper', 'vec_on_fly', 'patterns'
+MODE = 'single' # if you want to include vectors for main_words in MWE, replace single_wd with main;
+# this this supposed to include vectors for main components of MWE only if this synset has no single_word representation or if MWE is found in vectors
 
 FT_EMB = '/home/u2/resources/emb/araneum_none_fasttextcbow_300_5_2018/araneum_none_fasttextcbow_300_5_2018.model'
 # FT_EMB = '/home/u2/resources/emb/181_ruscorpora_fasttext/model.model'
 OUT = '/home/u2/proj/hypohyper/output/'
-MODE = 'single' # if you want to include vectors for main_words in MWE, replace single_wd with main;
-# this this supposed to include vectors for main components of MWE only if this synset has no single_word representation or if MWE is found in vectors
+
