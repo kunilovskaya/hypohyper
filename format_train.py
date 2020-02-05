@@ -67,11 +67,12 @@ mwes = [(a,b) for (a,b) in filtered_pairs if re.search('::',a) or re.search('::'
 print(mwes[:3])
 print('Number of MWE included %s' % len(mwes))
 
-hypohyper_train, hypohyper_test = train_test_split(filtered_pairs, test_size=.2,
-                                                   random_state=RANDOM_SEED)
+# hypohyper_train, hypohyper_test = train_test_split(filtered_pairs, test_size=.2,
+#                                                    random_state=RANDOM_SEED)
+hypohyper_train = filtered_pairs
 
 print('Train entries:', len(hypohyper_train), file=sys.stderr)
-print('Test entries:', len(hypohyper_test), file=sys.stderr)
+# print('Test entries:', len(hypohyper_test), file=sys.stderr)
 
 ## if any of MWE are in embeddings they look like '::'.join(item.lower().split()) now regardless whether with PoS-tags or without
 ## this outputs the LOWERCASED words, too
@@ -80,7 +81,7 @@ OUT = '%strains/' % OUT
 os.makedirs(OUT, exist_ok=True)
 
 write_hyp_pairs(hypohyper_train, '%s%s_%s_train.tsv.gz' % (OUT, VECTORS, POS))
-write_hyp_pairs(hypohyper_test, '%s%s_%s_test.tsv.gz' % (OUT, VECTORS, POS))
+# write_hyp_pairs(hypohyper_test, '%s%s_%s_test.tsv.gz' % (OUT, VECTORS, POS))
 
 end = time.time()
 training_time = int(end - start)
