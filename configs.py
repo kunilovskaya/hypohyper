@@ -1,8 +1,8 @@
 RANDOM_SEED = 42
 # codename for embeddings: 'ft_araneum_skip', w2v_rdt500, w2v_upos_araneum, ft_ruscorp_skip, ft_araneum_full, ft_news_0, w2v_upos_news_0
 # news_pos_sk, news_pos_sbow, ft_news_sk, ft_news_cbow
-VECTORS = 'w2v_upos_araneum'
-POS = 'VERB' # 'VERB'
+VECTORS = 'ft_araneum_skip'
+POS = 'NOUN' # 'VERB'
 MWE = True
 
 if 'pos' in VECTORS:
@@ -14,9 +14,9 @@ else:
     
 if VECTORS == 'w2v_upos_araneum':
     EMB_PATH = '/home/u2/resources/emb/araneum_upos_skipgram_300_2_2018.bin'
-if 'ft_araneum' in VECTORS:
+elif 'ft_araneum' in VECTORS:
     EMB_PATH = '/home/u2/resources/emb/araneum_none_fasttextcbow_300_5_2018/araneum_none_fasttextcbow_300_5_2018.model'
-if 'news' in VECTORS:
+elif 'news' in VECTORS:
     if 'pos' in VECTORS:
         if 'sk' in VECTORS:
             EMB_PATH = '/home/lpvoid/masha/resources/emb/hypo_news/news_pos_1_5.model'
