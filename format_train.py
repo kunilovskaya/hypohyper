@@ -58,12 +58,11 @@ print('RAW:\n', all_pairs[:3])
 filtered_pairs = filter_dataset(all_pairs, model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
 print('=== Embeddings coverage: %s ===' % len(filtered_pairs))
 
-print('\n!!! WYSIWYG !!!')
+print('\n!!! WYSIWYG as lookup queries!!!')
 print('Expecting: TAGS=%s; MWE=%s; %s' % (TAGS, MWE, POS))
 print(filtered_pairs[:3])
 mwes = [i for i in filtered_pairs if '::' in i]
 print(mwes[:3])
-print('!!!!!!!!!!!!!!!\n')
 
 hypohyper_train, hypohyper_test = train_test_split(filtered_pairs, test_size=.2,
                                                    random_state=RANDOM_SEED)
