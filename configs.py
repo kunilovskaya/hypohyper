@@ -33,8 +33,13 @@ else:
 # EMB_PATH = '/home/u2/resources/emb/181_ruscorpora_fasttext/model.model'
 # EMB_PATH = '/home/u2/resources/emb/all.norm-sz500-w10-cb0-it3-min5.w2v'
 RUWORDNET = 'input/resources/ruwordnet/'
-SKIP_OOV = True
+if 'full' in VECTORS:
+    SKIP_OOV = False
+else:
+    SKIP_OOV = True
+    
 OOV_STRATEGY = 'ft_vector' ##'ft_vector', 'top_hyper', 'vec_on_fly', 'patterns'
+
 FT_EMB = '/home/u2/resources/emb/araneum_none_fasttextcbow_300_5_2018/araneum_none_fasttextcbow_300_5_2018.model'
 # FT_EMB = '/home/u2/resources/emb/181_ruscorpora_fasttext/model.model'
 OUT = '/home/u2/proj/hypohyper/output/'
