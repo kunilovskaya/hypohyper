@@ -6,7 +6,7 @@ KuKuPl team's contribution to the shared task at Dialogue Evaluation 2020: [Taxo
 * (unexpectedly) intrinsic evaluation returns lower results for RDT vectors of size 500
 * intrinsic evaluation on 0.2 test is only arbitrary related to evaluation on the public test, due to the dynamic nature of our testset and uncontrolled polysemy of hyponyms (which was avoided in the public (real) test) 
 * we tried 6 vector models listed here in the order of performance on the NOUN public test
-- w2v upos araneum **0.2467**
+- w2v upos araneum **0.2488**
 - w2v_rdt500
 - ft_araneum_ft_no_OOV
 - ft_ruscorp_ft_no_OOV
@@ -38,7 +38,7 @@ Table 2. NOUN: For some models we report results (publicMAP values) on the combi
  vectors            | single_wd + ft vectors  | single_wd + top hyper  | main + ft vectors  | main + top hyper  |
   :---------------- |------------:|-----------:|------------:|-----------:| 
  w2v_rdt500         |             |   0.2103   |             |  0.1116    |
- w2v_upos_araneum   |    0.2464   | **0.2441** |   0.1679    |  0.1682    |
+ w2v_upos_araneum   |**0.2488**   | **0.2441** |   0.1679    |  0.1682    |
  araneum_ft(full)   |    --       |    --      |   0.0706    |            |
  araneum_ft(no_OOV) |    0.1410   |  0.1435    |   0.0938    |            |
  ruscorp_ft(no_OOV) |             |  0.0580    |             |            |
@@ -61,8 +61,8 @@ Table 2. VERBS: Different approaches to process ruWordNet and OOV in test
 
   vectors         | single_wd + ft vectors  | single_wd + top hyper  | main + ft vectors  | main + top hyper  |    
    :----------------|------------:|-----------:|------------:|-----------:|
- w2v_rdt500         |             |   ?????    |             |            |
- w2v_upos_araneum   |    ?????    | **0.0347** |   ??????    |  ??????    |
+ w2v_rdt500         |             | **0.0846** |             |            |
+ w2v_upos_araneum   |    ?????    |   0.0347   |   ??????    |  ??????    |
  araneum_ft(full)   |    --       |    --      |   ??????    |            |
  araneum_ft(no_OOV) |    ??????   |            |   ??????    |            |
  ruscorp_ft(no_OOV) |             |  ?????     |             |            |
