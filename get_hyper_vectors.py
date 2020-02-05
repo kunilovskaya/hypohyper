@@ -97,7 +97,7 @@ np.save('%s%s_%s_hyper_collector.npy' % (OUT, VECTORS, POS), hyper_collector)
 
 if len(hyper_collector) == len(test_hyponyms):
     print('Sanity test: passed')
-    print('Length of output equals the number of test words; in public Noun test 762: %s' % len(hyper_collector))
+    print('Length of output equals the number of test words: %s' % len(hyper_collector))
 
 
 end = time.time()

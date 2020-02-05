@@ -353,5 +353,88 @@ def popular_generic_concepts(relations_path):
     
     return my_ten # synset ids
 
+
+####### parse ruwordnet and get a list of (synset_id, word) tuples for both one word and heads in MWE)
+
+def parse_taxonymy(senses, tags=None, pos=None, mode=None, emb_voc=None):
+
+    doc = minidom.parse(senses)
+    parsed_senses = doc.getElementsByTagName("sense")
+    all_id_senses = []
+
+    print('Total number of senses %d' % len(parsed_senses))
+    count_main = 0
+    ids = []
+    for sense in parsed_senses:
+        
+        id = sense.getAttributeNode('synset_id').nodeValue
+        name = sense.getAttributeNode("name").nodeValue
+        main_wd = sense.getAttributeNode("main_word").nodeValue
+        
+        ids.append(id)
+        if len(name.split()) == 0:
+            item = None
+            print('Missing name for a sense in synset %s' % id)
+        
+        if mode == 'single':
+            if len(name.split()) == 1:
+                if tags == True:
+                    if pos == 'NOUN':
+                        item = name.lower() + '_NOUN'
+                    elif pos == 'VERB':
+                        item = name.lower() + '_VERB'
+                    else:
+                        item = None
+                        print('Which PoS part of WordNet are we dealing with?')
+                else:
+                    item = name.lower()
+                
+                all_id_senses.append((id, item))
+            else:
+                continue
+        
+        ## this this supposed to include vectors for main components of MWE only if this synset has no single_word representation or if MWE is found in vectors
+        elif mode == 'main':
+            if len(name.split()) == 1:
+                if tags == True:
+                    if pos == 'NOUN':
+                        item = name.lower() + '_NOUN'
+                    elif pos == 'VERB':
+                        item = name.lower() + '_VERB'
+                    else:
+                        item = None
+                        print('Which PoS part of WordNet are we dealing with?')
+                else:
+                    item = name.lower()
+                
+                all_id_senses.append((id, item))
+            
+            ## TODO: apply this condition only to synsets with no single_word representation;
+            if len(name.split()) > 1:
+                item = preprocess_mwe(name, tags=tags,
+                                      pos=pos)  ## this is compatible with embeddings already (lower, tagged)
+                if item in emb_voc:
+                    ### adding the few cases of MWE in embeddings vocabulary
+                    all_id_senses.append((id, item))
+                else:
+                    ## only if the respective synset has not been already added; no garantee that it has no single word lemmas further down
+                    count_main += 1
+                    if tags == True:
+                        if pos == 'NOUN':
+                            item = main_wd.lower() + '_NOUN'
+                        elif pos == 'VERB':
+                            item = main_wd.lower() + '_VERB'
+                        else:
+                            item = None
+                            print('Which PoS part of WordNet are we dealing with?')
+                    else:
+                        item = main_wd.lower()
+                    
+                    all_id_senses.append((id, item))
+                    ## TODO deduplicate tuples
+        else:
+            print('What do you want to do with senses that are lexicalised as MWE?')
+    return all_id_senses
+
 if __name__ == '__main__':
     print('=== This is a modules script, it is not supposed to run as main ===')

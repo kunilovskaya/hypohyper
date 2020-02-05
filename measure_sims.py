@@ -7,8 +7,8 @@ import zipfile
 from operator import itemgetter
 import numpy as np
 
-from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH
-from hyper_imports import popular_generic_concepts, load_embeddings
+from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, TAGS
+from hyper_imports import popular_generic_concepts, load_embeddings, parse_taxonymy
 
 parser = argparse.ArgumentParser('Detecting most similar synsets and formatting the output')
 # for ultimate results to submit use private instead of public
@@ -17,36 +17,47 @@ if POS == 'NOUN':
 if POS == 'VERB':
     parser.add_argument('--provided_test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
 parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_hyper_collector.npy' % (OUT, VECTORS, POS),
-                    help="predicted vectors")  # mind the OOV strategy!
-parser.add_argument('--sens_vectors',
-                    default='%sWordNet_vectorised/%s_%s_%s_ruwordnet_vectorised.npz' % (OUT, MODE, VECTORS, POS),
-                    help="folder where the output of vectorise_ruwordnet.py is")
-# parser.add_argument('--emb', required=True, help="Path to the embeddings file")
-
+                    help="predicted vectors")
 
 args = parser.parse_args()
 
 start = time.time()
 
-with np.load(args.sens_vectors) as npz:
-    sens_index = npz['senses_index']
+if POS == 'NOUN':
+    senses = '%ssenses.N.xml' % RUWORDNET
+elif POS == 'VERB':
+    senses = '%ssenses.V.xml' % RUWORDNET
+else:
+    senses = None
+    print('Not sure which PoS-domain you want from ruWordNet')
+
+model = load_embeddings(EMB_PATH)
+
+sens_index = parse_taxonymy(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab)
 
 synsets_dict = {}
 
 for i in sens_index:
     synset = i[0]
-    lemma = i[1].lower()
+    lemma = i[1]
     if lemma not in synsets_dict:
         synsets_dict[lemma] = set()
     synsets_dict[lemma].add(synset)
+    
+# print(synsets_dict)
 
 if OOV_STRATEGY == 'top_hyper':
-    rel_path = '%ssynset_relations.N.xml' % RUWORDNET
+    if POS == 'NOUN':
+        print('&&&&&&&&&&&&')
+        rel_path = '%ssynset_relations.N.xml' % RUWORDNET
+    elif POS == 'VERB':
+        rel_path = '%ssynset_relations.V.xml' % RUWORDNET
+    else:
+        rel_path = None
+        print('Which PoS?')
     top_ten = popular_generic_concepts(rel_path)
 else:
     top_ten = None
-
-model = load_embeddings(EMB_PATH)
 
 test = [i.strip() for i in open(args.provided_test, 'r').readlines()]
 
@@ -69,8 +80,6 @@ outfile = open('%s%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY), 'w
 writer = csv.writer(outfile, dialect='unix', delimiter='\t', lineterminator='\n', quoting=csv.QUOTE_NONE)
 
 counter = 0
-# print('============')
-# print(hyper_vecs)
 
 for hypo, hyper_vec in zip(test, hyper_vecs):
     if len(hyper_vec) == 1:
@@ -128,6 +137,6 @@ end = time.time()
 training_time = int(end - start)
 
 print('\n%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-print('DONE: final results, step 6.\n Measuring similarity and formatting output was done in %s minutes' % str(
+print('DONE: final results, step 5.\n Measuring similarity and formatting output was done in %s minutes' % str(
     round(training_time / 60)))
 print('%%%%%%%%%%%%%%%%%%%%%%%%%%%\n')
