@@ -180,7 +180,7 @@ def preprocess_mwe(item, tags=None, pos=None):
                 item = item + '_PROPN'
             else:
                 item = '::'.join(item.lower().split())
-            print('MWE example untagged:', item)
+            # print('MWE example untagged:', item)
         else:
             if tags:
                 item = item.lower()
@@ -331,8 +331,8 @@ def popular_generic_concepts(relations_path):
             freq_hypo[id] += 1
     
     all_ids = list(freq_hypo.keys()) + list(freq_hyper.keys())
-    print(all_ids[:5])
-    print(len(set(all_ids)))
+    # print(all_ids[:5])
+    # print(len(set(all_ids)))
     
     ratios = defaultdict(int)
     for id in all_ids:
