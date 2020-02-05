@@ -51,14 +51,16 @@ for hypo, hyper in zip(my_TEXTS, my_PARENT_TEXTS):
         tot_pairs += len(wd_tuples)
         all_pairs.append(wd_tuples)
 all_pairs = [item for sublist in all_pairs for item in sublist]  # flatten the list
-print('RAW:\n', all_pairs[:3])
+print('=== Raw training set: %s ===' % len(all_pairs))
+print('Raw examples:\n', all_pairs[:3])
+
 # print('Checksum: expected  %d; returned: %d' % (tot_pairs, len(all_pairs)))
 
 # limit training_data to the pairs that are found in the embeddings
 filtered_pairs = filter_dataset(all_pairs, model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
-print('=== Embeddings coverage: %s ===' % len(filtered_pairs))
+print('\n=== Embeddings coverage: %s ===' % len(filtered_pairs))
 
-print('\n!!! WYSIWYG as lookup queries!!!')
+print('!!! WYSIWYG as lookup queries!!!')
 print('Expecting: TAGS=%s; MWE=%s; %s' % (TAGS, MWE, POS))
 print(filtered_pairs[:3])
 mwes = [i for i in filtered_pairs if '::' in i]
