@@ -30,7 +30,8 @@ elif POS == 'VERB':
 else:
     senses = None
     print('Not sure which PoS-domain you want from ruWordNet')
-
+    
+print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
 model = load_embeddings(EMB_PATH)
 
 sens_index = parse_taxonymy(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab)
@@ -48,7 +49,7 @@ for i in sens_index:
 
 if OOV_STRATEGY == 'top_hyper':
     if POS == 'NOUN':
-        print('&&&&&&&&&&&&')
+        # print('&&&&&&&&&&&&')
         rel_path = '%ssynset_relations.N.xml' % RUWORDNET
     elif POS == 'VERB':
         rel_path = '%ssynset_relations.V.xml' % RUWORDNET
@@ -63,12 +64,12 @@ test = [i.strip() for i in open(args.provided_test, 'r').readlines()]
 
 hyper_vecs = np.load(args.hyper_vectors, allow_pickle=True)
 
-if len(test) == len(hyper_vecs):
-    print(
-        'Checking lengths for lists of hyponyms and corresponding hypernym vectors: passed, %d word-vector pairs' % len(
-            test))
-else:
-    print(len(test), len(hyper_vecs))
+# if len(test) == len(hyper_vecs):
+#     print(
+#         'Checking lengths for lists of hyponyms and corresponding hypernym vectors: passed, %d word-vector pairs' % len(
+#             test))
+# else:
+#     print(len(test), len(hyper_vecs))
 
 # for word, measure cosine similarity from all (single word) sense vectors present in embeddings
 # to the word's hypernym vector
