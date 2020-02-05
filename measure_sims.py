@@ -93,7 +93,7 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
         hyper_vec = np.array(hyper_vec, dtype=float)
         temp = set()
         deduplicated_sims = []
-        nearest_neighbors = model.most_similar(positive=[hyper_vec], topn=100)
+        nearest_neighbors = model.most_similar(positive=[hyper_vec], topn=1000)
         sims = []
         for res in nearest_neighbors:
             word = res[0]
