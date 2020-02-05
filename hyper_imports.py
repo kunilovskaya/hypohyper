@@ -143,7 +143,7 @@ def load_embeddings(modelfile):
     else:  # Native Gensim format, inclufing for fasttext models (.model in a folder with the other support files)
         emb_model = KeyedVectors.load(modelfile)
     emb_model.init_sims(replace=True)
-    print('Success! Vectors loaded')
+    # print('Success! Vectors loaded')
 
     return emb_model
 
