@@ -26,7 +26,7 @@ datafile = args.trainfile
 data = pd.read_csv(datafile, sep='\t', header=0)
 
 ## the words are already lowercased and tagged
-print(data.head(), file=sys.stderr)
+# print(data.head(), file=sys.stderr)
 
 hyponyms = data.hyponym.values
 hypernyms = data.hypernym.values
@@ -34,7 +34,7 @@ hypernyms = data.hypernym.values
 print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
 model = load_embeddings(EMB_PATH)
 
-print('Inferring vectors...', file=sys.stderr)
+# print('Inferring vectors...', file=sys.stderr)
 
 source_vecs = []
 target_vecs = []
@@ -67,7 +67,7 @@ for hyponym, hypernym in zip(hyponyms, hypernyms):
         print(hyponym, hypernym, 'not found!', file=sys.stderr)
 
 print('Whole train dataset shape:', len(source_vecs), file=sys.stderr)
-print('Learning projection matrix...', file=sys.stderr)
+# print('Learning projection matrix...', file=sys.stderr)
 
 transforms = learn_projection((source_vecs, target_vecs), model, lmbd=args.lmbd) ## this returns the transformation matrix
 print('Transformation matrix created', transforms.shape, file=sys.stderr)
