@@ -61,7 +61,7 @@ print('=== Embeddings coverage: %s ===' % len(filtered_pairs))
 print('\n!!! WYSIWYG !!!')
 print('Expecting: TAGS=%s; MWE=%s; %s' % (TAGS, MWE, POS))
 print(filtered_pairs[:3])
-mwes = [i for i in all_pairs if '::' in i]
+mwes = [i for i in filtered_pairs if '::' in i]
 print(mwes[:3])
 print('!!!!!!!!!!!!!!!\n')
 
