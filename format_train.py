@@ -1,7 +1,7 @@
 import argparse
 import time
 from itertools import repeat
-import os
+import os, re
 import sys
 from sklearn.model_selection import train_test_split
 from hyper_imports import read_xml, read_train, load_embeddings, id2wds_dict, wd2id_dict, \
@@ -63,8 +63,9 @@ print('\n=== Embeddings coverage: %s ===' % len(filtered_pairs))
 print('!!! WYSIWYG as lookup queries!!!')
 print('Expecting: TAGS=%s; MWE=%s; %s' % (TAGS, MWE, POS))
 print(filtered_pairs[:3])
-mwes = [i for i in filtered_pairs if '::' in i]
+mwes = [(a,b) for (a,b) in filtered_pairs if re.search('::',a) or re.search('::',b)]
 print(mwes[:3])
+print('Number of MWE included %s' % len(mwes))
 
 hypohyper_train, hypohyper_test = train_test_split(filtered_pairs, test_size=.2,
                                                    random_state=RANDOM_SEED)
