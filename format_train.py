@@ -17,7 +17,6 @@ if POS == 'NOUN':
 if POS == 'VERB':
     parser.add_argument('--synsets', default='%ssynsets.V.xml' % RUWORDNET, help="synsets files")
     parser.add_argument('--train', default='input/data/training_verbs.tsv', type=os.path.abspath)
-# parser.add_argument('--skip_oov', default=False, help='Skip OOV entries?') # action = 'store_true'
 
 start = time.time()
 
@@ -29,7 +28,6 @@ df_train = read_train(args.train)
 # strip of [] and ' in the strings:
 ## TODO maybe average vectors for representatives of each synset in the training_data
 df_train = df_train.replace(to_replace=r"[\[\]']", value='', regex=True)
-print('Datasets loaded', file=sys.stderr)
 
 print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
 model = load_embeddings(EMB_PATH)
@@ -54,15 +52,17 @@ for hypo, hyper in zip(my_TEXTS, my_PARENT_TEXTS):
         all_pairs.append(wd_tuples)
 all_pairs = [item for sublist in all_pairs for item in sublist]  # flatten the list
 print('RAW:\n', all_pairs[:3])
-print('Checksum: expected  %d; returned: %d' % (tot_pairs, len(all_pairs)))
+# print('Checksum: expected  %d; returned: %d' % (tot_pairs, len(all_pairs)))
 
 # limit training_data to the pairs that are found in the embeddings
 filtered_pairs = filter_dataset(all_pairs, model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
-print('Number of word pairs where both items are in embeddings:', len(filtered_pairs))
+print('=== Embeddings coverage: %s ===' % len(filtered_pairs))
 
 print('\n!!! WYSIWYG !!!')
 print('Expecting: TAGS=%s; MWE=%s; %s' % (TAGS, MWE, POS))
 print(filtered_pairs[:3])
+mwes = [i for i in all_pairs if '::' in i]
+print(mwes[:3])
 print('!!!!!!!!!!!!!!!\n')
 
 hypohyper_train, hypohyper_test = train_test_split(filtered_pairs, test_size=.2,
