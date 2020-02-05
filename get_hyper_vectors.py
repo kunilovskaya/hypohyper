@@ -52,7 +52,7 @@ predicted = {}  # Predicted dictionary of hypernyms corresponding to each hypony
 
 print('We will make predictions for %d hyponyms' % len(test_hyponyms), file=sys.stderr)
 
-print('Making predictions...', file=sys.stderr)
+# print('Making predictions...', file=sys.stderr)
 counter = 0
 test_preprocessed = []
 oov_in_test = []
@@ -87,7 +87,7 @@ for hyponym in test_hyponyms:
 print('\nOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO')
 print('====== Number of OOV in test: %d (%d%%)' % (len(oov_in_test), len(oov_in_test)/len(test_hyponyms)*100))
 print('OOV in test\n%s' % oov_in_test)
-print('\nSaving the predicted vectors and the list of preprocessed %d test hyponyms that are found in vectors' % (len(test_hyponyms)-len(oov_in_test)))
+# print('\nSaving the predicted vectors and the list of preprocessed %d test hyponyms that are found in vectors' % (len(test_hyponyms)-len(oov_in_test)))
 print('OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\n')
 
 OUT = '%spredicted_hypers/' % OUT
@@ -95,9 +95,9 @@ os.makedirs(OUT, exist_ok=True)
 
 np.save('%s%s_%s_hyper_collector.npy' % (OUT, VECTORS, POS), hyper_collector)
 
-if len(hyper_collector) == len(test_hyponyms):
-    print('Sanity test: passed')
-    print('Length of output equals the number of test words: %s' % len(hyper_collector))
+# if len(hyper_collector) == len(test_hyponyms):
+    # print('Sanity test: passed')
+    # print('Length of output equals the number of test words: %s' % len(hyper_collector))
 
 
 end = time.time()
