@@ -177,7 +177,7 @@ def preprocess_mwe(item, tags=None, pos=None):
         if len(item.split()) > 1:
             if tags:
                 item = '::'.join(item.lower().split())
-                item = item + '_PROPN'
+                item = item + '_NOUN'
             else:
                 item = '::'.join(item.lower().split())
             # print('MWE example untagged:', item)
