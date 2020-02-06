@@ -54,3 +54,9 @@ else:
 # FT_EMB = '/home/u2/resources/emb/181_ruscorpora_fasttext/model.model'
 OUT = '/home/u2/proj/hypohyper/output/'
 
+if 'ft' not in VECTORS and POS == 'VERB':
+    TOPN = 1500
+elif 'rdt' in VECTORS:
+    TOPN = 1000
+else:
+    TOPN = 500
