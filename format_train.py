@@ -39,22 +39,18 @@ id_dict = id2wds_dict(parsed_syns)
 wd_dict = wd2id_dict(id_dict)
 
 all_pairs = []
-hyper_count = 0
-tot_pairs = 0
+
 for hypo, hyper in zip(my_TEXTS, my_PARENT_TEXTS):
     hypo = hypo.split(', ')
     hyper = hyper.split(', ')
     this_syn = len(hyper)
-    hyper_count += this_syn
+
     for i in hypo:
         wd_tuples = list(zip(repeat(i), hyper))
-        tot_pairs += len(wd_tuples)
         all_pairs.append(wd_tuples)
 all_pairs = [item for sublist in all_pairs for item in sublist]  # flatten the list
 print('=== Raw training set: %s ===' % len(all_pairs))
 print('Raw examples:\n', all_pairs[:3])
-
-# print('Checksum: expected  %d; returned: %d' % (tot_pairs, len(all_pairs)))
 
 # limit training_data to the pairs that are found in the embeddings
 filtered_pairs = filter_dataset(all_pairs, model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
