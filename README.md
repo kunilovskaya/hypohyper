@@ -23,10 +23,10 @@ Table 1. Coverage (431937 noun and 233401 verb pairs) and OOV in testsets (762 n
 vectors           | coverage_N | testOOV_N | coverage_V | testOOV_V |
 :-----------------|---------:  |--------:  |---------:  |--------:  |
 w2v_rdt500        | 84705      |  31(4%)   | 98609      | 6(3%)     |
-w2v_pos_araneum   | 69916      |  32(4%)   | 41385      | 75(42%)   |
-ft_araneum(no OOV)| 73384      |  22(2%)   | 41664      | 75(42%)   |
-ft_ruscorp(no OOV)| 61213      |214(28%)   | 85189      | 30(17%)   |
-w2v_pos_news      | 56761      |152(19%)   | 71915      | 55(31%)   |
+w2v_pos_araneum   | 69916      |  32(4%)   | 41385      | ~~75(42%)~~   |
+ft_araneum(no OOV)| 73384      |  22(2%)   | 41664      | ~~75(42%)~~   |
+~~ft_ruscorp(no OOV)~~| 61213      |~~214(28%)~~   | 85189      | 30(17%)   |
+~~w2v_pos_news~~      | ~~56761~~      |~~152(19%)~~  | 71915      | 55(31%)   |
 ft_news           | 67124      |  38(4%)   | 78654      | 22(12%)      |
 
 * Number of MWE (ft_news):      697
@@ -84,10 +84,10 @@ Table 2B. VERBS: Different approaches to process ruWordNet and OOV in test
 vectors             |  NOUNS  |  VERBS   |
    :----------------|--------:|---------:|
  w2v_rdt500         |  55(3%) |   11(3%) |
- w2v_upos_araneum   |  56(3%) | 142(40%) |
- ft_araneum         |  46(3%) | 142(40%) |
- ft_ruscorp         | 431(28%)| 69(19%)  |
- w2v_pos_news       | 335(21%)| 116(33%) |
+ w2v_upos_araneum   |  56(3%) | ~~142(40%)~~ |
+ ft_araneum         |  46(3%) | ~~142(40%)~~ |
+ ~~ft_ruscorp~~     | 431(28%)| 69(19%)  |
+ ~~w2v_pos_news~~   | ~~335(21%)~~| ~~116(33%)~~ |
  ft_news_cbow       |   88(5%)| 38(10%)  |
 
 ## The task breakdown
