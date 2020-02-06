@@ -348,7 +348,7 @@ def popular_generic_concepts(relations_path):
     for i, (k, v) in enumerate(sort_it.items()):
         if i < 10:
             my_ten.append(k)
-            print(k)
+            # print(k)
     
     
     return my_ten # synset ids

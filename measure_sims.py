@@ -7,7 +7,7 @@ import zipfile
 from operator import itemgetter
 import numpy as np
 
-from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, TAGS
+from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, TAGS, TOPN
 from hyper_imports import popular_generic_concepts, load_embeddings, parse_taxonymy
 
 parser = argparse.ArgumentParser('Detecting most similar synsets and formatting the output')
@@ -86,6 +86,7 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
     if len(hyper_vec) == 1:
         # this happens if your OOV_STRATEGY == 'top_hyper';
         # in this case return the sorted list of 10 most frequent hypernyms
+        # print('================ WHY am I here?', hypo)
         for line in top_ten:
             row = [hypo.strip(), line.strip(), 'dummy']
             writer.writerow(row)
@@ -93,7 +94,7 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
         hyper_vec = np.array(hyper_vec, dtype=float)
         temp = set()
         deduplicated_sims = []
-        nearest_neighbors = model.most_similar(positive=[hyper_vec], topn=1000)
+        nearest_neighbors = model.most_similar(positive=[hyper_vec], topn=TOPN)
         sims = []
         for res in nearest_neighbors:
             word = res[0]
