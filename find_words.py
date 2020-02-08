@@ -19,8 +19,7 @@ if __name__ == "__main__":
 
     print('%d words read' % len(words), file=sys.stderr)
 
-    w_sentences = {w: 0 for w in words }
-
+    w_sentences = {w: 0 for w in words}
 
     for line in sys.stdin:
         res = set(line.strip().split())
@@ -30,4 +29,3 @@ if __name__ == "__main__":
 
     for w in w_sentences:
         print(w_sentences[w], w)
-
