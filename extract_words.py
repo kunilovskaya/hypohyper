@@ -1,7 +1,7 @@
 #! python3
 # coding: utf-8
 
-from hyper_import_functions import read_xml, id2wds_dict, preprocess_mwe
+from hyper_imports import read_xml, id2wds_dict, preprocess_mwe
 from argparse import ArgumentParser
 import sys
 from smart_open import open
