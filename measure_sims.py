@@ -6,17 +6,29 @@ import time
 import zipfile
 from operator import itemgetter
 import numpy as np
+from evaluate import get_score
+from smart_open import open
+import pandas as pd
+from collections import defaultdict
+from itertools import repeat
 
-from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, TAGS, TOPN
+from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, TAGS, TOPN, OPT, TEST
 from hyper_imports import popular_generic_concepts, load_embeddings, parse_taxonymy
 
 parser = argparse.ArgumentParser('Detecting most similar synsets and formatting the output')
 # for ultimate results to submit use private instead of public
-if POS == 'NOUN':
-    parser.add_argument('--provided_test', default='input/data/public_test/nouns_public.tsv', type=os.path.abspath)
-if POS == 'VERB':
-    parser.add_argument('--provided_test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
-parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_hyper_collector.npy' % (OUT, VECTORS, POS),
+if TEST == 'provided':
+    if POS == 'NOUN':
+        parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv', type=os.path.abspath)
+    if POS == 'VERB':
+        parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
+if TEST == 'intrinsic':
+    if POS == 'NOUN':
+        parser.add_argument('--test', default='%strains/%s_%s_test4testing.txt' % (OUT, VECTORS, POS), type=os.path.abspath)
+    if POS == 'VERB':
+        parser.add_argument('--test', default='%strains/%s_%s_test4testing.txt', type=os.path.abspath)
+    parser.add_argument('--truth', default='%strains/%s_%s_%s_test.tsv.gz' % (OUT, VECTORS, POS, TEST))
+parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS, OPT, TEST),
                     help="predicted vectors")
 
 args = parser.parse_args()
@@ -36,20 +48,16 @@ model = load_embeddings(EMB_PATH)
 
 sens_index = parse_taxonymy(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab)
 
-synsets_dict = {}
+synsets_dict = defaultdict(set)
 
 for i in sens_index:
     synset = i[0]
     lemma = i[1]
-    if lemma not in synsets_dict:
-        synsets_dict[lemma] = set()
     synsets_dict[lemma].add(synset)
-    
-# print(synsets_dict)
 
-if OOV_STRATEGY == 'top_hyper':
+
+if OOV_STRATEGY == 'top-hyper':
     if POS == 'NOUN':
-        # print('&&&&&&&&&&&&')
         rel_path = '%ssynset_relations.N.xml' % RUWORDNET
     elif POS == 'VERB':
         rel_path = '%ssynset_relations.V.xml' % RUWORDNET
@@ -60,36 +68,30 @@ if OOV_STRATEGY == 'top_hyper':
 else:
     top_ten = None
 
-test = [i.strip() for i in open(args.provided_test, 'r').readlines()]
+test = [i.strip() for i in open(args.test, 'r').readlines()]
 
 hyper_vecs = np.load(args.hyper_vectors, allow_pickle=True)
 
-# if len(test) == len(hyper_vecs):
-#     print(
-#         'Checking lengths for lists of hyponyms and corresponding hypernym vectors: passed, %d word-vector pairs' % len(
-#             test))
-# else:
-#     print(len(test), len(hyper_vecs))
-
-# for word, measure cosine similarity from all (single word) sense vectors present in embeddings
-# to the word's hypernym vector
 OUT = '%sresults/' % OUT
 os.makedirs(OUT, exist_ok=True)
-
-outfile = open('%s%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY), 'w')
-
+outfile = open('%s%s_%s_%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, OPT, TEST), 'w')
 writer = csv.writer(outfile, dialect='unix', delimiter='\t', lineterminator='\n', quoting=csv.QUOTE_NONE)
 
 counter = 0
 
+pred_dict = defaultdict(list)
 for hypo, hyper_vec in zip(test, hyper_vecs):
-    if len(hyper_vec) == 1:
+    # print(hypo)
+    if not np.any(hyper_vec):
+    # if len(hyper_vec) == 1:
         # this happens if your OOV_STRATEGY == 'top_hyper';
-        # in this case return the sorted list of 10 most frequent hypernyms
-        # print('================ WHY am I here?', hypo)
+        # in this case use the sorted list of 10 most frequent hypernyms
+        # for each of 10 lines write a triplet = get your required 10 dummy answers!
         for line in top_ten:
             row = [hypo.strip(), line.strip(), 'dummy']
             writer.writerow(row)
+            pred_dict[hypo.strip()].append(line.strip())
+            # print('OOV', line.strip()) # synset ids already
     else:
         hyper_vec = np.array(hyper_vec, dtype=float)
         temp = set()
@@ -119,26 +121,50 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
             # Want to see predictions in real time?
             print(
                 'Here comes a list of 10 unique synset ids for %s in test.\n '
-                'One of the vectors (representing its lemmas) is found most similar to %s hypernym vector '
-                'produced by the projection model:\n%s' % (hypo, hypo, this_hypo_res))
+                '%s' % (hypo, this_hypo_res))
         
         counter += 1
         
         for line in this_hypo_res:
             row = [hypo.strip(), line[0].strip(), line[1].strip()]
             writer.writerow(row)
+            pred_dict[hypo.strip()].append(line[0].strip())
 
 outfile.close()
 
-archive_name = '%s_%s_%s_%s.zip' % (VECTORS, POS, MODE, OOV_STRATEGY)
+archive_name = '%s_%s_%s_%s_%s_%s_res.zip' % (VECTORS, POS, MODE, OOV_STRATEGY, OPT, TEST)
 with zipfile.ZipFile(OUT + archive_name, 'w') as file:
-    file.write('%s%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY),
-               '%s_%s_%s_%s.tsv' % (VECTORS, POS, MODE, OOV_STRATEGY))
-
+    file.write('%s%s_%s_%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, OPT, TEST),
+               '%s_%s_%s_%s_%s_%s.tsv' % (VECTORS, POS, MODE, OOV_STRATEGY, OPT, TEST))
+    
 end = time.time()
 training_time = int(end - start)
 
 print('\n%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-print('DONE: final results, step 5.\n Measuring similarity and formatting output was done in %s minutes' % str(
-    round(training_time / 60)))
+print('DONE: %s has run.\n Measuring similarity and formatting output was done in %s minutes' % (os.path.basename(sys.argv[0]),str(round(training_time / 60))))
 print('%%%%%%%%%%%%%%%%%%%%%%%%%%%\n')
+
+if TEST == 'intrinsic':
+    print('Evaluating on the intrinsic testset')
+
+    gold_dict = defaultdict(set)
+    gold = open(args.truth, 'r').readlines()
+    for id,line in enumerate(gold):
+        # skip the header
+        if id == 0:
+            continue
+            
+        # intrinsic test is formated as wd:1067-N, wd:1067-N]
+        hypo = line.split('\t')[0].strip()
+        hypo = hypo[:-5].upper()
+        hyper_id = line.split('\t')[1].strip()
+    
+        gold_dict[hypo].add(hyper_id)
+        
+    mean_ap, mean_rr = get_score(gold_dict, pred_dict)
+    print("MAP: {0}\nMRR: {1}\n".format(mean_ap, mean_rr), file=sys.stderr)
+
+    print(list(gold_dict.keys())[:5])
+    
+
+    print(len(gold_dict), len(pred_dict))
