@@ -113,10 +113,11 @@ however, there are only 7274 unique hyponyms and 3622 cases of duplicates on the
 ## Outstanding tasks (Feb04):
 - [x] ditch intrinsic evaluation and rerun on all data
 - [X] analyse OOV in private tests: how important is anti-OOV strategy?
-- [X] produce a raw static train-test split so that test includes only monosemantic hyponym synsets, i.e. synsets that have only one hypernym synset
+- [X] **FAILED: I can't reproduce the Codalab evaluation results**! produce a raw static train-test split so that test includes only monosemantic hyponym synsets, i.e. synsets that have only one hypernym synset
 - [ ] average synset vectors at train time and for getting most_similar
+- [ ] exclude same word as hypernym
 - [ ] factor in cooccurence stats or patterns based on the news corpus
-- [X] cluster input (inapplicable for data with no gound truth available)
+- [X] **FAILED: unusable for data with no gound truth available**; cluster input
 - [ ] add negative sampling (based on hyponyms, synonyms)
 - [ ] choose wiser: rank synsets and get the most high ranking ones
 
