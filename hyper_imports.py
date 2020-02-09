@@ -1,5 +1,5 @@
 import csv
-import os
+import os, re
 from xml.dom import minidom
 from collections import defaultdict
 from collections import Counter
@@ -9,6 +9,10 @@ from gensim.models import KeyedVectors
 import numpy as np
 from gensim.matutils import unitvec
 from smart_open import open
+from itertools import repeat
+from operator import itemgetter
+from scipy.spatial import distance
+import scipy.spatial as sp
 
 
 # parse ruwordnet
@@ -40,20 +44,18 @@ def id2wds_dict(synsets):
 
     return id2wds  # get a dict of format 144031-N:[АУТИЗМ, АУТИСТИЧЕСКОЕ МЫШЛЕНИЕ]
 
-
 # map synset ids to synset names from synsets.N.xml (ex. ruthes_name="УЛЫБКА")
 def id2name_dict(synsets):
     id2name = defaultdict()
     for syn in synsets:
-        identifier = syn.getAttributeNode('id').nodeValue
         name = syn.getAttributeNode('ruthes_name').nodeValue
-
+        identifier = syn.getAttributeNode('id').nodeValue
         id2name[identifier] = name
 
     return id2name
 
 
-def wd2id_dict(id2dict):
+def wd2id_dict(id2dict): # id2wds
     wd2id = defaultdict(list)
     for k, values in id2dict.items():
         for v in values:
@@ -123,13 +125,97 @@ def get_rel_by_synset_id(relations, identifier, id2wds, name=None):
     return related_wds, related_ids, wds_in_this_id
 
 
+def process_tsv(filepath, emb=None, tags=None, mwe=None, pos=None, skip_oov=None):
+    df_train = read_train(filepath)
+    
+    # strip of [] and ' in the strings:
+    ## TODO maybe average vectors for representatives of each synset in the training_data
+    df_train = df_train.replace(to_replace=r"[\[\]']", value='', regex=True)
+
+    my_TEXTS = df_train['TEXT'].tolist()
+    my_PARENT_TEXTS = df_train['PARENT_TEXTS'].tolist()
+    
+    all_pairs = []
+    
+    for hypo, hyper in zip(my_TEXTS, my_PARENT_TEXTS):
+        hypo = hypo.replace(r'"', '')
+        hyper = hyper.replace(r'"', '')
+        hypo = hypo.split(', ')
+        hyper = hyper.split(', ')
+        
+        for i in hypo:
+            wd_tuples = list(zip(repeat(i), hyper))
+            all_pairs.append(wd_tuples)
+    all_pairs = [item for sublist in all_pairs for item in sublist]  # flatten the list
+    print('=== Raw training set: %s ===' % len(all_pairs))
+    print('Raw examples:\n', all_pairs[:3])
+    
+    # limit training_data to the pairs that are found in the embeddings
+    filtered_pairs = filter_dataset(all_pairs, emb, tags=tags, mwe=mwe, pos=pos, skip_oov=skip_oov)
+    print('\n=== Embeddings coverage (intrinsuc train): %s ===' % len(filtered_pairs))
+    
+    # print('!!! WYSIWYG as lookup queries!!!')
+    # print('Expecting: TAGS=%s; MWE=%s; %s' % (tags, mwe, pos))
+    print(filtered_pairs[:3])
+    mwes = [(a, b) for (a, b) in filtered_pairs if re.search('::', a) or re.search('::', b)]
+    print(mwes[:3])
+    # print('Number of MWE included %s' % len(mwes))
+    
+    return filtered_pairs
+
+
+def process_test_tsv(filepath, emb=None, tags=None, mwe=None, pos=None, skip_oov=None):
+    
+    df = read_train(filepath)
+    
+    # strip of [] and ' in the strings:
+    ## TODO maybe average vectors for representatives of each synset in the training_data
+    df = df.replace(to_replace=r"[\[\]']", value='', regex=True)
+    
+    my_TEXTS = df['TEXT'].tolist()
+    my_PARENT_IDS = df['PARENTS'].tolist()
+    
+    good_pairs = []
+    oov_counter = 0
+    for hypos, hypers in zip(my_TEXTS, my_PARENT_IDS):
+        hypos = hypos.split(', ')
+        hypers = hypers.split(', ')
+        
+        for i in hypos:
+            ## filter out multiwords
+            # print(i)
+            if len(i.split()) == 1:
+                if tags:
+                    if pos == 'NOUN':
+                        i = i.lower() + '_NOUN'
+                    elif pos == 'VERB':
+                        i = i.lower() + '_VERB'
+                else:
+                    i = i
+                ## filter out single-word OOV in the embeddings
+                if i in emb.vocab:
+                    wd_tuples = list(zip(repeat(i), hypers))
+                    good_pairs.append(wd_tuples)
+                else:
+                    oov_counter += 1
+                    # print('====',i)
+            else:
+                continue
+    good_pairs = [item for sublist in good_pairs for item in sublist]  # flatten the list
+    print('+++ Raw testset pairs: %s +++' % (len(good_pairs)+oov_counter))
+    print('Examples from saved intrinsic test:\n', good_pairs[:3])
+    print('\n=== Embeddings coverage (intrinsuc test): %.2f%% ===' % (100 - (oov_counter/(len(good_pairs))*100)))
+    
+    return good_pairs
+
+
 def read_train(tsv_in):
     df_out = pd.read_csv(tsv_in, sep='\t')
     return df_out
 
 
 def load_embeddings(modelfile):
-    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     if not os.path.isfile(modelfile):
         raise FileNotFoundError("No file called {file}".format(file=modelfile))
     # Determine the model format by the file extension
@@ -198,24 +284,22 @@ def filter_dataset(pairs, embedding, tags=None, mwe=None, pos=None, skip_oov=Non
             if mwe: ## this returns lowercased and tagged single words ot MWE
                 hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
                 hyper = preprocess_mwe(hyper, tags=tags, pos=pos)
-                
                 if hypo in embedding.vocab and hyper in embedding.vocab:
                     smaller_train.append((hypo, hyper))
             else:
                 if pos == 'VERB':
                     hypo = hypo.lower() + '_VERB'
                     hyper = hyper.lower() + '_VERB'
-                    # if hypo in embedding.vocab and hyper in embedding.vocab:
-                    #     smaller_train.append((hypo, hyper))
+                    if hypo in embedding.vocab and hyper in embedding.vocab:
+                        smaller_train.append((hypo, hyper))
                 elif pos == 'NOUN':
                     hypo = hypo.lower() + '_NOUN'
                     hyper = hyper.lower() + '_NOUN'
-                    
-                if skip_oov == False:
-                    smaller_train.append((hypo, hyper))
-                elif skip_oov == True:
-                    if hypo in embedding.vocab and hyper in embedding.vocab:
+                    if skip_oov == False:
                         smaller_train.append((hypo, hyper))
+                    elif skip_oov == True:
+                        if hypo in embedding.vocab and hyper in embedding.vocab:
+                            smaller_train.append((hypo, hyper))
                             
         ## this is only when I can afford to retain all items with untagged fasttext
         else:
@@ -227,6 +311,8 @@ def filter_dataset(pairs, embedding, tags=None, mwe=None, pos=None, skip_oov=Non
                 elif skip_oov == True:
                     if hypo in embedding.vocab and hyper in embedding.vocab:
                         smaller_train.append((hypo, hyper)) ## preprocess_mwe returns lowercased items already
+                else:
+                    smaller_train.append((hypo.lower(), hyper.lower()))
             else:
                 ## this is tuned for ft vectors to filter out OOV (mostly MWE)
                 if skip_oov == False:
@@ -234,13 +320,16 @@ def filter_dataset(pairs, embedding, tags=None, mwe=None, pos=None, skip_oov=Non
                 elif skip_oov == True:
                     if hypo.lower() in embedding.vocab and hyper.lower() in embedding.vocab:
                         smaller_train.append((hypo.lower(), hyper.lower()))
+                else:
+                    smaller_train.append((hypo.lower(), hyper.lower()))
 
     return smaller_train  # only the pairs that are found in the embeddings if skip_oov=True
 
 
+
 def write_hyp_pairs(data, filename):
     with open(filename, 'w') as f:
-        writer = csv.writer(f, dialect='unix', delimiter='\t', lineterminator='\n')
+        writer = csv.writer(f, dialect='unix', delimiter='\t', lineterminator='\n', quoting=csv.QUOTE_NONE)
         writer.writerow(['hyponym', 'hypernym'])
         for pair in data:
             writer.writerow(pair)
@@ -316,6 +405,23 @@ def predict(source, embedding, projection, topn=10):
     return nearest_neighbors, predicted_vector
 
 
+def star_predict(source, embedding, projection, topn=10):
+    ## what happens when your test word is not in the embeddings? how do you get its vector?
+    ## skip for now!
+    ## TODO implement this
+    try:
+        test = np.mat(embedding[source])
+    except KeyError:
+        return None
+    
+    test = np.c_[1.0, test]  # Adding bias term
+    predicted_vector = np.dot(projection, test.T)
+    predicted_vector = np.squeeze(np.asarray(predicted_vector))
+    # Our predictions:
+    nearest_neighbors = embedding.most_similar(positive=[predicted_vector], topn=topn)
+    return nearest_neighbors, predicted_vector
+
+
 def popular_generic_concepts(relations_path):
     ## how often an id has a name="hypernym" when "parent" in synset_relations.N.xml (aim for the ratio hypernym/hyponym > 1)
     parsed_rels = read_xml(relations_path)
@@ -331,7 +437,7 @@ def popular_generic_concepts(relations_path):
             freq_hypo[id] += 1
     
     all_ids = list(freq_hypo.keys()) + list(freq_hyper.keys())
-    # print(all_ids[:5])
+    print(all_ids[:5])
     # print(len(set(all_ids)))
     
     ratios = defaultdict(int)
@@ -435,6 +541,111 @@ def parse_taxonymy(senses, tags=None, pos=None, mode=None, emb_voc=None):
         else:
             print('What do you want to do with senses that are lexicalised as MWE?')
     return all_id_senses
+
+def lemmas_based_hypers(test_item, vec=None, emb=None, topn=None, dict_w2ids=None):
+    nosamename = 0
+    hyper_vec = np.array(vec, dtype=float)
+    temp = set()
+    deduplicated_sims = []
+    nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=topn)
+    sims = []
+    for res in nearest_neighbors:
+        hypernym = res[0]
+        similarity = res[1]
+        if hypernym in dict_w2ids:
+            for synset in dict_w2ids[hypernym]:  # we are adding all synset ids associated with the topN most_similar in embeddings and found in ruWordnet
+                sims.append((synset, hypernym, similarity))
+    
+    # sort the list of tuples (id, sim) by the 2nd element and deduplicate
+    # by rewriting the list while checking for duplicate synset ids
+    sims = sorted(sims, key=itemgetter(2), reverse=True)
+    
+    for a, b, c in sims:
+        # exclude same word as hypernym
+        b = b[:-5].upper()
+        if test_item != b:
+            # print(hypo, b)
+            if a not in temp:
+                temp.add(a)
+                deduplicated_sims.append((a, b, c))
+        else:
+            nosamename += 1
+    # print('Selves as hypernyms: %s' % nosamename)
+    this_hypo_res = deduplicated_sims[:10]  # list of (synset_id, hypernym_word, sim)
+    
+    return this_hypo_res
+
+def synsets_vectorized(emb=None, worded_synsets=None, named_synsets=None, tags=None, pos=None):
+    total_lemmas = 0
+    single_lemmas = 0
+    ruthes_oov = 0
+    mean_synset_vecs = []
+    synset_ids_names = []
+    for id, wordlist in worded_synsets.items():
+        # print('==', id, named_synsets[id], wordlist)
+        current_vector_list = []
+        for w in wordlist:
+            total_lemmas += 1
+            if len(w.split()) == 1:
+                single_lemmas += 1
+                if tags:
+                    if pos == 'NOUN':
+                        w = (w.lower() + '_NOUN')
+                    if pos == 'VERB':
+                        w = (w.lower() + '_VERB')
+                if w in emb.vocab:
+                    # print('++', w, emb[w])
+                    current_vector_list.append(emb[w])
+                    current_array = np.array(current_vector_list)
+                    this_mean_vec = np.mean(current_array,axis=0)  # average column-wise, getting a new row=vector of size 300
+                    mean_synset_vecs.append(this_mean_vec)
+                    synset_ids_names.append((id, named_synsets[id]))
+                else:
+                    ruthes_oov += 1
+                    this_mean_vec = None
+            else:
+                continue
+
+    print('===300===', len(this_mean_vec))
+    print('Total lemmas: ', total_lemmas)
+    print('Singleword lemmas: ', single_lemmas)
+    print('Singleword lemmas in ruWordNet absent from embeddings: ', ruthes_oov)
+    return synset_ids_names, mean_synset_vecs
+
+def mean_synset_based_hypers(test_item, vec=None, syn_ids=None, syn_vecs=None, topn=10):
+    sims = []
+    temp = set()
+    deduplicated_sims = []
+    nosamename = 0
+    
+    hyper_vec = np.array(vec, dtype=float)
+    syn_vecs_arr = np.array(syn_vecs)
+    
+    sims = np.dot(hyper_vec, syn_vecs_arr.T)
+    ## sorting in the reverse descending order
+    my_top_idx = (np.argsort(sims, axis=0)[::-1])[:50]
+    
+    my_top_syn_ids_name = [syn_ids[hyper] for hyper in my_top_idx] ## list of tuples (id, name) ex. (134530-N, КУНГУР)
+    
+    my_top_syn_ids = [id[0] for id in my_top_syn_ids_name]
+    my_top_syn_names = [id[1] for id in my_top_syn_ids_name]
+    
+    my_top_sims = [sims[ind] for ind in my_top_idx] ##actual similarity values
+
+    for a, b, c in zip(my_top_syn_ids, my_top_syn_names, my_top_sims):
+        # exclude same word as the name of the hypernym synset (many of these names are strangely VERBs)
+        # b = b[:-5].upper()
+        if test_item != b:
+            # print(hypo, b)
+            if a not in temp:
+                temp.add(a)
+                deduplicated_sims.append((a, b, c))
+        else:
+            nosamename += 1
+
+    this_hypo_res = deduplicated_sims[:topn]  ## list of (synset_id, hypernym_word, sim)
+    
+    return this_hypo_res  # list of (synset_id, hypernym_synset_name, sim)
 
 if __name__ == '__main__':
     print('=== This is a modules script, it is not supposed to run as main ===')
