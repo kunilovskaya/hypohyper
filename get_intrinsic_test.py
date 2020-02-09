@@ -1,13 +1,17 @@
-import os
+import os, sys
 import argparse
 import time
 import csv
 from smart_open import open
 import pandas as pd
 
-from configs import OUT, POS
+from configs import OUT, POS, TEST
 
 # produce a raw train-test split so that test includes only monosemantic hyponym synsets, i.e. synsets that have only one hypernym synset
+if TEST == 'provided':
+    print('According to the config settings, you are going to use the provided test. Are you sure you want to produce data for intrinsic evaluation?')
+    sys.exit()
+
 
 parser = argparse.ArgumentParser()
 if POS == 'NOUN':
