@@ -4,7 +4,7 @@ RANDOM_SEED = 42
 VECTORS = 'w2v-pos-araneum' ## no full means that we filter out OOV at train time
 POS = 'NOUN' # 'VERB'
 MWE = True
-TEST = 'intrinsic' # intrinsic, provided
+TEST = 'random' # intrinsic, provided random
 ## regularisation strategy: neg-hyp, neg-syn, no-reg
 OPT = 'no-reg'
 
