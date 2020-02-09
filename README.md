@@ -6,7 +6,7 @@ KuKuPl team's contribution to the shared task at Dialogue Evaluation 2020: [Taxo
 * (unexpectedly) intrinsic evaluation returns lower results for RDT vectors of size 500
 * intrinsic evaluation on 0.2 test is only arbitrary related to evaluation on the public test, due to the dynamic nature of our testset and uncontrolled polysemy of hyponyms (which was avoided in the public (real) test) 
 * we tried 6 vector models listed here in the order of performance on the NOUN public test (all fastText vectors are learnt on lemmatised corpora)
-- w2v upos araneum **0.2488**
+- w2v upos araneum **NOUN: 0.2540**
 - w2v_rdt500
 - ft_araneum_ft_no_OOV
 - ft_ruscorp_ft_no_OOV
@@ -25,8 +25,8 @@ vectors           | coverage_N | testOOV_N | coverage_V | testOOV_V |
 w2v_rdt500        | 84705      |  31(4%)   | 98609      | 6(3%)     |
 w2v_pos_araneum   | 69916      |  32(4%)   | 41385      | ~~75(42%)~~   |
 ft_araneum(no OOV)| 73384      |  22(2%)   | 41664      | ~~75(42%)~~   |
-~~ft_ruscorp(no OOV)~~| 61213      |~~214(28%)~~   | 85189      | 30(17%)   |
-~~w2v_pos_news~~      | ~~56761~~      |~~152(19%)~~  | 71915      | 55(31%)   |
+~~ft_ruscorp(no OOV)~~| 61213      |~~214(28%)~~   | 85189      | ~~30(17%)~~   |
+~~w2v_pos_news~~      | ~~56761~~      |~~152(19%)~~  | 71915      | ~~55(31%)~~  |
 ft_news           | 67124      |  38(4%)   | 78654      | 22(12%)      |
 
 * Number of MWE (ft_news):      697
@@ -65,17 +65,18 @@ Table 2A. NOUN: For some models we report results (publicMAP values for models t
 - w2v_upos_araneum: MAP: 0.0634, MRR: 0.1091
 
 Table 2B. VERBS: Different approaches to process ruWordNet and OOV in test
+Evaluation is stuck due to Codalab problems
 
   vectors      | single+ft_vectors|single+top_hyper|main+ft_vectors|main+top_hyper|  
    :----------------|------------:|-----------:|------------:|-----------:|
- w2v_rdt500         |      N/A    | **+?????** |      N/A    |            |
+ w2v_rdt500         |      N/A    | **0.0850** |      N/A    |            |
  w2v_upos_araneum   |    --       |   0.0599   |   --        |  --        |
- ft_araneum(no_OOV) |    +??????   |   --       |   --        |  --        |
- ft_ruscorp(no_OOV) |             |  +?????     |   --        |  --        |
- w2v_pos_news_cbow  |    +??????   |   --   |   --        |   --       |
- w2v_pos_news_sk    |    --       |   +??????   |   +??????    |   --       |
- ft_news_cbow       |   +??????    |   --       |   --        |   --       |
- ft_news_sk         |   +??????   |   --   |   --        |   --       |
+ ft_araneum(no_OOV) |    0.0599   |   --       |   --        |  --        |
+ ft_ruscorp(no_OOV) |             |  0.0319     |   --        |  --        |
+ w2v_pos_news_cbow  |    0.0174   |   --   |   --        |   --       |
+ w2v_pos_news_sk    |    --       |   0.0361   |   0.0146    |   --       |
+ ft_news_cbow       |   0.0006    |   --       |   --        |   --       |
+ ft_news_sk         |   0.0174   |   --   |   --        |   --       |
 
 =========================================================================
 
@@ -111,12 +112,12 @@ however, there are only 7274 unique hyponyms and 3622 cases of duplicates on the
 ===============================================================
 ## Outstanding tasks (Feb04):
 - [x] ditch intrinsic evaluation and rerun on all data
-- [x] analyse OOV in private tests: how important is anti-OOV strategy?
-- [ ] intrinsic evaluation set
+- [X] analyse OOV in private tests: how important is anti-OOV strategy?
+- [X] produce a raw static train-test split so that test includes only monosemantic hyponym synsets, i.e. synsets that have only one hypernym synset
 - [ ] average synset vectors at train time and for getting most_similar
 - [ ] factor in cooccurence stats or patterns based on the news corpus
-- [ ] cluster input 
-- [ ] add negative sampling
+- [X] cluster input (inapplicable for data with no gound truth available)
+- [ ] add negative sampling (based on hyponyms, synonyms)
 - [ ] choose wiser: rank synsets and get the most high ranking ones
 
 ================================================================
@@ -148,10 +149,16 @@ will run the pipeline of five scripts, create foders, save and load interim outp
 
 #### Step-by-step
 
+(0) make a static train-test split on raw data regardless of te embedding used, for comparability reasons
+
+```
+python3 get_intrinsic_test.py 
+```
+
 (1) to get compressed train and 0.2 test files (.tsv.gz) with all hypo-hyper wordpairs from train reduced to only those found in the given embedding file (of 431937 wordpairs available, the best coverage of 84705 is see in RDT, araneum is second best with 69913)
 
 ```
-python3 format_train.py 
+python3 format_data.py 
 ```
 
 (2) to get the .pickle.gz, which has {threshold: transforms} dict for subsequent internal evaluation against the embeddings vocabulary (see test_projection.py)
