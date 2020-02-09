@@ -7,13 +7,15 @@ import pandas as pd
 import sys, os
 import numpy as np
 import time
-from configs import VECTORS, EMB_PATH, OUT, POS, SKIP_OOV
+from hyper_imports import filter_dataset
+from configs import VECTORS, EMB_PATH, OUT, POS, SKIP_OOV, OPT, TEST
 
 
 parser = ArgumentParser()
-parser.add_argument('--trainfile', default='%strains/%s_%s_train.tsv.gz' % (OUT, VECTORS, POS),
-                    help="0.8 train of pre-processed training_data",
+parser.add_argument('--trainfile', default='%strains/%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, TEST),
+                    help="0.8 static train of pre-processed training_data, all UPPER",
                     type=os.path.abspath)
+
 parser.add_argument('--lmbd', action='store', type=float, default=0.0)
 
 args = parser.parse_args()
@@ -33,7 +35,6 @@ hypernyms = data.hypernym.values
 print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
 model = load_embeddings(EMB_PATH)
 
-# print('Inferring vectors...', file=sys.stderr)
 
 source_vecs = []
 target_vecs = []
@@ -45,7 +46,7 @@ target_vecs = []
 
 for hyponym, hypernym in zip(hyponyms, hypernyms):
     if SKIP_OOV == True:
-        if hyponym in model.vocab or hypernym in model.vocab:
+        if hyponym in model.vocab or hypernym in model.vocab: # good for static-train
             source_vec = model[hyponym]
             target_vec = model[hypernym]
             source_vecs.append(source_vec)
@@ -54,10 +55,6 @@ for hyponym, hypernym in zip(hyponyms, hypernyms):
             continue
             
     elif SKIP_OOV == False:
-        # if hyponym not in mult_hypernyms:
-        #     mult_hypernyms[hyponym] = []
-        # if hyponym in model and hypernym in model: ## this is kinda taken care of earlier but okey, just double-checking
-        #     mult_hypernyms[hyponym].append(hypernym)
         source_vec = model[hyponym]
         target_vec = model[hypernym]
         source_vecs.append(source_vec)
@@ -74,7 +71,7 @@ print('Transformation matrix created', transforms.shape, file=sys.stderr)
 OUT = '%sprojections/' % OUT
 os.makedirs(OUT, exist_ok=True)
 
-np.save('%s%s_%s_projection.npy' % (OUT, VECTORS, POS), transforms)
+np.save('%s%s_%s_%s_%s_projection.npy' % (OUT, VECTORS, POS, OPT, TEST), transforms)
 
 end = time.time()
 training_time = int(end - start)
