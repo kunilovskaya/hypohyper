@@ -17,12 +17,13 @@ if TEST == 'provided':
         parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv', type=os.path.abspath)
     if POS == 'VERB':
         parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
-if TEST == 'intrinsic':
+if TEST == 'intrinsic' or TEST == 'random':
     if POS == 'NOUN':
-        parser.add_argument('--test', default='%strains/%s_%s_test4testing.txt' % (OUT, VECTORS, POS), type=os.path.abspath)
+        parser.add_argument('--test', default='%strains/%s_%s_%s_test4testing.txt' % (OUT, VECTORS, POS, TEST), type=os.path.abspath)
     if POS == 'VERB':
-        parser.add_argument('--test', default='%strains/%s_%s_test4testing.txt', type=os.path.abspath)
-parser.add_argument('--projection', default='%sprojections/%s_%s_%s_projection.npy' % (OUT, VECTORS, POS, OPT))
+        parser.add_argument('--test', default='%strains/%s_%s_%s_test4testing.txt' % (OUT, VECTORS, POS, TEST), type=os.path.abspath)
+        
+parser.add_argument('--projection', default='%sprojections/%s_%s_%s_%s_projection.npy' % (OUT, VECTORS, POS, OPT, TEST))
 parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
 
 args = parser.parse_args()

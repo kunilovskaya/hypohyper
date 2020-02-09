@@ -26,10 +26,8 @@ if TEST == 'intrinsic':
                             type=os.path.abspath)
         parser.add_argument('--test', default='%strains/static/%s_static-test.tsv' % (OUT, POS), help='static test',
                             type=os.path.abspath)
-if TEST == 'provided':
+if TEST == 'provided' or TEST == 'random':
     if POS == 'NOUN':
-        # parser.add_argument('--train', default='%strains/static/%s_static-train.tsv' % (OUT, POS), help='static train',
-        #                     type=os.path.abspath)
         parser.add_argument('--train', default='input/data/training_nouns.tsv', type=os.path.abspath)
     if POS == 'VERB':
         parser.add_argument('--train', default='input/data/training_verbs.tsv', type=os.path.abspath)
@@ -50,16 +48,38 @@ hypohyper_train = process_tsv(args.train, emb=model, tags=TAGS, mwe=MWE, pos=POS
 
 print('\n%s train entries: %d\n==!!==!!==!!==!!==!!\n' % (TEST.upper(), len(hypohyper_train)), file=sys.stderr)
 
-## if any of MWE are in embeddings they look like '::'.join(item.lower().split()) now regardless whether with PoS-tags or without
-## this outputs the LOWERCASED words, too
-write_hyp_pairs(hypohyper_train, '%s%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, TEST))
-
+if TEST == 'provided':
+    ## if any of MWE are in embeddings they look like '::'.join(item.lower().split()) now regardless whether with PoS-tags or without
+    ## this outputs the LOWERCASED words, too
+    write_hyp_pairs(hypohyper_train, '%s%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, TEST))
+    
+if TEST == 'random':
+    hypohyper_train, hypohyper_test = train_test_split(hypohyper_train, test_size=.2, random_state=RANDOM_SEED)
+    
+    print(len(hypohyper_train))
+    print(len(hypohyper_test))
+    
+    write_hyp_pairs(hypohyper_train, '%s%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, TEST))
+    write_hyp_pairs(hypohyper_test, '%s%s_%s_%s_test.tsv.gz' % (OUT, VECTORS, POS, TEST))
+    
+    with open('%s%s_%s_%s_test4testing.txt' % (OUT, VECTORS, POS, TEST), 'w') as my_testfile:
+        temp = set()
+        for tup in hypohyper_test:
+            hypo = tup[0]
+            hypo = hypo[:-5].upper()
+            if hypo not in temp:
+                temp.add(hypo)
+                my_testfile.write(hypo + '\n')
+            else:
+                continue
+    print('I have prepared data for intrinsic testing (based on random train-test split)')
+    
 if TEST == 'intrinsic':
     hypohyper_test = process_test_tsv(args.test, emb=model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
     print('%s test entries: %d' % (TEST.upper(), len(hypohyper_test)), file=sys.stderr)
     write_hyp_pairs(hypohyper_test, '%s%s_%s_%s_test.tsv.gz' % (OUT, VECTORS, POS, TEST))
     
-    with open('%s%s_%s_test4testing.txt' % (OUT, VECTORS, POS), 'w') as my_testfile:
+    with open('%s%s_%s_%s_test4testing.txt' % (OUT, VECTORS, POS, TEST), 'w') as my_testfile:
         temp = set()
         for tup in hypohyper_test:
             hypo = tup[0]
