@@ -8,7 +8,7 @@ from smart_open import open
 import numpy as np
 import time
 
-from configs import VECTORS, TAGS, EMB_PATH, OUT, FT_EMB, OOV_STRATEGY, POS, OPT, TEST
+from configs import VECTORS, TAGS, EMB_PATH, OUT, FT_EMB, OOV_STRATEGY, POS, METHOD, TEST
 
 parser = ArgumentParser()
 # for ultimate results to submit use private instead of public
@@ -23,7 +23,7 @@ if TEST == 'intrinsic' or TEST == 'random':
     if POS == 'VERB':
         parser.add_argument('--test', default='%strains/%s_%s_%s_test4testing.txt' % (OUT, VECTORS, POS, TEST), type=os.path.abspath)
         
-parser.add_argument('--projection', default='%sprojections/%s_%s_%s_%s_projection.npy' % (OUT, VECTORS, POS, OPT, TEST))
+parser.add_argument('--projection', default='%sprojections/%s_%s_%s_%s_projection.npy' % (OUT, VECTORS, POS, METHOD, TEST))
 parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
 
 args = parser.parse_args()
@@ -62,14 +62,12 @@ predicted = {}  # Predicted dictionary of hypernyms corresponding to each hypony
 
 print('We will make predictions for %d hyponyms' % len(test_hyponyms), file=sys.stderr)
 
-# print('Making predictions...', file=sys.stderr)
 counter = 0
 test_preprocessed = []
 oov_in_test = []
 hyper_collector = []
 
 for hyponym in test_hyponyms:
-    # print(hyponym)
     if hyponym in model.vocab:
         candidates, predicted_vector = predict(hyponym, model, projection, topn=args.nr)
     else:
@@ -101,18 +99,12 @@ for hyponym in test_hyponyms:
 print('\nOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO')
 print('====== Number of OOV in test: %d (%d%%)' % (len(oov_in_test), len(oov_in_test)/len(test_hyponyms)*100))
 print('OOV in test\n%s' % oov_in_test)
-# print('\nSaving the predicted vectors and the list of preprocessed %d test hyponyms that are found in vectors' % (len(test_hyponyms)-len(oov_in_test)))
 print('OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\n')
 
 OUT = '%spredicted_hypers/' % OUT
 os.makedirs(OUT, exist_ok=True)
 
-# np.savez_compressed('%s%s_%s_%s_%s_hypers.npz' % (OUT, VECTORS, POS, OPT, TEST), hyper_collector)
-np.save('%s%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS, OPT, TEST), hyper_collector)
-# if len(hyper_collector) == len(test_hyponyms):
-    # print('Sanity test: passed')
-    # print('Length of output equals the number of test words: %s' % len(hyper_collector))
-
+np.save('%s%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS, METHOD, TEST), hyper_collector)
 
 end = time.time()
 training_time = int(end - start)
