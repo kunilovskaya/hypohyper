@@ -4,9 +4,9 @@ from itertools import repeat
 import os, re
 import sys
 from sklearn.model_selection import train_test_split
-from hyper_imports import load_embeddings, write_hyp_pairs, process_tsv, process_test_tsv
+from hyper_imports import load_embeddings, write_hyp_pairs, process_tsv, process_test_tsv, process_tsv_deworded
 
-from configs import VECTORS, TAGS, MWE, EMB_PATH, OUT, RANDOM_SEED, POS, SKIP_OOV, TEST
+from configs import VECTORS, TAGS, MWE, EMB_PATH, OUT, RANDOM_SEED, POS, SKIP_OOV, TEST, METHOD
 
 parser = argparse.ArgumentParser()
     
@@ -38,54 +38,73 @@ model = load_embeddings(EMB_PATH)
 OUT = '%strains/' % OUT
 os.makedirs(OUT, exist_ok=True)
 
-hypohyper_train = process_tsv(args.train, emb=model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
+if METHOD == 'deworded':
+    ## this returns synset_ids pairs as training_data to be represented by avaraged vectors at learning time and
+    # when discovering synsets nearest to the predicted vector
+    hypohyper_train = process_tsv_deworded(args.train, emb=model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
+    if TEST == 'provided':
+        write_hyp_pairs(hypohyper_train, '%s%s_%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
 
-print('\n%s train entries: %d\n==!!==!!==!!==!!==!!\n' % (TEST.upper(), len(hypohyper_train)), file=sys.stderr)
+    if TEST == 'random':
+        hypohyper_train, hypohyper_test = train_test_split(hypohyper_train, test_size=.2, random_state=RANDOM_SEED)
+    
+        print(len(hypohyper_train))
+        print(len(hypohyper_test))
+    
+        write_hyp_pairs(hypohyper_train, '%s%s_%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
+        write_hyp_pairs(hypohyper_test, '%s%s_%s_%s_%s_test.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
+        
+    if TEST == 'intrinsic':
+        print('We dont have the functionality to use average vectors with intrinsic train/test split option')
+        
+else:
+    hypohyper_train = process_tsv(args.train, emb=model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
+    print('\n%s train entries: %d\n==!!==!!==!!==!!==!!\n' % (TEST.upper(), len(hypohyper_train)), file=sys.stderr)
 
-if TEST == 'provided':
-    ## if any of MWE are in embeddings they look like '::'.join(item.lower().split()) now regardless whether with PoS-tags or without
-    ## this outputs the LOWERCASED words, too
-    write_hyp_pairs(hypohyper_train, '%s%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, TEST))
+    if TEST == 'provided':
+        ## if any of MWE are in embeddings they look like '::'.join(item.lower().split()) now regardless whether with PoS-tags or without
+        ## this outputs the LOWERCASED words, too
+        write_hyp_pairs(hypohyper_train, '%s%s_%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
+        
+    if TEST == 'random':
+        hypohyper_train, hypohyper_test = train_test_split(hypohyper_train, test_size=.2, random_state=RANDOM_SEED)
+        
+        print(len(hypohyper_train))
+        print(len(hypohyper_test))
+        
+        write_hyp_pairs(hypohyper_train, '%s%s_%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
+        write_hyp_pairs(hypohyper_test, '%s%s_%s_%s_%s_test.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
+        
+        with open('%s%s_%s_%s_test4testing.txt' % (OUT, VECTORS, POS, TEST), 'w') as my_testfile:
+            temp = set()
+            for tup in hypohyper_test:
+                hypo = tup[0]
+                hypo = hypo[:-5].upper()
+                if hypo not in temp:
+                    temp.add(hypo)
+                    my_testfile.write(hypo + '\n')
+                else:
+                    continue
+        print('I have prepared data for intrinsic testing (based on random train-test split)')
+        
+    if TEST == 'intrinsic':
+        hypohyper_test = process_test_tsv(args.test, emb=model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
+        print('%s test entries: %d' % (TEST.upper(), len(hypohyper_test)), file=sys.stderr)
+        write_hyp_pairs(hypohyper_test, '%s%s_%s_%s_%s_test.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
+        
+        with open('%s%s_%s_%s_test4testing.txt' % (OUT, VECTORS, POS, TEST), 'w') as my_testfile:
+            temp = set()
+            for tup in hypohyper_test:
+                hypo = tup[0]
+                hypo = hypo[:-5].upper()
+                if hypo not in temp:
+                    temp.add(hypo)
+                    my_testfile.write(hypo + '\n')
+                else:
+                    continue
+        print('I have prepared data for intrinsic testing')
+        
     
-if TEST == 'random':
-    hypohyper_train, hypohyper_test = train_test_split(hypohyper_train, test_size=.2, random_state=RANDOM_SEED)
-    
-    print(len(hypohyper_train))
-    print(len(hypohyper_test))
-    
-    write_hyp_pairs(hypohyper_train, '%s%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, TEST))
-    write_hyp_pairs(hypohyper_test, '%s%s_%s_%s_test.tsv.gz' % (OUT, VECTORS, POS, TEST))
-    
-    with open('%s%s_%s_%s_test4testing.txt' % (OUT, VECTORS, POS, TEST), 'w') as my_testfile:
-        temp = set()
-        for tup in hypohyper_test:
-            hypo = tup[0]
-            hypo = hypo[:-5].upper()
-            if hypo not in temp:
-                temp.add(hypo)
-                my_testfile.write(hypo + '\n')
-            else:
-                continue
-    print('I have prepared data for intrinsic testing (based on random train-test split)')
-    
-if TEST == 'intrinsic':
-    hypohyper_test = process_test_tsv(args.test, emb=model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
-    print('%s test entries: %d' % (TEST.upper(), len(hypohyper_test)), file=sys.stderr)
-    write_hyp_pairs(hypohyper_test, '%s%s_%s_%s_test.tsv.gz' % (OUT, VECTORS, POS, TEST))
-    
-    with open('%s%s_%s_%s_test4testing.txt' % (OUT, VECTORS, POS, TEST), 'w') as my_testfile:
-        temp = set()
-        for tup in hypohyper_test:
-            hypo = tup[0]
-            hypo = hypo[:-5].upper()
-            if hypo not in temp:
-                temp.add(hypo)
-                my_testfile.write(hypo + '\n')
-            else:
-                continue
-    print('I have prepared data for intrinsic testing')
-    
-
 end = time.time()
 training_time = int(end - start)
 print('\n%%%%%%%%%%%%%%%%%%%%%%%%%%%')
