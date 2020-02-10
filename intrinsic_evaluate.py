@@ -6,6 +6,10 @@ import json
 from evaluate import get_score
 from configs import OUT, POS, TEST, METHOD
 
+if TEST == 'provided':
+    print('You have been useing the provided test set, you dont have laballed data for internal evaluation!')
+    sys.exit()
+
 gold_dict = json.load(open('%sgold_dicts/%s_%s_gold.json' % (OUT, POS, TEST), 'r'))
 pred_dict = json.load(open('%sresults/%s_%s_pred_%s.json' % (OUT, POS, TEST, METHOD), 'r'))
 
