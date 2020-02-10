@@ -162,7 +162,7 @@ def process_tsv(filepath, emb=None, tags=None, mwe=None, pos=None, skip_oov=None
     print(mwes[:3])
     # print('Number of MWE included %s' % len(mwes))
     
-    return filtered_pairs
+    return filtered_pairs ## ('ихтиолог_NOUN', 'ученый_NOUN')
 
 
 def process_tsv_deworded(filepath, emb=None, tags=None, mwe=None, pos=None, skip_oov=None):
@@ -174,20 +174,29 @@ def process_tsv_deworded(filepath, emb=None, tags=None, mwe=None, pos=None, skip
         if i == 0:
             continue
         res = line.split('\t')
-        hypo_id, _, par_ids, _ = res
-        ## fix quotes
+        ## learn the hypoWORD to averaged synset vector projection
+        hypo_id, wds, par_ids, _ = res
         par_ids = par_ids.replace("'", '"')
         
-        temp_dict[hypo_id] = json.loads(par_ids) # {'126551-N': ['4544-N', '147272-N'], '120440-N': ['141697-N', '116284-N']}
+        wds = wds.split(', ')
+        for w in wds:
+            w = w.replace(r'"', '')
+            temp_dict[w] = json.loads(par_ids)  # {'WORD': ['4544-N', '147272-N'], '120440-N': ['141697-N', '116284-N']}
+        ## alternatively use averaged vectors for hypo_ids (only 19327 training pairs and a problem with mapping input words to their synsets)
+        ## fix quotes
+        # temp_dict[hypo_id] = json.loads(par_ids) # {'126551-N': ['4544-N', '147272-N'], '120440-N': ['141697-N', '116284-N']}
+    # for hypo_id, hypers_ids in temp_dict.items():
+    #     id_tuples = list(zip(repeat(hypo_id), hypers_ids))
+    #     synset_pairs.append(id_tuples)
         
-    for hypo_id, hypers_ids in temp_dict.items():
-        id_tuples = list(zip(repeat(hypo_id), hypers_ids))
+    for hypo_w, hypers_ids in temp_dict.items():
+        id_tuples = list(zip(repeat(hypo_w), hypers_ids))
         synset_pairs.append(id_tuples)
     
     synset_pairs = [item for sublist in synset_pairs for item in sublist]  # flatten the list
-    print('Number of synset pairs in training_data: ', len(synset_pairs))
+    print('Number of wd-to-synset pairs in training_data: ', len(synset_pairs))
     
-    return synset_pairs
+    return synset_pairs ## ('ИХТИОЛОГ', 'УЧЕНЫЙ')
 
 def process_test_tsv(filepath, emb=None, tags=None, mwe=None, pos=None, skip_oov=None):
     
@@ -230,7 +239,7 @@ def process_test_tsv(filepath, emb=None, tags=None, mwe=None, pos=None, skip_oov
     print('Examples from saved intrinsic test:\n', good_pairs[:3])
     print('\n=== Embeddings coverage (intrinsuc test): %.2f%% ===' % (100 - (oov_counter/(len(good_pairs))*100)))
     
-    return good_pairs
+    return good_pairs  ## ('ихтиолог_NOUN', 'ученый_NOUN')
 
 
 def read_train(tsv_in):
@@ -353,7 +362,7 @@ def filter_dataset(pairs, embedding, tags=None, mwe=None, pos=None, skip_oov=Non
 
 def write_hyp_pairs(data, filename):
     with open(filename, 'w') as f:
-        writer = csv.writer(f, dialect='unix', delimiter='\t', lineterminator='\n', quoting=csv.QUOTE_NONE)
+        writer = csv.writer(f, dialect='unix', delimiter='\t', lineterminator='\n', escapechar='\\', quoting=csv.QUOTE_NONE)
         writer.writerow(['hyponym', 'hypernym'])
         for pair in data:
             writer.writerow(pair)
@@ -716,7 +725,7 @@ def cooccurence_counts(test_item, vec=None, emb=None, topn=None, dict_w2ids=None
     if len(corpus_freqs[test_item]) != 0:
 
         for i in corpus_freqs[test_item]: # [word_NOUN, word_NOUN, word_NOUN]
-            for tup in deduplicated_sims[:50]:  ## maybe further limit these 500 words to 100?
+            for tup in deduplicated_sims[:25]:  ## maybe further limit these 500 words to 100?
                 if i == tup[1].lower()+'_NOUN':
                     # print('==', i, tup[1].lower()+'_NOUN')
             # if i in hypo_small: ## this is always the casebecause co-occurence candidates were drawn from the top (how many?) hypernyms
@@ -735,11 +744,9 @@ def cooccurence_counts(test_item, vec=None, emb=None, topn=None, dict_w2ids=None
     return new_list  # list of (synset_id, hypernym_synset_name)
 
 
-def get_random_test(goldpath=None, w2ids_d=None):
+def get_random_test(goldpath=None, w2ids_d=None, method=None):
     gold_dict = defaultdict(list)
-    # intrinsic test is formated as
-    # смена_NOUN	избежание_NOUN
-    # сейсмичность_NOUN	объем_NOUN
+
     gold = open(goldpath, 'r').readlines()
     print(goldpath)
     for id, line in enumerate(gold):
@@ -748,24 +755,39 @@ def get_random_test(goldpath=None, w2ids_d=None):
             continue
         
         pair = line.split('\t')
-        hypo = pair[0].strip()
-        hypo = hypo[:-5].upper()
-        hyper = pair[1].strip()
-        ## replace the worded golden hypernym with all synset_ids possible for this hypernym
-        syn_ids = w2ids_d[hyper[:-5].upper()]  ## a list of hypernym synset_ids
+        # print(pair)
+        if method == 'deworded':
+            hypo = pair[0].strip()
+            hyper = pair[1].strip()
+            gold_dict[hypo].append(hyper)  ## the values is list of lists of ids in the deworded method
+        else:
+            hypo = pair[0].strip()
+            hypo = hypo[:5].upper()
+            hyper = pair[1].strip()
+            hyper = hyper[:5].upper()
+            ## replace the worded golden hypernym with all synset_ids possible for this hypernym
+            syn_ids = w2ids_d[hyper]  ## a list of hypernym synset_ids
+            gold_dict[hypo].append(syn_ids)
+    
+    if method != 'deworded':
+        gold_dict0 = defaultdict(list)
+        for key in gold_dict:
+            gold_dict0[key] = [item for sublist in gold_dict[key] for item in sublist]  # flatten the list
+    
+        first2pairs_gold = {k: gold_dict0[k] for k in list(gold_dict0)[:10]}
         
-        gold_dict[hypo].append(syn_ids)  ## the values is list of lists
+        print(first2pairs_gold)
+        print(len(gold_dict0))
     
-    gold_dict0 = defaultdict(list)
-    for key in gold_dict:
-        gold_dict0[key] = [item for sublist in gold_dict[key] for item in sublist]  # flatten the list
+        return gold_dict0
     
-    first2pairs_gold = {k: gold_dict0[k] for k in list(gold_dict0)[:2]}
+    else:
+        first2pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:10]}
     
-    print(first2pairs_gold)
-    print(len(gold_dict0))
-    
-    return gold_dict0
+        print(first2pairs_gold)
+        print(len(gold_dict))
+        
+        return gold_dict
 
 
 def get_intrinsic_test(goldpath=None):
