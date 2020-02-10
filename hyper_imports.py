@@ -13,6 +13,7 @@ from itertools import repeat
 from operator import itemgetter
 from scipy.spatial import distance
 import scipy.spatial as sp
+import json
 
 
 # parse ruwordnet
@@ -164,12 +165,35 @@ def process_tsv(filepath, emb=None, tags=None, mwe=None, pos=None, skip_oov=None
     return filtered_pairs
 
 
+def process_tsv_deworded(filepath, emb=None, tags=None, mwe=None, pos=None, skip_oov=None):
+    ## open with json
+    lines = open(filepath, 'r').readlines()
+    temp_dict = {}
+    synset_pairs = []
+    for i,line in enumerate(lines):
+        if i == 0:
+            continue
+        res = line.split('\t')
+        hypo_id, _, par_ids, _ = res
+        ## fix quotes
+        par_ids = par_ids.replace("'", '"')
+        
+        temp_dict[hypo_id] = json.loads(par_ids) # {'126551-N': ['4544-N', '147272-N'], '120440-N': ['141697-N', '116284-N']}
+        
+    for hypo_id, hypers_ids in temp_dict.items():
+        id_tuples = list(zip(repeat(hypo_id), hypers_ids))
+        synset_pairs.append(id_tuples)
+    
+    synset_pairs = [item for sublist in synset_pairs for item in sublist]  # flatten the list
+    print('Number of synset pairs in training_data: ', len(synset_pairs))
+    
+    return synset_pairs
+
 def process_test_tsv(filepath, emb=None, tags=None, mwe=None, pos=None, skip_oov=None):
     
     df = read_train(filepath)
-    
-    # strip of [] and ' in the strings:
-    ## TODO maybe average vectors for representatives of each synset in the training_data
+
+    # strip of [] and ' in the strings,  json fails here with json.decoder.JSONDecodeError: Expecting value: line 1 column 2 (char 1)
     df = df.replace(to_replace=r"[\[\]']", value='', regex=True)
     
     my_TEXTS = df['TEXT'].tolist()
@@ -540,9 +564,9 @@ def parse_taxonymy(senses, tags=None, pos=None, mode=None, emb_voc=None):
                     ## TODO deduplicate tuples
         else:
             print('What do you want to do with senses that are lexicalised as MWE?')
-    return all_id_senses
+    return all_id_senses ## 134530-N, кунгур_NOUN
 
-def lemmas_based_hypers(test_item, vec=None, emb=None, topn=None, dict_w2ids=None):
+def lemmas_based_hypers(test_item, vec=None, emb=None, topn=None, dict_w2ids=None): #кунгур_NOUN:['134530-N']
     nosamename = 0
     hyper_vec = np.array(vec, dtype=float)
     temp = set()
@@ -610,6 +634,7 @@ def synsets_vectorized(emb=None, worded_synsets=None, named_synsets=None, tags=N
     print('Total lemmas: ', total_lemmas)
     print('Singleword lemmas: ', single_lemmas)
     print('Singleword lemmas in ruWordNet absent from embeddings: ', ruthes_oov)
+    ## synset_ids_names has 134530-N, КУНГУР
     return synset_ids_names, mean_synset_vecs
 
 def mean_synset_based_hypers(test_item, vec=None, syn_ids=None, syn_vecs=None, topn=10):
@@ -646,6 +671,135 @@ def mean_synset_based_hypers(test_item, vec=None, syn_ids=None, syn_vecs=None, t
     this_hypo_res = deduplicated_sims[:topn]  ## list of (synset_id, hypernym_word, sim)
     
     return this_hypo_res  # list of (synset_id, hypernym_synset_name, sim)
+
+## кунгур_NOUN:['134530-N'], агностик_NOUN	["атеист_NOUN", "человек_NOUN", "религия_NOUN", ...]
+def cooccurence_counts(test_item, vec=None, emb=None, topn=None, dict_w2ids=None, corpus_freqs=None):
+    nosamename = 0
+    hyper_vec = np.array(vec, dtype=float)
+    temp = set()
+    deduplicated_sims = []
+    nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=topn)
+    sims = []
+    for res in nearest_neighbors:
+        hypernym = res[0] ## word_NOUN
+        similarity = res[1]
+        if hypernym in dict_w2ids:
+            for synset in dict_w2ids[hypernym]:  # we are adding all synset ids associated with the topN most_similar in embeddings and found in ruWordnet
+                sims.append((synset, hypernym, similarity))
+    
+    # sort the list of tuples (id, sim) by the 2nd element and deduplicate
+    # by rewriting the list while checking for duplicate synset ids
+    sims = sorted(sims, key=itemgetter(2), reverse=True) ## those that are found in ruWordNet in top 500 most_similar embeddings
+    
+    for a, b, c in sims:
+        # exclude same word as hypernym even if attributed to another synset
+        b = b[:-5].upper()
+        if test_item != b:
+            # print(hypo, b)
+            if a not in temp:
+                temp.add(a)
+                deduplicated_sims.append((a, b, c))
+        else:
+            nosamename += 1
+    # print('Selves as hypernyms: %s' % nosamename)
+    
+    this_hypo_res = deduplicated_sims[:10]  # list of (synset_id, HYPERNYM_WORD, sim)
+    
+    print('\n\n%%%%%%%%%%%%%%%%%%')
+    print('MY QUERY:  === %s ===' % test_item)
+    
+    print('This is before factoring in the cooccurence stats\n', this_hypo_res)
+    test_item = test_item.lower()+'_NOUN'
+    # print('%s co-occured with\n%s' % (test_item, corpus_freqs[test_item]))
+    
+    new_list = []
+    if len(corpus_freqs[test_item]) != 0:
+
+        for i in corpus_freqs[test_item]: # [word_NOUN, word_NOUN, word_NOUN]
+            for tup in deduplicated_sims[:50]:  ## maybe further limit these 500 words to 100?
+                if i == tup[1].lower()+'_NOUN':
+                    # print('==', i, tup[1].lower()+'_NOUN')
+            # if i in hypo_small: ## this is always the casebecause co-occurence candidates were drawn from the top (how many?) hypernyms
+                    new_list.append(tup)
+    else:
+        # print('NOCOOCCURRENCE:', test_item) ## травести, точмаш, прет-а-порте, стечкин
+        new_list = deduplicated_sims[:10]
+    if len(new_list) < 10:
+        for tup in deduplicated_sims:
+            if tup not in new_list:
+                new_list.append(tup)
+                
+    new_list = new_list[:10]
+    
+    print('New order of hypernyms\n%s' % (new_list))
+    return new_list  # list of (synset_id, hypernym_synset_name)
+
+
+def get_random_test(goldpath=None, w2ids_d=None):
+    gold_dict = defaultdict(list)
+    # intrinsic test is formated as
+    # смена_NOUN	избежание_NOUN
+    # сейсмичность_NOUN	объем_NOUN
+    gold = open(goldpath, 'r').readlines()
+    print(goldpath)
+    for id, line in enumerate(gold):
+        # skip the header
+        if id == 0:
+            continue
+        
+        pair = line.split('\t')
+        hypo = pair[0].strip()
+        hypo = hypo[:-5].upper()
+        hyper = pair[1].strip()
+        ## replace the worded golden hypernym with all synset_ids possible for this hypernym
+        syn_ids = w2ids_d[hyper[:-5].upper()]  ## a list of hypernym synset_ids
+        
+        gold_dict[hypo].append(syn_ids)  ## the values is list of lists
+    
+    gold_dict0 = defaultdict(list)
+    for key in gold_dict:
+        gold_dict0[key] = [item for sublist in gold_dict[key] for item in sublist]  # flatten the list
+    
+    first2pairs_gold = {k: gold_dict0[k] for k in list(gold_dict0)[:2]}
+    
+    print(first2pairs_gold)
+    print(len(gold_dict0))
+    
+    return gold_dict0
+
+
+def get_intrinsic_test(goldpath=None):
+    gold_dict = defaultdict(list)
+    print('Evaluating on the intrinsic testset')
+    df_test = pd.read_csv(goldpath, sep='\t')
+    df_test = df_test.replace(to_replace=r"[\[\]']", value='', regex=True)
+    
+    ids = df_test['SYNSET_ID'].tolist()
+    my_TEXTS = df_test['TEXT'].tolist()
+    ids_parents = df_test['PARENTS'].tolist()
+    
+    for hypo, hyper in zip(my_TEXTS, ids_parents):
+        hypo = hypo.replace(r'"', '')
+        hyper = hyper.replace(r'"', '')
+        hypo = hypo.split(', ')
+        hyper = hyper.split(', ')
+        print(hyper)
+        for i in hypo:
+            gold_dict[i].append(hyper)
+    
+    gold_dict0 = defaultdict(list)
+    for key in gold_dict:
+        gold_dict0[key] = [item for sublist in gold_dict[key] for item in sublist]  # flatten the list
+    
+    first2pairs_gold = {k: gold_dict0[k] for k in list(gold_dict0)[:2]}
+    
+    print(first2pairs_gold)
+    
+    return gold_dict0
+
+
+######################
+
 
 if __name__ == '__main__':
     print('=== This is a modules script, it is not supposed to run as main ===')
