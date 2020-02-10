@@ -1,18 +1,13 @@
-## encoding: utf-8
 import argparse
-import csv
 import os
-import pandas as pd
 from smart_open import open
 import json
-from collections import defaultdict
-
-
+## a one-time script to produce reference in random and intrinsic setting
 ## I need HYPO ['synset_id', 'synset_id'] format from
 # (1) training data format test file in intrinsic mode
 # (2) hypo_NOUN hyper_NOUN random split
 
-from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, TAGS, TOPN, METHOD, TEST
+from configs import VECTORS, OUT, RUWORDNET, POS, METHOD, TEST
 from hyper_imports import read_xml, wd2id_dict
 from hyper_imports import id2wds_dict, get_random_test, get_intrinsic_test
 
