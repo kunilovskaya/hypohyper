@@ -4,16 +4,11 @@ from itertools import repeat
 import os, re
 import sys
 from sklearn.model_selection import train_test_split
-from hyper_imports import read_xml, load_embeddings, write_hyp_pairs, process_tsv, process_test_tsv
+from hyper_imports import load_embeddings, write_hyp_pairs, process_tsv, process_test_tsv
 
-from configs import VECTORS, TAGS, MWE, EMB_PATH, OUT, RUWORDNET, RANDOM_SEED, POS, SKIP_OOV, TEST
-
+from configs import VECTORS, TAGS, MWE, EMB_PATH, OUT, RANDOM_SEED, POS, SKIP_OOV, TEST
 
 parser = argparse.ArgumentParser()
-# if POS == 'NOUN':
-#     parser.add_argument('--synsets', default='%ssynsets.N.xml' % RUWORDNET, help="synsets files")
-# if POS == 'VERB':
-#     parser.add_argument('--synsets', default='%ssynsets.V.xml' % RUWORDNET, help="synsets files")
     
 if TEST == 'intrinsic':
     if POS == 'NOUN':
@@ -37,7 +32,6 @@ start = time.time()
 
 args = parser.parse_args()
 
-# parsed_syns = read_xml(args.synsets)
 print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
 model = load_embeddings(EMB_PATH)
 
