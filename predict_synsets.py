@@ -13,13 +13,13 @@ from collections import defaultdict
 from itertools import repeat
 import json
 
-from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, TAGS, TOPN, OPT, TEST
+
+from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, TAGS, TOPN, TEST, METHOD
 from hyper_imports import popular_generic_concepts, load_embeddings, parse_taxonymy,read_xml, id2name_dict, wd2id_dict
 from hyper_imports import lemmas_based_hypers, mean_synset_based_hypers,id2wds_dict, synsets_vectorized, get_random_test
-from hyper_imports import get_intrinsic_test
+from hyper_imports import cooccurence_counts
 
 parser = argparse.ArgumentParser('Detecting most similar synsets and formatting the output')
-parser.add_argument('--effort', default='base', required=True) #'averaged_syns' #, 'corpus-informed' base
 # for ultimate results to submit use private instead of public
 if TEST == 'provided':
     if POS == 'NOUN':
@@ -32,7 +32,7 @@ if TEST == 'intrinsic' or TEST == 'random':
     if POS == 'VERB':
         parser.add_argument('--test', default='%strains/%s_%s_%s_test4testing.txt' % (OUT, VECTORS, POS, TEST), type=os.path.abspath)
         
-parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS, OPT, TEST),
+parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS, METHOD, TEST),
                     help="predicted vectors")
 parser.add_argument('--more_info', default='%scooc_hypernyms_public_nouns_news.tsv' % (OUT),
                     help="predicted vectors")
@@ -41,7 +41,6 @@ args = parser.parse_args()
 
 start = time.time()
 
-effort = args.effort
 
 if POS == 'NOUN':
     senses = '%ssenses.N.xml' % RUWORDNET
@@ -57,6 +56,7 @@ else:
 print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
 model = load_embeddings(EMB_PATH)
 
+## get a list of tuples (134530-N, кунгур_NOUN)
 sens_index = parse_taxonymy(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab)
 
 synsets_dict = defaultdict(list) ## defaultdict(set)
@@ -65,7 +65,7 @@ for i in sens_index:
     synset = i[0]
     ## <sense lemma="НЕСОБЛЮДЕНИЕ ПРАВИЛО ТОРГОВЛЯ" name="НЕСОБЛЮДЕНИЕ ПРАВИЛ ТОРГОВЛИ" ... /sense>
     name = i[1]
-    synsets_dict[name].append(synset)
+    synsets_dict[name].append(synset) ## a dict that reverses the list of tuples (134530-N, кунгур_NOUN) to get кунгур_NOUN:['134530-N']
     # synsets_dict[name].add(synset)
 
 parsed_syns = read_xml(synsets)
@@ -92,7 +92,7 @@ hyper_vecs = np.load(args.hyper_vectors, allow_pickle=True)
 
 OUT = '%sresults/' % OUT
 os.makedirs(OUT, exist_ok=True)
-outfile = open('%s%s_%s_%s_%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, OPT, TEST, effort), 'w')
+outfile = open('%s%s_%s_%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, METHOD, TEST), 'w')
 writer = csv.writer(outfile, dialect='unix', delimiter='\t', lineterminator='\n', escapechar='\\', quoting=csv.QUOTE_NONE)
 
 identifier_tuple, syn_vectors = synsets_vectorized(emb=model, worded_synsets=synset_words, named_synsets=synsets_names, tags=TAGS, pos=POS)
@@ -102,27 +102,39 @@ counter = 0
 nosamename = 0
 pred_dict = defaultdict(list)
 for hypo, hyper_vec in zip(test, hyper_vecs):
-    # print(hypo)
     if not np.any(hyper_vec):
         for line in top_ten: # synset ids already
             row = [hypo.strip(), line.strip(), 'dummy']
             writer.writerow(row)
             pred_dict[hypo.strip()].append(line.strip())
     else:
-        if effort == 'base':
-            # (default) list of (synset_id, hypernym_word, sim)
-            this_hypo_res = lemmas_based_hypers(hypo, vec=hyper_vec, emb=model, topn=TOPN, dict_w2ids=synsets_dict)
-        if effort == 'averaged_syns':
-        # list of (synset_id, hypernym_synset_name, sim)
+        if METHOD == 'base':
+            # (default) get a list of (synset_id, hypernym_word, sim)
+            this_hypo_res = lemmas_based_hypers(hypo, vec=hyper_vec, emb=model, topn=TOPN, dict_w2ids=synsets_dict) #кунгур_NOUN:['134530-N']
+        elif METHOD == 'deworded':
+        # gets a list of (synset_id, hypernym_synset_name, sim); identifier_tuple is 134530-N, КУНГУР
             this_hypo_res = mean_synset_based_hypers(hypo, vec=hyper_vec, syn_ids=identifier_tuple, syn_vecs=syn_vectors, topn=10)
-    
+        elif 'corpus-informed' in METHOD:
+            ## load the lists of hypernyms that coocur with the given hyponyms
+            lines = open(args.more_info, 'r').readlines()
+            freqs_dict = {}
+            for line in lines:
+                res = line.split('\t')
+                hyponym, hypernyms = res
+                freqs_dict[hyponym] = json.loads(hypernyms)
+            
+            this_hypo_res = cooccurence_counts(hypo, vec=hyper_vec, emb=model, topn=TOPN, dict_w2ids=synsets_dict, corpus_freqs=freqs_dict) # кунгур_NOUN:['134530-N']
+        else:
+            this_hypo_res = None
+            print('Any other methods to improve performance?')
+            
         if counter % 300 == 0:
             print('\n%d hyponyms processed out of %d total' % (counter, len(test)),
                   file=sys.stderr)
             # Want to see predictions in real time?
-            print(
-                'Here comes a list of 10 unique synset ids for %s in test.\n '
-                '%s' % (hypo, this_hypo_res))
+            # print(
+            #     'Here comes a list of 10 unique synset ids for %s in test.\n '
+            #     '%s' % (hypo, this_hypo_res))
         
         counter += 1
         
@@ -131,20 +143,20 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
             writer.writerow(row)
             pred_dict[hypo.strip()].append(line[0].strip())
             
-json.dump(pred_dict, open('%s%s_%s_pred_%s.json' % (OUT, POS, TEST, effort), 'w'))
+json.dump(pred_dict, open('%s%s_%s_pred_%s.json' % (OUT, POS, TEST, METHOD), 'w'))
 # print('Number of samename hypernyms excluded',nosamename)
 outfile.close()
 
 if TEST == 'provided':
-    print('===Look at OOV===')
-    print('АНИСОВКА', [synsets_names[name] for name in pred_dict['АНИСОВКА']])
-    print(pred_dict['ВЭЙП'])
-    print(pred_dict['ДРЕСС-КОД'])
+    # print('===Look at OOV===')
+    # print('АНИСОВКА', [synsets_names[name] for name in pred_dict['АНИСОВКА']])
+    # print(pred_dict['ВЭЙП'])
+    # print(pred_dict['ДРЕСС-КОД'])
     # upload this archive to the site
-    archive_name = '%s_%s_%s_%s_%s_%s_%s.zip' % (VECTORS, POS, MODE, OOV_STRATEGY, OPT, TEST, effort)
+    archive_name = '%s_%s_%s_%s_%s_%s.zip' % (VECTORS, POS, MODE, OOV_STRATEGY, METHOD, TEST)
     with zipfile.ZipFile(OUT + archive_name, 'w') as file:
-        file.write('%s%s_%s_%s_%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, OPT, TEST, effort),
-                   '%s_%s_%s_%s_%s_%s_%s.tsv' % (VECTORS, POS, MODE, OOV_STRATEGY, OPT, TEST, effort))
+        file.write('%s%s_%s_%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, METHOD, TEST),
+                   '%s_%s_%s_%s_%s_%s.tsv' % (VECTORS, POS, MODE, OOV_STRATEGY, METHOD, TEST))
     
 end = time.time()
 training_time = int(end - start)
