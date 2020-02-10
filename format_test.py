@@ -12,7 +12,7 @@ from collections import defaultdict
 # (1) training data format test file in intrinsic mode
 # (2) hypo_NOUN hyper_NOUN random split
 
-from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, TAGS, TOPN, OPT, TEST
+from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, TAGS, TOPN, METHOD, TEST
 from hyper_imports import read_xml, wd2id_dict
 from hyper_imports import id2wds_dict, get_random_test, get_intrinsic_test
 
@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser('Detecting most similar synsets and formatting 
 # for ultimate results to submit use private instead of public
 
 if TEST == 'random':
-    parser.add_argument('--truth', default='%strains/%s_%s_%s_test.tsv.gz' % (OUT, VECTORS, POS, TEST)) ## replace values(words with lists of associated ids (from wd2ids))
+    parser.add_argument('--truth', default='%strains/%s_%s_%s_%s_test.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST)) ## replace values(words with lists of associated ids (from wd2ids))
 if TEST == 'intrinsic':
     parser.add_argument('--truth', default='%s/trains/static/%s_static-test.tsv' % (OUT, POS)) # use PARENTS col directly as a list of gold synset_ids for test items
 
