@@ -8,7 +8,7 @@ import sys, os
 import numpy as np
 import time
 from hyper_imports import filter_dataset
-from configs import VECTORS, EMB_PATH, OUT, POS, SKIP_OOV, OPT, TEST
+from configs import VECTORS, EMB_PATH, OUT, POS, SKIP_OOV, METHOD, TEST
 
 
 parser = ArgumentParser()
@@ -71,10 +71,16 @@ print('Transformation matrix created', transforms.shape, file=sys.stderr)
 OUT = '%sprojections/' % OUT
 os.makedirs(OUT, exist_ok=True)
 
-np.save('%s%s_%s_%s_%s_projection.npy' % (OUT, VECTORS, POS, OPT, TEST), transforms)
+np.save('%s%s_%s_%s_%s_projection.npy' % (OUT, VECTORS, POS, METHOD, TEST), transforms)
 
 end = time.time()
 training_time = int(end - start)
 print('\n%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-print('DONE learning step 1. \nTraining data re-formated in %s minutes' % str(round(training_time/60)))
+print('%s has run\nProjections learnt in %s minutes' % (os.path.basename(sys.argv[0]), str(round(training_time/60))))
+if TEST == 'provided':
+    print('We are using 100\% of the training-data')
+if TEST == 'intrinsic':
+    print('We are using 0.8 of the training data with fewer monosemantic words which were saved for test')
+if TEST == 'random':
+    print('Using the standard train/test random split')
 print('%%%%%%%%%%%%%%%%%%%%%%%%%%%\n')
