@@ -1,19 +1,17 @@
-#! python3
-# coding: utf-8
-
 from hyper_imports import learn_projection, load_embeddings, estimate_sims
 from argparse import ArgumentParser
 import pandas as pd
 import sys, os
 import numpy as np
 import time
-from hyper_imports import filter_dataset, read_xml, id2name_dict, id2wds_dict, synsets_vectorized
-from configs import VECTORS, EMB_PATH, OUT, POS, SKIP_OOV, METHOD, TEST, RUWORDNET, TAGS
+from hyper_imports import preprocess_hypo, preprocess_wordpair, read_xml, id2name_dict, id2wds_dict, synsets_vectorized
+from configs import VECTORS, EMB_PATH, OUT, POS, SKIP_OOV, METHOD, TEST, RUWORDNET, TAGS, MWE
 from collections import defaultdict
+import json
 
 parser = ArgumentParser()
-parser.add_argument('--trainfile', default='%strains/%s_%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST),
-                    help="0.8 static train of pre-processed training_data, all UPPER",
+parser.add_argument('--train', default='%strains/%s_%s_%s_%s_train.json' % (OUT, VECTORS, POS, TEST, METHOD),
+                    help="unfiltered, (CAPS,CAPS) or (CAPS,id) pairs",
                     type=os.path.abspath)
 
 parser.add_argument('--lmbd', action='store', type=float, default=0.0)
@@ -22,24 +20,23 @@ args = parser.parse_args()
 
 start = time.time()
 
-datafile = args.trainfile
-
-data = pd.read_csv(datafile, sep='\t', header=0)
-
-## the words are already lowercased and tagged
-# print(data.head(), file=sys.stderr)
-
-hyponyms = data.hyponym.values
-hypernyms = data.hypernym.values
+## filter the training data, taking into account TAGS and POS and model.vocab
+pairs = json.load(open(args.train, 'r')) # list of tuples
 
 print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
 model = load_embeddings(EMB_PATH)
-
 
 source_vecs = []
 target_vecs = []
 
 if METHOD == 'deworded':
+    data = preprocess_hypo(pairs, tags=TAGS, mwe=MWE, pos=POS)  # list of tuples
+    ## this is formated to lookup in embeddings
+    hyponyms = [pair[0] for pair in data]
+    hypernyms = [pair[1] for pair in data]
+    
+    oov_hypo = []
+    oov_synsets = []
     if POS == 'NOUN':
         synsets = '%ssynsets.N.xml' % RUWORDNET
     elif POS == 'VERB':
@@ -57,23 +54,34 @@ if METHOD == 'deworded':
     print('Number of vectorised synsets', len(syn_vectors))
     lookup = defaultdict()
     for (id,name), vect in zip(identifier_tuple, syn_vectors):
+        # print('==', id)
         lookup[id] = vect
     
     for hyponym, hypernym in zip(hyponyms, hypernyms):
-        source_vec = lookup[hyponym]
-        target_vec = lookup[hypernym]
-        source_vecs.append(source_vec)
-        target_vecs.append(target_vec)
+        if hyponym not in model.vocab:
+            print(hyponym)
+            oov_hypo.append(hyponym)
+        if hypernym not in lookup.keys():
+            oov_synsets.append(hypernym)
+        if hyponym in model.vocab and hypernym in lookup.keys(): # this is where we filter thru emb.vocab and skip synsets with no singleword representation
+            source_vec = model[hyponym]
+            target_vec = lookup[hypernym]
+            source_vecs.append(source_vec)
+            target_vecs.append(target_vec)
+        else:
+            source_vec = None
+
+    print('OOV unique hyponyms: ', len(set(oov_hypo)))
+    print('OOV unique synsets: ', len(set(oov_synsets)))
     
 else:
-    ## in the train data, hyponym--hyperonym are not necessarily one2one correspondences
-    ## multiple hypo-hypernymic relations are typical for polysemantic words,
-    # e.g CASE -> example/instance; CASE -> container; CASE -> a piece of furniture; CASE -> a set of facts
-    # mult_hypernyms = {}  # Dictionary of hypernyms corresponding to each hyponym which was used for threhold, but not anymore
+    data = preprocess_wordpair(pairs, tags=TAGS, mwe=MWE, pos=POS)  # list of tuples
+    hyponyms = [pair[0] for pair in data]
+    hypernyms = [pair[1] for pair in data]
     
     for hyponym, hypernym in zip(hyponyms, hypernyms):
         if SKIP_OOV == True:
-            if hyponym in model.vocab or hypernym in model.vocab: # good for static-train
+            if hyponym in model.vocab or hypernym in model.vocab: # this is where filtering thru emb happens
                 source_vec = model[hyponym]
                 target_vec = model[hypernym]
                 source_vecs.append(source_vec)
@@ -88,10 +96,7 @@ else:
             target_vecs.append(target_vec)
         else:
             print(hyponym, hypernym, 'not found!', file=sys.stderr)
-    
-print('Whole train dataset shape:', len(source_vecs), file=sys.stderr)
-# print('Learning projection matrix...', file=sys.stderr)
-
+            source_vec = None
 transforms = learn_projection((source_vecs, target_vecs), model, lmbd=args.lmbd) ## this returns the transformation matrix
 print('Transformation matrix created', transforms.shape, file=sys.stderr)
 
@@ -102,12 +107,11 @@ np.save('%s%s_%s_%s_%s_projection.npy' % (OUT, VECTORS, POS, METHOD, TEST), tran
 
 end = time.time()
 training_time = int(end - start)
-print('\n%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-print('%s has run\nProjections learnt in %s minutes' % (os.path.basename(sys.argv[0]), str(round(training_time/60))))
-if TEST == 'provided':
-    print('We are using 100\% of the training-data')
-if TEST == 'intrinsic':
-    print('We are using 0.8 of the training data with fewer monosemantic words which were saved for test')
-if TEST == 'random':
-    print('Using the standard train/test random split')
-print('%%%%%%%%%%%%%%%%%%%%%%%%%%%\n')
+
+print('METHOD == %s' % METHOD, file=sys.stderr)
+print('TEST == %s' % TEST, file=sys.stderr)
+print('Train is filtered with an embedding model', file=sys.stderr)
+print('Training on %s pairs' % len(source_vec), file=sys.stderr)
+
+print('=== %s has run ===\nProjections learnt in %s minutes' % (os.path.basename(sys.argv[0]), str(round(training_time/60))))
+
