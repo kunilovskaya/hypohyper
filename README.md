@@ -115,11 +115,12 @@ however, there are only 7274 unique hyponyms and 3622 cases of duplicates on the
 - [X] analyse OOV in private tests: how important is anti-OOV strategy?
 - [X] **FAILED**: produce a raw static train-test split so that test includes only monosemantic hyponym synsets, 
 i.e. synsets that have only one hypernym synset; **Next step** fall back to random train-test split and see whether Codalab res will be reproducible
-- [ ] average synset vectors at train and inference times and for getting most_similar
+- [X] average synset vectors at train and hyponym-synset-detection times and for getting most_similar
 - [X] exclude same word as hypernym; **contrary to expectations, I don't get same-name candidates in testset**
-- [ ] factor in cooccurence stats or patterns based on the news corpus
-- [X] **FAILED: unusable for data with no gound truth available**; cluster input
-- [ ] add negative sampling (based on hyponyms, synonyms)
+- [X] factor in cooccurence stats or 
+- [ ] Hearst patterns based on the news corpus
+- [X] **FAILED: unusable for data with no gound truth available**; cluster input following Fu et al. (2014) and Ustalov (2017)'s suggestions 
+- [X] **Results are lower than for the naive approach**: add negative sampling (based on hyponyms, synonyms) following Ustalov (2017)'s suggestions
 - [ ] choose wiser: rank synsets and get the most high ranking ones
 
 ================================================================
@@ -186,7 +187,25 @@ python3 get_hyper_vectors.py
 * finally, represent all (single word or multi-word) senses of NOUN synsets in ruWordNet, measure the similarities and produce the formatted output by running
 
 ```
-python3 measure_sims.py
+python3 predict_synsets.py
+```
+
+(6) this will produce the formmated output expected at the competition side
+
+* finally, represent all (single word or multi-word) senses of NOUN synsets in ruWordNet, measure the similarities and produce the formatted output by running
+
+```
+python3 predict_synsets.py
+```
+(7-8)
+if you are using random or intrinsic TEST option you will train on 80% of the data; you can produce the golden test set
+to internally evaluate the performance of our algo
+
+```
+python3 format_test.py
+```
+```
+python3 intrinsic_evaluate.py
 ```
 
 ========================================================================
