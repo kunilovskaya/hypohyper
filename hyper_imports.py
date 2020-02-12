@@ -760,7 +760,7 @@ def get_random_test(goldpairs=None):
 def get_static_test(goldpath=None):
     lines = open(goldpath, 'r').readlines()
     print('длина статичного тестфайла', len(lines))
-    temp_dict = {}
+    temp_dict = defaultdict()
     for i, line in enumerate(lines):
         # skip the header
         if i == 0:
@@ -777,7 +777,7 @@ def get_static_test(goldpath=None):
     
     gold_dict = defaultdict()
     for key in temp_dict:
-        gold_dict[key] = [item for sublist in gold_dict[key] for item in sublist]
+        gold_dict[key] = [item for sublist in temp_dict[key] for item in sublist]
     print(len(gold_dict))
     return gold_dict
 
