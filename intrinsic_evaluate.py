@@ -4,21 +4,26 @@ from smart_open import open
 import json
 
 from evaluate import get_score
-from configs import OUT, POS, TEST, METHOD
+from configs import OUT, POS, TEST, METHOD, EMB_PATH
 
-if TEST == 'provided':
-    print('You have been useing the provided test set, you dont have laballed data for internal evaluation!')
+if TEST == 'codalab':
+    print('You have been using the codalab test set, you dont have laballed data for internal evaluation!')
     sys.exit()
-
-gold_dict = json.load(open('%sgold_dicts/%s_%s_gold.json' % (OUT, POS, TEST), 'r'))
-pred_dict = json.load(open('%sresults/%s_%s_pred_%s.json' % (OUT, POS, TEST, METHOD), 'r'))
+    
+## {'ОТЕЧЕСТВО': ['445-N', '445-N', '130809-N', '445-N', '144422-N'], 'ТОММОТ': ['242-N', '142582-N', '145516-N']}
+gold_dict = json.load(open('%sgold_dicts/%s_%s_%s_gold.json' % (OUT, POS, TEST, METHOD), 'r'))
+## PRED: {'АБДОМИНОПЛАСТИКА': ['100022-N', '242-N', '2062-N', '106555-N', '2550-N', '139862-N', '106451-N', ...
+pred_dict = json.load(open('%sresults/%s_%s_%s_pred.json' % (OUT, POS, TEST, METHOD), 'r'))
 
 first2pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:2]}
-print(first2pairs_gold)
-first2pairs_gold_pred = {k: pred_dict[k] for k in list(pred_dict)[:2]}
-print(first2pairs_gold_pred)
+print('GOLD ', first2pairs_gold)
+first2pairs_pred = {k: pred_dict[k] for k in list(pred_dict)[:2]}
+print('PRED ', first2pairs_pred)
 
+print(len(gold_dict), len(pred_dict))
 
+print('Embedding:', EMB_PATH.split('/')[-2], file=sys.stderr)
+print(TEST, METHOD)
 mean_ap, mean_rr = get_score(gold_dict, pred_dict)
 print("MAP: {0}\nMRR: {1}\n".format(mean_ap, mean_rr), file=sys.stderr)
 
