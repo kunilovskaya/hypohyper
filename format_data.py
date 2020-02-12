@@ -141,11 +141,11 @@ if TEST != 'codalab':
         for key in gold_dict:
             my_testfile.write(key + '\n')
         
-print('Train pairs: %d' % len(hypohyper_train), file=sys.stderr)
+print('Raw train pairs: %d' % len(hypohyper_train), file=sys.stderr)
 if TEST == 'random' or TEST == 'static' or TEST == 'provided':
-    print('Test words: %d' % len(gold_dict), file=sys.stderr)
+    print('Test words (no MWE): %d' % len(gold_dict), file=sys.stderr)
     print('GOLD:', first3pairs_gold, file=sys.stderr)
-print('TRAIN: ', hypohyper_train[:3], file=sys.stderr)
+# print('RAW TRAIN: ', hypohyper_train[:3], file=sys.stderr)
 
 end = time.time()
 training_time = int(end - start)
