@@ -1,12 +1,14 @@
-RANDOM_SEED = 42
-# codename for embeddings: 'ft-araneum', w2v-rdt500, w2v_pos-araneum, ft-ruscorp, ft-araneum_full
+RANDOM_SEED = 0
+# codename for emb: 'ft-araneum', w2v-rdt500, w2v-pos-ruscorpwiki, w2v-pos-araneum, ft-ruscorp, ft-araneum_full
 # news-pos-sk, news-pos-sbow, ft-news-sk, ft-news-cbow
-VECTORS = 'w2v-pos-araneum' ## no full means that we filter out OOV at train time
+VECTORS = 'w2v-tayga-fpos5' ## no full means that we filter out OOV at train time
 POS = 'NOUN' # 'VERB'
-MWE = True
-TEST = 'random' # intrinsic, provided random
-## regularisation strategy: neg-hyp, neg-syn, no-reg
-OPT = 'no-reg'
+MWE = True ## always TRUE wouldn't hurt
+TEST = 'provided' # static, provided, random, codalab
+
+## strategies to improve performance
+METHOD = 'deworded' # neg-hyp, neg-syn, deworded, corpus-informed25, base
+
 
 if 'pos' in VECTORS:
     TAGS = True
@@ -16,6 +18,10 @@ else:
     
 if VECTORS == 'w2v-pos-araneum':
     EMB_PATH = '/home/u2/resources/emb/araneum_upos_skipgram_300_2_2018.bin'
+elif VECTORS == 'w2v-pos-ruscorpwiki':
+    EMB_PATH = '/home/u2/resources/emb/182_ruwikiruscorpora_upos_skipgram_300_2_2019/model.bin'
+elif VECTORS == 'w2v-tayga-fpos5':
+    EMB_PATH = '/home/u2/resources/emb/186_tayga-func_upos_skipgram_300_5_2019/model.bin'
 elif 'ft-araneum' in VECTORS:
     EMB_PATH = '/home/u2/resources/emb/araneum_none_fasttextcbow_300_5_2018/araneum_none_fasttextcbow_300_5_2018.model'
 elif 'ft-ruscorp' in VECTORS:
