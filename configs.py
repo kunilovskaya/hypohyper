@@ -1,13 +1,13 @@
 RANDOM_SEED = 0
 # codename for emb: 'ft-araneum', w2v-rdt500, w2v-pos-ruscorpwiki, w2v-pos-araneum, ft-ruscorp, ft-araneum_full
-# news-pos-sk, news-pos-sbow, ft-news-sk, ft-news-cbow
+# news-pos-sk, news-pos-sbow, ft-news-sk, ft-news-cbow, w2v-tayga-fpos5
 VECTORS = 'w2v-tayga-fpos5' ## no full means that we filter out OOV at train time
 POS = 'NOUN' # 'VERB'
 MWE = True ## always TRUE wouldn't hurt
-TEST = 'provided' # static, provided, random, codalab
+TEST = 'random' # static, provided, random, codalab
 
 ## strategies to improve performance
-METHOD = 'deworded' # neg-hyp, neg-syn, deworded, corpus-informed25, base
+METHOD = 'base' # neg-hyp, neg-syn, deworded, corpus-informed25, base
 
 
 if 'pos' in VECTORS:
