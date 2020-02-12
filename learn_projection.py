@@ -1,6 +1,5 @@
 from hyper_imports import learn_projection, load_embeddings, estimate_sims
 from argparse import ArgumentParser
-import pandas as pd
 import sys, os
 import numpy as np
 import time
@@ -37,29 +36,25 @@ if METHOD == 'deworded':
     
     oov_hypo = []
     oov_synsets = []
+    synsets = None
     if POS == 'NOUN':
         synsets = '%ssynsets.N.xml' % RUWORDNET
     elif POS == 'VERB':
         synsets = '%ssynsets.V.xml' % RUWORDNET
-    else:
-        synsets = None
-        print('Not sure which PoS-domain you want from ruWordNet')
         
     parsed_syns = read_xml(synsets)
-    synsets_names = id2name_dict(parsed_syns)# a dict of format 144031-N:АУТИЗМ
+    synsets_names = id2name_dict(parsed_syns) # a dict of format 144031-N:АУТИЗМ
     synset_words = id2wds_dict(parsed_syns) # a dict of format 144031-N:[АУТИЗМ, АУТИСТИЧЕСКОЕ МЫШЛЕНИЕ]
-    ## (id,name)
+
     identifier_tuple, syn_vectors = synsets_vectorized(emb=model, worded_synsets=synset_words,
                                                        named_synsets=synsets_names, tags=TAGS, pos=POS)
     print('Number of vectorised synsets', len(syn_vectors))
     lookup = defaultdict()
     for (id,name), vect in zip(identifier_tuple, syn_vectors):
-        # print('==', id)
         lookup[id] = vect
     
     for hyponym, hypernym in zip(hyponyms, hypernyms):
         if hyponym not in model.vocab:
-            print(hyponym)
             oov_hypo.append(hyponym)
         if hypernym not in lookup.keys():
             oov_synsets.append(hypernym)
@@ -81,7 +76,7 @@ else:
     
     for hyponym, hypernym in zip(hyponyms, hypernyms):
         if SKIP_OOV == True:
-            if hyponym in model.vocab or hypernym in model.vocab: # this is where filtering thru emb happens
+            if hyponym in model.vocab and hypernym in model.vocab: # this is where filtering thru emb happens
                 source_vec = model[hyponym]
                 target_vec = model[hypernym]
                 source_vecs.append(source_vec)
@@ -96,14 +91,13 @@ else:
             target_vecs.append(target_vec)
         else:
             print(hyponym, hypernym, 'not found!', file=sys.stderr)
-            source_vec = None
 transforms = learn_projection((source_vecs, target_vecs), model, lmbd=args.lmbd) ## this returns the transformation matrix
-print('Transformation matrix created', transforms.shape, file=sys.stderr)
+# print('Transformation matrix created', transforms.shape, file=sys.stderr)
 
 OUT = '%sprojections/' % OUT
 os.makedirs(OUT, exist_ok=True)
 
-np.save('%s%s_%s_%s_%s_projection.npy' % (OUT, VECTORS, POS, METHOD, TEST), transforms)
+np.save('%s%s_%s_%s_%s_projection.npy' % (OUT, VECTORS, POS, TEST, METHOD), transforms)
 
 end = time.time()
 training_time = int(end - start)
@@ -111,7 +105,7 @@ training_time = int(end - start)
 print('METHOD == %s' % METHOD, file=sys.stderr)
 print('TEST == %s' % TEST, file=sys.stderr)
 print('Train is filtered with an embedding model', file=sys.stderr)
-print('Training on %s pairs' % len(source_vec), file=sys.stderr)
+print('Training on %s pairs' % len(source_vecs), file=sys.stderr)
 
 print('=== %s has run ===\nProjections learnt in %s minutes' % (os.path.basename(sys.argv[0]), str(round(training_time/60))))
 
