@@ -1,22 +1,144 @@
 KuKuPl team's contribution to the shared task at Dialogue Evaluation 2020: [Taxonomy Enrichment for the Russian Language](https://competitions.codalab.org/competitions/22168)
 
-## RESULTS (last updated Feb04, 2020)
 
-### Discussion:
-* (unexpectedly) intrinsic evaluation returns lower results for RDT vectors of size 500
-* intrinsic evaluation on 0.2 test is only arbitrary related to evaluation on the public test, due to the dynamic nature of our testset and uncontrolled polysemy of hyponyms (which was avoided in the public (real) test) 
-* we tried 6 vector models listed here in the order of performance on the NOUN public test (all fastText vectors are learnt on lemmatised corpora)
-- w2v upos araneum **NOUN: 0.2540**
+## tasks and solutions (last updated Feb12, 2020)
+
+### (1) Getting the hypernym vector for a test word
+
+**(1.1) select the best performing vector model in the no-frills setting**
+
+we tried 8 vector models listed here in the order of performance on the NOUN public test 
+- w2v upos araneum **NOUN: 0.2470** for top-hyper OOV strategy
 - w2v_rdt500
+- 186_tayga-pos5
+- 182_ruscwiki-pos
 - ft_araneum_ft_no_OOV
+- news_pos_0_5
 - ft_ruscorp_ft_no_OOV
 - ft_araneum_full
 - dedicated news ft with extended MWE support (('набат_NOUN', 'колокольный::звон_NOUN'), ('этиловый::спирт_NOUN', 'спирт_NOUN'))
-* the best performing combination of parameters for getting synsets most similar to hypernym projection and for resolving OOV problem in testset: limit the ruWordNet lemma search space by single-word items only and get top ten most frequent hypernym synsets for OOV test items.
-* w2v works better than ft on the same corpus (we are discarding all OOV training pairs; the performance on the full 4 times bigger train represented with fastText is considerably lower)
+
+NB! all fastText vectors are learnt on lemmatised corpora
+see Tables 1-3 below for models coverage and comparative results
+
+**(1.2) devise a strategy to fight OOV in testset**
+- get top ten most frequent hypernym synsets for OOV test items
+- get FastTest rpresentations
+- _TODO_ cooccurence statistics
+
+**(1.3) test alternative learning METHODs**
+* try training on avaraged synset vectors (deworded)
+* apply negative sampling (neg-hyp, neg-syn) 
+(adoptation of Ustalov's [hyperstar2017](https://arxiv.org/pdf/1707.03903) or make use of [PatternSims](https://github.com/cental/patternsim))
+* use cooccurrence statistics (corpus-informed25)
+
+### (2) Finding most-similar synset in ruWordNet
+
+**(2.1) decide how to approach MWE in ruWordNet (1/4 of synsets don't have single word lemmas, which renders them unavailable for hypernym synset id search)**
+* limit the ruWordNet lemma search space to single-word items only
+* _IMPROVE_ for the synsets that do not have single word representations use main words of their MW lemmas
+* instead of using word vectors, get averaged synset vectors as hyponym candidates
+
+**(2.2) simple tricks**
+* exclude duplicates and selves in the output
+
+### House-keeping
+**decide how representative is the Codalab public test and set up internal evaluation for error analysis** 
+* ~~produce a test including only monosemantic items as is the case with the Codalab testset according to the orgs~~ BAD IDEA
+* incorporate the train-dev-test split provided by the org Feb11
+
+=====================================
+
+## Outstanding tasks (Feb04):
+- [X] ditch intrinsic evaluation and rerun on all data
+- [X] analyse OOV in private tests: how important is anti-OOV strategy?
+- [X] **FAILED**: produce a raw static train-test split so that test includes only monosemantic hyponym synsets, 
+i.e. synsets that have only one hypernym synset; **Next step** fall back to random train-test split and see whether Codalab res will be reproducible
+- [X] average synset vectors at train and hyponym-synset-detection times and for getting most_similar
+- [X] exclude same word as hypernym; **contrary to expectations, I don't get same-name candidates in testset**
+- [X] factor in cooccurence stats or 
+- [ ] Hearst patterns based on the news corpus
+- [X] **FAILED: unusable for data with no gound truth available**; cluster input following Fu et al. (2014) and Ustalov (2017)'s suggestions 
+- [X] **Results are lower than for the naive approach**: add negative sampling (based on hyponyms, synonyms) following Ustalov (2017)'s suggestions
+- [ ] choose wiser: rank synsets and get the most high ranking ones
+- [ ] retain sublists in the reference to take into account "компоненты связности"
+- [ ] use coocurrence for OOV in test
 
 
-### Comparative Results for various setups
+## RUNNING the code
+
+### Getting the resources and setting up the parameters
+(i) download the embeddings to the input/resources folder
+
+**suggested options (pre-selected based on coverage and/or type)**
+
+* (default and recommended) codename: [araneum](https://rusvectores.org/static/models/rusvectores4/araneum/araneum_upos_skipgram_300_2_2018.vec.gz) (**192 MB**, tags=True, binary=False); 
+* codename: [rdt](http://panchenko.me/data/dsl-backup/w2v-ru/all.norm-sz500-w10-cb0-it3-min5.w2v) (13 GiB, tags=False, binary=True, embeddings from Russian Distributional Thesaurus, limit=3500000);
+* codename: [cc](https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.ru.300.vec.gz) (1.3 GB, tags=False, binary=False, fasttext)
+
+(ii) set the paths and the parameters in the configs.py 
+
+### Running the pipeline
+NB! all the running comands below assume that you accept the default settings, such as (inter alia)
+
+* vectors trained on UD-tagged araneum
+* in train-test MWE are joined with :: by default and all items are lowercased
+* taking into account only single_wd members of synsets (and thus ignoring 19.3% of synsets)
+
+#### In one go
+
+```
+sh run_all.sh
+```
+will run the pipeline of five scripts, create foders, save and load interim output and print the results of each step, provided that the preparatory steps i and ii are taken
+
+#### Step-by-step
+
+(0) make a static train-test split on raw data regardless of te embedding used, for comparability reasons
+
+```
+python3 get_static_test.py 
+```
+
+(1) to get compressed train and 0.2 test files (.tsv.gz) with all hypo-hyper wordpairs from train reduced to only those found in the given embedding file (of 431937 wordpairs available, the best coverage of 84705 is see in RDT, araneum is second best with 69913)
+
+```
+python3 format_data.py 
+```
+
+(2) to get the .pickle.gz, which has {threshold: transforms} dict for subsequent internal evaluation against the embeddings vocabulary (see test_projection.py)
+
+```
+python3 learn_projection.py
+```
+
+(3) to get a compressed file (.npz) with the predicted hypernym vectors, run 
+
+```
+python3 get_hyper_vectors.py
+```
+
+##### Produce the output file, given a list of hypernym vectors for test words
+
+(5) this will produce the formmated output expected at the competition side
+
+* finally, represent all (single word or multi-word) senses of NOUN synsets in ruWordNet, measure the similarities and produce the formatted output by running
+
+```
+python3 predict_synsets.py
+```
+(7-8)
+if you are using random or intrinsic TEST option you will train on 90% of the data; you can produce the golden test set
+to internally evaluate the performance of our algo
+
+```
+python3 intrinsic_evaluate.py
+```
+
+==================================================
+
+## SOME RESULTS
+### Comparative Results for various embeddings and basic setups (admittedly without taking into account the polysemy caveate in evaluation)
 
 Table 1. Coverage (431937 noun and 233401 verb pairs) and OOV in testsets (762 nouns and 175 verbs)
 
@@ -28,6 +150,8 @@ ft_araneum(no OOV)| 73384      |  22(2%)   | 41664      | ~~75(42%)~~   |
 ~~ft_ruscorp(no OOV)~~| 61213      |~~214(28%)~~   | 85189      | ~~30(17%)~~   |
 ~~w2v_pos_news~~      | ~~56761~~      |~~152(19%)~~  | 71915      | ~~55(31%)~~  |
 ft_news           | 67124      |  38(4%)   | 78654      | 22(12%)      |
+182_ruswiki_upos  | 55448      |  212(27%) |            |              |
+~~186-tayga-fpos5~~ |  59182   |  ~~225(29%)~~ |            |              |
 
 * Number of MWE (ft_news):      697
 * Number of MWE (w2v_pos_news): 32
@@ -78,7 +202,6 @@ Evaluation is stuck due to Codalab problems
  ft_news_cbow       |   0.0006    |   --       |   --        |   --       |
  ft_news_sk         |   0.0174   |   --   |   --        |   --       |
 
-=========================================================================
 
 **Table 3. OOV in private test (nouns and verbs)**
 
@@ -91,122 +214,9 @@ vectors             |  NOUNS  |  VERBS   |
  ~~w2v_pos_news~~   | ~~335(21%)~~| ~~116(33%)~~ |
  ft_news_cbow       |   88(5%)| 38(10%)  |
 
-## The task breakdown
-
-(1) produce/format the training data: hyponym---hypernym pairs from the training set provided 
-* get all possible hypo-hypernym pairs row-wise from TEXT---PARENT\_TEXTS columns (get 431937 pairs, see provided [training\_data](https://github.com/dialogue-evaluation/taxonomy-enrichment/blob/master/data/training_data/training_nouns.tsv) )
-* glue all MWE with :: (посевная::кампания_PROPN, научная::организация_PROPN); >90% of them  are filtered out anyway even with fasttext (if skip_oov=True)
-* filter out embedding's OOV (mostly MWE): this reduces the train to less than a quarter of the original number of pairs
-
-(2) learn a transformation matrix to go from a hyponym vector to a hypernym vector
-* even for fasttext skip OOV (done in step 1, actually)
-* train/test split (test_size=.2)
-* args.lmbd = 0.0
-* _TODO problem_: polysemy in train is pervasive: the length of 0.2 test is 13984 wordpairs, 
-however, there are only 7274 unique hyponyms and 3622 cases of duplicates on the hyponym side of the pairs from the training data.
-
-(3) detect the synsets that are most similar to the predicted hypernym vector
-* represente synsets semantics or ruWordNet items (esp. MWE); choose mode: how to represent MWE lemmas in ruWordNet synset lemmas (one option is to include vectors for main components of MWE only if this synset has no single_word representation)
-* decide how to get results for OOV in test: either use 10 synsets that are most frequent hypernyms in ruWordNet (OOV\_STRATEGY == 'top\_hyper') or use fasttext to produce vectors for them from parts (OOV\_STRATEGY = 'ft\_vector'). See stats on this in the Results tables.
-
-===============================================================
-## Outstanding tasks (Feb04):
-- [X] ditch intrinsic evaluation and rerun on all data
-- [X] analyse OOV in private tests: how important is anti-OOV strategy?
-- [X] **FAILED**: produce a raw static train-test split so that test includes only monosemantic hyponym synsets, 
-i.e. synsets that have only one hypernym synset; **Next step** fall back to random train-test split and see whether Codalab res will be reproducible
-- [X] average synset vectors at train and hyponym-synset-detection times and for getting most_similar
-- [X] exclude same word as hypernym; **contrary to expectations, I don't get same-name candidates in testset**
-- [X] factor in cooccurence stats or 
-- [ ] Hearst patterns based on the news corpus
-- [X] **FAILED: unusable for data with no gound truth available**; cluster input following Fu et al. (2014) and Ustalov (2017)'s suggestions 
-- [X] **Results are lower than for the naive approach**: add negative sampling (based on hyponyms, synonyms) following Ustalov (2017)'s suggestions
-- [ ] choose wiser: rank synsets and get the most high ranking ones
-
 ================================================================
 
-### Getting the resources and setting up the parameters
-(i) download the embeddings to the input/resources folder
 
-**suggested options (pre-selected based on coverage and/or type)**
-
-* (default and recommended) codename: [araneum](https://rusvectores.org/static/models/rusvectores4/araneum/araneum_upos_skipgram_300_2_2018.vec.gz) (**192 MB**, tags=True, binary=False); 
-* codename: [rdt](http://panchenko.me/data/dsl-backup/w2v-ru/all.norm-sz500-w10-cb0-it3-min5.w2v) (13 GiB, tags=False, binary=True, embeddings from Russian Distributional Thesaurus, limit=3500000);
-* codename: [cc](https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.ru.300.vec.gz) (1.3 GB, tags=False, binary=False, fasttext)
-
-(ii) set the paths and the parameters in the configs.py 
-
-### Running the pipeline
-NB! all the running comands below assume that you accept the default settings, such as (inter alia)
-
-* vectors trained on UD-tagged araneum
-* in train-test MWE are joined with :: by default and all items are lowercased
-* taking into account only single_wd members of synsets (and thus ignoring 19.3% of synsets)
-
-#### In one go
-
-```
-sh run_all.sh
-```
-will run the pipeline of five scripts, create foders, save and load interim output and print the results of each step, provided that the preparatory steps i and ii are taken
-
-#### Step-by-step
-
-(0) make a static train-test split on raw data regardless of te embedding used, for comparability reasons
-
-```
-python3 get_intrinsic_test.py 
-```
-
-(1) to get compressed train and 0.2 test files (.tsv.gz) with all hypo-hyper wordpairs from train reduced to only those found in the given embedding file (of 431937 wordpairs available, the best coverage of 84705 is see in RDT, araneum is second best with 69913)
-
-```
-python3 format_data.py 
-```
-
-(2) to get the .pickle.gz, which has {threshold: transforms} dict for subsequent internal evaluation against the embeddings vocabulary (see test_projection.py)
-
-```
-python3 learn_projection.py
-```
-
-(3) run internal evaluation (what are your MAP scores? MRR is the same, except it does not take into the account duplicates among predictions)
-
-```
-python3 test_projection.py
-```
-
-(4) to get a compressed file (.npz) with the predicted hypernym vectors, run 
-
-```
-python3 get_hyper_vectors.py
-```
-##### Produce the output file, given a list of hypernym vectors for test words
-(5) format the output: it is done in two steps to avoid uploading the embeddings yet again
-
-* finally, represent all (single word or multi-word) senses of NOUN synsets in ruWordNet, measure the similarities and produce the formatted output by running
-
-```
-python3 predict_synsets.py
-```
-
-(6) this will produce the formmated output expected at the competition side
-
-* finally, represent all (single word or multi-word) senses of NOUN synsets in ruWordNet, measure the similarities and produce the formatted output by running
-
-```
-python3 predict_synsets.py
-```
-(7-8)
-if you are using random or intrinsic TEST option you will train on 80% of the data; you can produce the golden test set
-to internally evaluate the performance of our algo
-
-```
-python3 format_test.py
-```
-```
-python3 intrinsic_evaluate.py
-```
 
 ========================================================================
 
@@ -227,11 +237,7 @@ python3 intrinsic_evaluate.py
 
 * represent training pairs with fasttext (to address out-of-embeddings issues esp for MWE), train a binary classifier to predict whether hypernymy obtains between any given pair of words; for every test word build all possible wordpairs with all names of senses, predict hypernymy, replace words to synsets_ids, set ids, get top 10;
 * learn a transformation matrix to go from a hyponym embedding to its hypernym vector; predict a hypernym vector for each (single word) test items; represent each sense/synset with a vector, return 10 pairs with the highest cosine similarity 
-* failed to adopt Ustalov's [hyperstar2017](https://arxiv.org/pdf/1707.03903) or make use of [PatternSims](https://github.com/cental/patternsim)
 
-**work in progress**
 
-DONE: Can we reduce ruWordNet items to single word entries only to identify hypernym synsets ids? Are there many synsets that are lemmatized only via MWE?
-TODO: get a generalized/averaged vector for each synset
 
 
