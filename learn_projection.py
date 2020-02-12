@@ -71,6 +71,7 @@ if METHOD == 'deworded':
     
 else:
     data = preprocess_wordpair(pairs, tags=TAGS, mwe=MWE, pos=POS)  # list of tuples
+    
     hyponyms = [pair[0] for pair in data]
     hypernyms = [pair[1] for pair in data]
     
@@ -106,6 +107,6 @@ print('METHOD == %s' % METHOD, file=sys.stderr)
 print('TEST == %s' % TEST, file=sys.stderr)
 print('Train is filtered with an embedding model', file=sys.stderr)
 print('Training on %s pairs' % len(source_vecs), file=sys.stderr)
-
-print('=== %s has run ===\nProjections learnt in %s minutes' % (os.path.basename(sys.argv[0]), str(round(training_time/60))))
+print('TRAIN: ', data[:3], file=sys.stderr)
+print('=== %s has run ===\nProjections learnt in %s minutes\n' % (os.path.basename(sys.argv[0]), str(round(training_time/60))))
 
