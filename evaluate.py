@@ -27,7 +27,8 @@ def get_score(reference, predicted, k=10):
         predicted_hypernyms = predicted.get(neologism, [])
 
         ap_sum += compute_ap(reference_hypernyms, predicted_hypernyms, k)
-        rr_sum += compute_rr([j for i in reference_hypernyms for j in i], predicted_hypernyms, k)
+        rr_sum += compute_rr(reference_hypernyms, predicted_hypernyms, k)
+        # rr_sum += compute_rr([j for i in reference_hypernyms for j in i], predicted_hypernyms, k)
     return ap_sum / len(reference), rr_sum / len(reference)
 
 
