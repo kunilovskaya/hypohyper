@@ -1,16 +1,18 @@
 import argparse
 import time
-from itertools import repeat
-import os, re
+import os
 import sys
 from sklearn.model_selection import train_test_split
-from hyper_imports import load_embeddings, write_hyp_pairs, process_tsv, process_test_tsv, process_tsv_deworded
+from hyper_imports import load_embeddings, write_hyp_pairs, process_tsv, get_random_test, get_static_test, process_tsv_deworded_hypers
+from hyper_imports import wd2id_dict, id2wds_dict, read_xml, get_orgtest_deworded, get_orgtrain_deworded, get_orgtrain
+import json
+from configs import VECTORS, RUWORDNET, TAGS, MWE, EMB_PATH, OUT, RANDOM_SEED, POS, SKIP_OOV, TEST, METHOD
 
-from configs import VECTORS, TAGS, MWE, EMB_PATH, OUT, RANDOM_SEED, POS, SKIP_OOV, TEST, METHOD
+## postpone filtering thru embedding and respective CAPS conversion and TAGS-attaching to learning and testing time
 
 parser = argparse.ArgumentParser()
     
-if TEST == 'intrinsic':
+if TEST == 'static':
     if POS == 'NOUN':
         parser.add_argument('--train', default='%strains/static/%s_static-train.tsv' % (OUT, POS), help='static train',
                             type=os.path.abspath)
@@ -21,92 +23,130 @@ if TEST == 'intrinsic':
                             type=os.path.abspath)
         parser.add_argument('--test', default='%strains/static/%s_static-test.tsv' % (OUT, POS), help='static test',
                             type=os.path.abspath)
-if TEST == 'provided' or TEST == 'random':
+if TEST == 'codalab' or TEST == 'random':
     if POS == 'NOUN':
         parser.add_argument('--train', default='input/data/training_nouns.tsv', type=os.path.abspath)
     if POS == 'VERB':
         parser.add_argument('--train', default='input/data/training_verbs.tsv', type=os.path.abspath)
-
+if TEST == 'provided':
+    if POS == 'NOUN':
+        parser.add_argument('--train', default='input/data/org_split/training_nouns.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='input/data/org_split/test_nouns.tsv', type=os.path.abspath)
+    if POS == 'VERB':
+        parser.add_argument('--train', default='input/data/org_split/training_verbs.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='input/data/org_split/test_nouns.tsv')
    
 start = time.time()
 
 args = parser.parse_args()
 
-print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
-model = load_embeddings(EMB_PATH)
+synset_words = None
+word_syn_ids = None
 
-OUT = '%strains/' % OUT
-os.makedirs(OUT, exist_ok=True)
+if METHOD != 'deworded':
+        
+    if POS == 'NOUN':
+        synsets = '%ssynsets.N.xml' % RUWORDNET
+    elif POS == 'VERB':
+        synsets = '%ssynsets.V.xml' % RUWORDNET
+    else:
+        synsets = None
+        print('Not sure which PoS-domain you want from ruWordNet', file=sys.stderr)
+    
+    parsed_syns = read_xml(synsets)
+    synset_words = id2wds_dict(parsed_syns) # a dict of format 144031-N:[АУТИЗМ, АУТИСТИЧЕСКОЕ МЫШЛЕНИЕ]
+    
+    word_syn_ids = wd2id_dict(synset_words) # ex. ЗНАК:[152660-N, 118639-N, 107519-N, 154560-N]
+
+
+OUT_TRAIN = '%strains/' % OUT
+os.makedirs(OUT_TRAIN, exist_ok=True)
+OUT_GOLD = '%sgold_dicts/' % OUT
+os.makedirs(OUT_GOLD, exist_ok=True)
+
+print('METHOD == %s' % METHOD, file=sys.stderr)
+print('TEST == %s' % TEST, file=sys.stderr)
+print('Datasets are NOT filtered for OOV or lowercased/tagged just yet, except MWE are deleted in tests', file=sys.stderr)
 
 if METHOD == 'deworded':
-    ## this returns synset_ids pairs as training_data to be represented by avaraged vectors at learning time and
-    # when discovering synsets nearest to the predicted vector
-    hypohyper_train = process_tsv_deworded(args.train, emb=model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
-    if TEST == 'provided':
-        write_hyp_pairs(hypohyper_train, '%s%s_%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
+    if TEST == 'codalab':
+        hypohyper_train = process_tsv_deworded_hypers(args.train)  ## ('ИХТИОЛОГ', '9033-N')
+        json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
+        gold_dict = None
+        
+    elif TEST == 'random':
+        hypohyper_train = process_tsv_deworded_hypers(args.train)  ## ('ИХТИОЛОГ', '9033-N')
+        hypohyper_train, hypohyper_test = train_test_split(hypohyper_train, test_size=.1, random_state=RANDOM_SEED)
+        json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
 
-    if TEST == 'random':
-        hypohyper_train, hypohyper_test = train_test_split(hypohyper_train, test_size=.2, random_state=RANDOM_SEED)
+        gold_dict = get_random_test(goldpairs=hypohyper_test) ## pairs-to-dict
+
+    elif TEST == 'static':
+        hypohyper_train = process_tsv_deworded_hypers(args.train)  ## ('ИХТИОЛОГ', '9033-N')
+        json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
     
-        print(len(hypohyper_train))
-        print(len(hypohyper_test))
+        gold_dict = get_static_test(goldpath=args.test)  # I don't need to filter test for OOV, this is real life, baby!
+ 
+    elif TEST == 'provided':
+        hypohyper_train = get_orgtrain_deworded(args.train)
+        json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
+        
+        gold_dict = get_orgtest_deworded(args.test) ## filtered for MWE
+        
+    else:
+        gold_dict = None
+        print('Choose the test mode', file=sys.stderr)
     
-        write_hyp_pairs(hypohyper_train, '%s%s_%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
-        write_hyp_pairs(hypohyper_test, '%s%s_%s_%s_%s_test.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
-        
-    if TEST == 'intrinsic':
-        print('We dont have the functionality to use average vectors with intrinsic train/test split option')
-        
 else:
-    hypohyper_train = process_tsv(args.train, emb=model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
-    print('\n%s train entries: %d\n==!!==!!==!!==!!==!!\n' % (TEST.upper(), len(hypohyper_train)), file=sys.stderr)
+    if TEST == 'codalab':
+        hypohyper_train = process_tsv(args.train)
+        json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
+        gold_dict = None
+    elif TEST == 'random':
+        hypohyper_train = process_tsv(args.train)
+        hypohyper_train, hypohyper_test = train_test_split(hypohyper_train, test_size=.1, random_state=RANDOM_SEED)
+        json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
+        
+        temp_pairs = []
 
-    if TEST == 'provided':
-        ## if any of MWE are in embeddings they look like '::'.join(item.lower().split()) now regardless whether with PoS-tags or without
-        ## this outputs the LOWERCASED words, too
-        write_hyp_pairs(hypohyper_train, '%s%s_%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
+        for tup in hypohyper_test:
+            hypo = tup[0].strip()
+            hyper = tup[1].strip()
+            hyper_syn_ids = word_syn_ids[hyper]
+            for hyper_syn_id in hyper_syn_ids:
+                temp_pairs.append((hypo,hyper_syn_id))  # the values are lists of lists of ids in the deworded method
+        ## make a dict as before
+        gold_dict = get_random_test(goldpairs=temp_pairs)
         
-    if TEST == 'random':
-        hypohyper_train, hypohyper_test = train_test_split(hypohyper_train, test_size=.2, random_state=RANDOM_SEED)
+    elif TEST == 'static':
+        hypohyper_train = process_tsv(args.train)
+        json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
         
-        print(len(hypohyper_train))
-        print(len(hypohyper_test))
-        
-        write_hyp_pairs(hypohyper_train, '%s%s_%s_%s_%s_train.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
-        write_hyp_pairs(hypohyper_test, '%s%s_%s_%s_%s_test.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
-        
-        with open('%s%s_%s_%s_test4testing.txt' % (OUT, VECTORS, POS, TEST), 'w') as my_testfile:
-            temp = set()
-            for tup in hypohyper_test:
-                hypo = tup[0]
-                hypo = hypo[:-5].upper()
-                if hypo not in temp:
-                    temp.add(hypo)
-                    my_testfile.write(hypo + '\n')
-                else:
-                    continue
-        print('I have prepared data for intrinsic testing (based on random train-test split)')
-        
-    if TEST == 'intrinsic':
-        hypohyper_test = process_test_tsv(args.test, emb=model, tags=TAGS, mwe=MWE, pos=POS, skip_oov=SKIP_OOV)
-        print('%s test entries: %d' % (TEST.upper(), len(hypohyper_test)), file=sys.stderr)
-        write_hyp_pairs(hypohyper_test, '%s%s_%s_%s_%s_test.tsv.gz' % (OUT, VECTORS, POS, METHOD, TEST))
-        
-        with open('%s%s_%s_%s_test4testing.txt' % (OUT, VECTORS, POS, TEST), 'w') as my_testfile:
-            temp = set()
-            for tup in hypohyper_test:
-                hypo = tup[0]
-                hypo = hypo[:-5].upper()
-                if hypo not in temp:
-                    temp.add(hypo)
-                    my_testfile.write(hypo + '\n')
-                else:
-                    continue
-        print('I have prepared data for intrinsic testing')
-        
+        gold_dict = get_static_test(goldpath=args.test)  # I don't need to filter test for OOV, just for MWE! this is real life, baby!
     
+    elif TEST == 'provided':
+        hypohyper_train = get_orgtrain(args.train, map=synset_words)
+        json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
+    
+        gold_dict = get_orgtest_deworded(args.test)  # hypos are filtered for MWE
+        
+    else:
+        gold_dict = None
+        print('Choose the test mode', file=sys.stderr)
+
+if TEST != 'codalab':
+    json.dump(gold_dict, open('%s%s_%s_%s_gold.json' % (OUT_GOLD, POS, TEST, METHOD), 'w'))
+    first3pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:3]}
+    with open('%s%s_%s_%s_%s_WORDS.txt' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w') as my_testfile:
+        for key in gold_dict:
+            my_testfile.write(key + '\n')
+        
+print('Train pairs: %d' % len(hypohyper_train), file=sys.stderr)
+if TEST == 'random' or TEST == 'static' or TEST == 'provided':
+    print('Test words: %d' % len(gold_dict), file=sys.stderr)
+    print('GOLD:', first3pairs_gold, file=sys.stderr)
+print('TRAIN: ', hypohyper_train[:3], file=sys.stderr)
+
 end = time.time()
 training_time = int(end - start)
-print('\n%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-print('%s has run' % (os.path.basename(sys.argv[0])))# #\n Training data re-formatted in %s minutes ,str(round(training_time/60))
-print('%%%%%%%%%%%%%%%%%%%%%%%%%%%\n')
+print('=== %s has run ===' % (os.path.basename(sys.argv[0])))
