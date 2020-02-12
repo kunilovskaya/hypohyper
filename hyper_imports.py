@@ -17,12 +17,9 @@ import json
 
 
 # parse ruwordnet
-# and (1) build one-to-one dicts for synsets_ids and any asociated lemmas/=words/=senses/=synonyms
 def read_xml(xml_file):
     doc = minidom.parse(xml_file)
-    # node = doc.documentElement
     try:
-        # it is a list?
         parsed = doc.getElementsByTagName("synset") or doc.getElementsByTagName("relation")
     except TypeError:
         # nodelist = parsed
@@ -31,9 +28,6 @@ def read_xml(xml_file):
 
     return parsed  # a list of xml entities
 
-
-# how does this account for the fact that wd can be a member of several synsets?:
-# synset2wordlist mappings are unique, while the reverse is not true
 def id2wds_dict(synsets):
     id2wds = defaultdict(list)
     for syn in synsets:
@@ -56,18 +50,16 @@ def id2name_dict(synsets):
     return id2name
 
 
-def wd2id_dict(id2dict): # id2wds
+def wd2id_dict(id2dict): # input: id2wds
     wd2id = defaultdict(list)
     for k, values in id2dict.items():
         for v in values:
             wd2id[v].append(k)
 
-    # ex. ЗНАК:[152660-N, 118639-N, 107519-N, 154560-N]
-    return wd2id
+    return wd2id  # ex. ЗНАК:[152660-N, 118639-N, 107519-N, 154560-N]
 
-
-# distribution of relations annotated in ruwordnet
-def get_all_rels(relations):
+# FYI: distribution of relations annotated in ruwordnet
+def get_all_rels(relations): # <- parsed_rels = read_xml(args.relations) <- synset_relations.N.xml
     my_list = []
     for rel in relations:
         rel_name = rel.getAttributeNode('name').nodeValue
@@ -80,10 +72,9 @@ def get_all_rels(relations):
     print('=====\n %s \n=====' % my_dict)
 
 
-# (2) по лемме (ключи в нашем словаре) его синсет-гипероним и синсет-гипоним
-# как списки лемм и номера соответствующих синсетов
-# if you pass hyponym you get the query hyperonyms (ids)
-# level: hypernym, hyponym, domain, POS-synonymy, instance hypernym, instance hyponym:
+# pass a hyponym to get its hyperonyms (ids)
+# name: hypernym, hyponym, domain, POS-synonymy, instance hypernym, instance hyponym:
+# relations: # <- parsed_rels = read_xml(args.relations) <- synset_relations.N.xml
 def get_rel_by_name(relations, word, wds2ids, id2wds, name=None):
     these_ids = wds2ids[word]  # this is a list of possible ids for this word
     related_ids = []
@@ -104,8 +95,8 @@ def get_rel_by_name(relations, word, wds2ids, id2wds, name=None):
 
     return related_wds, related_ids
 
-
-# level: hypernym, hyponym, domain, POS-synonymy, instance hypernym, instance hyponym:
+# relations: # <- parsed_rels = read_xml(args.relations) <- synset_relations.N.xml
+# name: hypernym, hyponym, domain, POS-synonymy, instance hypernym, instance hyponym:
 def get_rel_by_synset_id(relations, identifier, id2wds, name=None):
     wds_in_this_id = id2wds[identifier]
     related_ids = []
@@ -126,11 +117,9 @@ def get_rel_by_synset_id(relations, identifier, id2wds, name=None):
     return related_wds, related_ids, wds_in_this_id
 
 
-def process_tsv(filepath, emb=None, tags=None, mwe=None, pos=None, skip_oov=None):
+def process_tsv(filepath):
     df_train = read_train(filepath)
-    
-    # strip of [] and ' in the strings:
-    ## TODO maybe average vectors for representatives of each synset in the training_data
+
     df_train = df_train.replace(to_replace=r"[\[\]']", value='', regex=True)
 
     my_TEXTS = df_train['TEXT'].tolist()
@@ -148,47 +137,29 @@ def process_tsv(filepath, emb=None, tags=None, mwe=None, pos=None, skip_oov=None
             wd_tuples = list(zip(repeat(i), hyper))
             all_pairs.append(wd_tuples)
     all_pairs = [item for sublist in all_pairs for item in sublist]  # flatten the list
-    print('=== Raw training set: %s ===' % len(all_pairs))
-    print('Raw examples:\n', all_pairs[:3])
     
-    # limit training_data to the pairs that are found in the embeddings
-    filtered_pairs = filter_dataset(all_pairs, emb, tags=tags, mwe=mwe, pos=pos, skip_oov=skip_oov)
-    print('\n=== Embeddings coverage (intrinsuc train): %s ===' % len(filtered_pairs))
-    
-    # print('!!! WYSIWYG as lookup queries!!!')
-    # print('Expecting: TAGS=%s; MWE=%s; %s' % (tags, mwe, pos))
-    print(filtered_pairs[:3])
-    mwes = [(a, b) for (a, b) in filtered_pairs if re.search('::', a) or re.search('::', b)]
-    print(mwes[:3])
-    # print('Number of MWE included %s' % len(mwes))
-    
-    return filtered_pairs ## ('ихтиолог_NOUN', 'ученый_NOUN')
+    return all_pairs # ('ИХТИОЛОГ', 'УЧЕНЫЙ')
 
 
-def process_tsv_deworded(filepath, emb=None, tags=None, mwe=None, pos=None, skip_oov=None):
-    ## open with json
+def process_tsv_deworded_hypers(filepath):
+    ## open the original training data (or part of it) with json
     lines = open(filepath, 'r').readlines()
     temp_dict = {}
     synset_pairs = []
-    for i,line in enumerate(lines):
+    for i, line in enumerate(lines):
+        # skip the header
         if i == 0:
             continue
         res = line.split('\t')
-        ## learn the hypoWORD to averaged synset vector projection
-        hypo_id, wds, par_ids, _ = res
-        par_ids = par_ids.replace("'", '"')
         
-        wds = wds.split(', ')
+        _, wds, par_ids, _ = res
+        par_ids = par_ids.replace("'", '"')  # to meet the json requirements
+        
+        wds = wds.split(', ')  # this column is not a json format!
         for w in wds:
-            w = w.replace(r'"', '')
+            w = w.replace(r'"', '')  # get rid of dangerous quotes in МАШИНА "ЖИГУЛИ"
             temp_dict[w] = json.loads(par_ids)  # {'WORD': ['4544-N', '147272-N'], '120440-N': ['141697-N', '116284-N']}
-        ## alternatively use averaged vectors for hypo_ids (only 19327 training pairs and a problem with mapping input words to their synsets)
-        ## fix quotes
-        # temp_dict[hypo_id] = json.loads(par_ids) # {'126551-N': ['4544-N', '147272-N'], '120440-N': ['141697-N', '116284-N']}
-    # for hypo_id, hypers_ids in temp_dict.items():
-    #     id_tuples = list(zip(repeat(hypo_id), hypers_ids))
-    #     synset_pairs.append(id_tuples)
-        
+    
     for hypo_w, hypers_ids in temp_dict.items():
         id_tuples = list(zip(repeat(hypo_w), hypers_ids))
         synset_pairs.append(id_tuples)
@@ -196,50 +167,71 @@ def process_tsv_deworded(filepath, emb=None, tags=None, mwe=None, pos=None, skip
     synset_pairs = [item for sublist in synset_pairs for item in sublist]  # flatten the list
     print('Number of wd-to-synset pairs in training_data: ', len(synset_pairs))
     
-    return synset_pairs ## ('ИХТИОЛОГ', 'УЧЕНЫЙ')
+    return synset_pairs  # ('ИХТИОЛОГ', '9033-N')
 
-def process_test_tsv(filepath, emb=None, tags=None, mwe=None, pos=None, skip_oov=None):
-    
-    df = read_train(filepath)
+def get_orgtrain_deworded(filepath):
+    lines = open(filepath, 'r').readlines()
+    temp_dict = defaultdict(list)
+    org_pairs = []
+    for line in lines:
+        res = line.split('\t')
+        wd, par_ids = res
+        wd = wd.replace(r'"', '')  # get rid of dangerous quotes in МАШИНА "ЖИГУЛИ"
+        par_ids = par_ids.replace("'", '"')  ## to meet the json requirements
+        id_list = json.loads(par_ids)
+        for id in id_list:
+            temp_dict[wd].append(id)  # {'WORD': [['4544-N'], ['147272-N']], 'WORD': ['141697-N', '116284-N']}
 
-    # strip of [] and ' in the strings,  json fails here with json.decoder.JSONDecodeError: Expecting value: line 1 column 2 (char 1)
-    df = df.replace(to_replace=r"[\[\]']", value='', regex=True)
+    for hypo_w, hypers_ids in temp_dict.items():
+        id_tuples = list(zip(repeat(hypo_w), hypers_ids))
+        org_pairs.append(id_tuples)
+
+    org_pairs = [item for sublist in org_pairs for item in sublist]  # flatten the list
+    print('Number of wd-to-synset pairs in training_data: ', len(org_pairs))
     
-    my_TEXTS = df['TEXT'].tolist()
-    my_PARENT_IDS = df['PARENTS'].tolist()
+    return org_pairs # ('ИХТИОЛОГ', '9033-N')
+
+
+def get_orgtrain(filepath, map=None): # map = synset_words
+    lines = open(filepath, 'r').readlines()
+    temp_dict = defaultdict(list)
+    org_pairs = []
+    for line in lines:
+        res = line.split('\t')
+        wd, par_ids = res
+        wd = wd.replace(r'"', '')  # get rid of dangerous quotes in МАШИНА "ЖИГУЛИ"
+        par_ids = par_ids.replace("'", '"')  # to meet the json requirements
+        id_list = json.loads(par_ids)
+        for id in id_list:
+            wd_list = map[id]
+            for i in wd_list:
+                temp_dict[wd].append(i)
+    for hypo_w, hypers_wds in temp_dict.items():
+        wd_tuples = list(zip(repeat(hypo_w), hypers_wds))
+        org_pairs.append(wd_tuples)
+    org_pairs = [item for sublist in org_pairs for item in sublist]  # flatten the list
+    print('Number of wd-to-synset pairs in training_data: ', len(org_pairs))
     
-    good_pairs = []
-    oov_counter = 0
-    for hypos, hypers in zip(my_TEXTS, my_PARENT_IDS):
-        hypos = hypos.split(', ')
-        hypers = hypers.split(', ')
+    return org_pairs  ## ('ИХТИОЛОГ', '9033-N')
+
+def get_orgtest_deworded(filepath):
+    mwe = []
+    lines = open(filepath, 'r').readlines()
+    gold_dict = defaultdict(list)
+    for line in lines:
+        res = line.split('\t')
+        wd, par_ids = res
+        wd = wd.replace(r'"', '') # get rid of dangerous quotes in МАШИНА "ЖИГУЛИ"
         
-        for i in hypos:
-            ## filter out multiwords
-            # print(i)
-            if len(i.split()) == 1:
-                if tags:
-                    if pos == 'NOUN':
-                        i = i.lower() + '_NOUN'
-                    elif pos == 'VERB':
-                        i = i.lower() + '_VERB'
-                else:
-                    i = i
-                ## filter out single-word OOV in the embeddings
-                if i in emb.vocab:
-                    wd_tuples = list(zip(repeat(i), hypers))
-                    good_pairs.append(wd_tuples)
-                else:
-                    oov_counter += 1
-                    # print('====',i)
-            else:
-                continue
-    good_pairs = [item for sublist in good_pairs for item in sublist]  # flatten the list
-    print('+++ Raw testset pairs: %s +++' % (len(good_pairs)+oov_counter))
-    print('Examples from saved intrinsic test:\n', good_pairs[:3])
-    print('\n=== Embeddings coverage (intrinsuc test): %.2f%% ===' % (100 - (oov_counter/(len(good_pairs))*100)))
+        if len(wd.split()) != 1 or bool(re.search('[a-zA-Z]', wd)): ## skip MWE
+            mwe.append(wd)
+            continue
+        par_ids = par_ids.replace("'", '"') # to meet the json requirements
+        id_list = json.loads(par_ids)
+        for id in id_list:
+            gold_dict[wd].append(id)  # {'WORD1': ['4544-N', '147272-N'], 'WORD2': ['141697-N', '116284-N']}
     
-    return good_pairs  ## ('ихтиолог_NOUN', 'ученый_NOUN')
+    return gold_dict
 
 
 def read_train(tsv_in):
@@ -262,21 +254,18 @@ def load_embeddings(modelfile):
     else:  # Native Gensim format, inclufing for fasttext models (.model in a folder with the other support files)
         emb_model = KeyedVectors.load(modelfile)
     emb_model.init_sims(replace=True)
-    # print('Success! Vectors loaded')
 
     return emb_model
 
-
-def get_vector(word, emb=None):
-    if not emb:
-        return None
-    vector = emb[word]
-    return vector
-
+# def get_vector(word, emb=None):
+#     if not emb:
+#         return None
+#     vector = emb[word]
+#     return vector
 
 def preprocess_mwe(item, tags=None, pos=None):
     # Alas, those bigrams are overwhelmingly proper names while we need multi-word concepts.
-    # For example, in aranea: "::[а-я]+\_NOUN" 8369 item, while the freq of all "::" 8407
+    # For example, in aranea: "::[а-я]+\_PROPN" 8369 item, while the freq of all "::" 8407
     if pos == 'VERB':
         if len(item.split()) > 1:
             if tags:
@@ -299,7 +288,7 @@ def preprocess_mwe(item, tags=None, pos=None):
                 item = item + '_NOUN'
             else:
                 item = '::'.join(item.lower().split())
-            # print('MWE example untagged:', item)
+
         else:
             if tags:
                 item = item.lower()
@@ -309,56 +298,79 @@ def preprocess_mwe(item, tags=None, pos=None):
             
     return item
 
+def convert_item_format(caps_word, tags=None, mwe=None, pos=None):
+    if tags:
+        if mwe:
+            item = preprocess_mwe(caps_word, tags=tags, pos=pos) # this returns lowercased and tagged single words ot MWE
+        else:
+            if pos == 'VERB':
+                item = caps_word.lower() + '_VERB'
+            elif pos == 'NOUN':
+                item = caps_word.lower() + '_NOUN'
+            else:
+                item = caps_word.lower()
+    else:
+        if mwe:
+            item = preprocess_mwe(caps_word, tags=tags, pos=pos) # this returns lowercased words
+        else:
+            item = caps_word.lower()
+            
+    return item
+    
 ## now this function stores lowercased word pairs regardless of the combination of tags/mwe boolean options)
-def filter_dataset(pairs, embedding, tags=None, mwe=None, pos=None, skip_oov=None):
-    smaller_train = []
+def preprocess_wordpair(pairs, tags=None, mwe=None, pos=None):
+    preprocessed_train = []
     for hypo, hyper in pairs:
         if tags:
-            if mwe: ## this returns lowercased and tagged single words ot MWE
-                hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
+            if mwe:
+                hypo = preprocess_mwe(hypo, tags=tags, pos=pos) # this returns lowercased and tagged single words ot MWE
                 hyper = preprocess_mwe(hyper, tags=tags, pos=pos)
-                if hypo in embedding.vocab and hyper in embedding.vocab:
-                    smaller_train.append((hypo, hyper))
+                preprocessed_train.append((hypo, hyper))
             else:
                 if pos == 'VERB':
                     hypo = hypo.lower() + '_VERB'
                     hyper = hyper.lower() + '_VERB'
-                    if hypo in embedding.vocab and hyper in embedding.vocab:
-                        smaller_train.append((hypo, hyper))
+                    preprocessed_train.append((hypo, hyper))
                 elif pos == 'NOUN':
                     hypo = hypo.lower() + '_NOUN'
                     hyper = hyper.lower() + '_NOUN'
-                    if skip_oov == False:
-                        smaller_train.append((hypo, hyper))
-                    elif skip_oov == True:
-                        if hypo in embedding.vocab and hyper in embedding.vocab:
-                            smaller_train.append((hypo, hyper))
+                    preprocessed_train.append((hypo, hyper))
                             
         ## this is only when I can afford to retain all items with untagged fasttext
         else:
             if mwe: ## this returns lowercased words
                 hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
                 hyper = preprocess_mwe(hyper, tags=tags, pos=pos)
-                if skip_oov == False:
-                    smaller_train.append((hypo, hyper))
-                elif skip_oov == True:
-                    if hypo in embedding.vocab and hyper in embedding.vocab:
-                        smaller_train.append((hypo, hyper)) ## preprocess_mwe returns lowercased items already
-                else:
-                    smaller_train.append((hypo.lower(), hyper.lower()))
+                preprocessed_train.append((hypo, hyper)) ## preprocess_mwe returns lowercased items already
             else:
-                ## this is tuned for ft vectors to filter out OOV (mostly MWE)
-                if skip_oov == False:
-                    smaller_train.append((hypo.lower(), hyper.lower()))
-                elif skip_oov == True:
-                    if hypo.lower() in embedding.vocab and hyper.lower() in embedding.vocab:
-                        smaller_train.append((hypo.lower(), hyper.lower()))
-                else:
-                    smaller_train.append((hypo.lower(), hyper.lower()))
+                preprocessed_train.append((hypo.lower(), hyper.lower()))
 
-    return smaller_train  # only the pairs that are found in the embeddings if skip_oov=True
+    return preprocessed_train
 
 
+def preprocess_hypo(pairs, tags=None, mwe=None, pos=None):
+    preprocessed_train = []
+    for hypo, hyper in pairs:
+        if tags:
+            if mwe:  # this returns lowercased and tagged single words ot MWE
+                hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
+                preprocessed_train.append((hypo, hyper))
+            else:
+                if pos == 'VERB':
+                    hypo = hypo.lower() + '_VERB'
+                    preprocessed_train.append((hypo, hyper))
+                elif pos == 'NOUN':
+                    hypo = hypo.lower() + '_NOUN'
+                    preprocessed_train.append((hypo, hyper))
+        ## this is only when I can afford to retain all items with untagged fasttext
+        else:
+            if mwe:  # this returns lowercased words
+                hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
+                preprocessed_train.append((hypo, hyper))
+            else:
+                preprocessed_train.append((hypo.lower(), hyper))
+    
+    return preprocessed_train
 
 def write_hyp_pairs(data, filename):
     with open(filename, 'w') as f:
@@ -374,7 +386,7 @@ def learn_projection(dataset, embedding, lmbd=1.0, from_df=False):
         source_vectors = dataset['hyponym'].T
         target_vectors = dataset['hypernym'].T
     else:
-        ## this gets a tuple of two lists of vectors: (source_vecs, target_vecs)
+        ## gets two lists of vectors
         source_vectors = dataset[0]
         target_vectors = dataset[1]
     source_vectors = np.mat([[i for i in vec] for vec in source_vectors])
@@ -422,9 +434,6 @@ def estimate_sims(source, targets, projection, model):
 
 
 def predict(source, embedding, projection, topn=10):
-    ## what happens when your test word is not in the embeddings? how do you get its vector?
-    ## skip for now!
-    ## TODO implement this
     try:
         test = np.mat(embedding[source])
     except KeyError:
@@ -439,9 +448,6 @@ def predict(source, embedding, projection, topn=10):
 
 
 def star_predict(source, embedding, projection, topn=10):
-    ## what happens when your test word is not in the embeddings? how do you get its vector?
-    ## skip for now!
-    ## TODO implement this
     try:
         test = np.mat(embedding[source])
     except KeyError:
@@ -470,8 +476,6 @@ def popular_generic_concepts(relations_path):
             freq_hypo[id] += 1
     
     all_ids = list(freq_hypo.keys()) + list(freq_hyper.keys())
-    print(all_ids[:5])
-    # print(len(set(all_ids)))
     
     ratios = defaultdict(int)
     for id in all_ids:
@@ -481,27 +485,22 @@ def popular_generic_concepts(relations_path):
             continue
     
     sort_it = {k: v for k, v in sorted(ratios.items(), key=lambda item: item[1], reverse=True)}
-    # for id in sort_it:
-    #     print(id, sort_it[id])
+
     my_ten = []
     for i, (k, v) in enumerate(sort_it.items()):
         if i < 10:
             my_ten.append(k)
-            # print(k)
-    
     
     return my_ten # synset ids
 
 
 ####### parse ruwordnet and get a list of (synset_id, word) tuples for both one word and heads in MWE)
-
-def parse_taxonymy(senses, tags=None, pos=None, mode=None, emb_voc=None):
+def parse_taxonymy(senses, tags=None, pos=None, mode=None, emb_voc=None): # mode 'main'
 
     doc = minidom.parse(senses)
     parsed_senses = doc.getElementsByTagName("sense")
     all_id_senses = []
 
-    print('Total number of senses %d' % len(parsed_senses))
     count_main = 0
     ids = []
     for sense in parsed_senses:
@@ -639,11 +638,10 @@ def synsets_vectorized(emb=None, worded_synsets=None, named_synsets=None, tags=N
             else:
                 continue
 
-    print('===300===', len(this_mean_vec))
     print('Total lemmas: ', total_lemmas)
     print('Singleword lemmas: ', single_lemmas)
     print('Singleword lemmas in ruWordNet absent from embeddings: ', ruthes_oov)
-    ## synset_ids_names has 134530-N, КУНГУР
+    ## synset_ids_names has (134530-N, КУНГУР)
     return synset_ids_names, mean_synset_vecs
 
 def mean_synset_based_hypers(test_item, vec=None, syn_ids=None, syn_vecs=None, topn=10):
@@ -668,21 +666,19 @@ def mean_synset_based_hypers(test_item, vec=None, syn_ids=None, syn_vecs=None, t
 
     for a, b, c in zip(my_top_syn_ids, my_top_syn_names, my_top_sims):
         # exclude same word as the name of the hypernym synset (many of these names are strangely VERBs)
-        # b = b[:-5].upper()
         if test_item != b:
-            # print(hypo, b)
             if a not in temp:
                 temp.add(a)
                 deduplicated_sims.append((a, b, c))
         else:
             nosamename += 1
 
-    this_hypo_res = deduplicated_sims[:topn]  ## list of (synset_id, hypernym_word, sim)
+    this_hypo_res = deduplicated_sims[:topn]  # list of (synset_id, hypernym_word, sim)
     
     return this_hypo_res  # list of (synset_id, hypernym_synset_name, sim)
 
 ## кунгур_NOUN:['134530-N'], агностик_NOUN	["атеист_NOUN", "человек_NOUN", "религия_NOUN", ...]
-def cooccurence_counts(test_item, vec=None, emb=None, topn=None, dict_w2ids=None, corpus_freqs=None):
+def cooccurence_counts(test_item, vec=None, emb=None, topn=None, dict_w2ids=None, corpus_freqs=None, method=None):
     nosamename = 0
     hyper_vec = np.array(vec, dtype=float)
     temp = set()
@@ -721,11 +717,12 @@ def cooccurence_counts(test_item, vec=None, emb=None, topn=None, dict_w2ids=None
     test_item = test_item.lower()+'_NOUN'
     # print('%s co-occured with\n%s' % (test_item, corpus_freqs[test_item]))
     
+    limit_mobility = int(''.join([i for i in method if i.isdigit()]))
     new_list = []
     if len(corpus_freqs[test_item]) != 0:
 
         for i in corpus_freqs[test_item]: # [word_NOUN, word_NOUN, word_NOUN]
-            for tup in deduplicated_sims[:25]:  ## maybe further limit these 500 words to 100?
+            for tup in deduplicated_sims[:limit_mobility]:  ## maybe further limit these 500 words to 100?
                 if i == tup[1].lower()+'_NOUN':
                     # print('==', i, tup[1].lower()+'_NOUN')
             # if i in hypo_small: ## this is always the casebecause co-occurence candidates were drawn from the top (how many?) hypernyms
@@ -744,84 +741,47 @@ def cooccurence_counts(test_item, vec=None, emb=None, topn=None, dict_w2ids=None
     return new_list  # list of (synset_id, hypernym_synset_name)
 
 
-def get_random_test(goldpath=None, w2ids_d=None, method=None):
+def get_random_test(goldpairs=None):
     gold_dict = defaultdict(list)
-
-    gold = open(goldpath, 'r').readlines()
-    print(goldpath)
-    for id, line in enumerate(gold):
-        # skip the header
-        if id == 0:
+    print(len(goldpairs))
+    for tup in goldpairs:
+        hypo = tup[0].strip()
+        hyper = tup[1].strip()
+        ## skip MWE
+        if len(hypo.split()) != 1:
             continue
-        
-        pair = line.split('\t')
-        # print(pair)
-        if method == 'deworded':
-            hypo = pair[0].strip()
-            hyper = pair[1].strip()
-            gold_dict[hypo].append(hyper)  ## the values is list of lists of ids in the deworded method
         else:
-            hypo = pair[0].strip()
-            hypo = hypo[:5].upper()
-            hyper = pair[1].strip()
-            hyper = hyper[:5].upper()
-            ## replace the worded golden hypernym with all synset_ids possible for this hypernym
-            syn_ids = w2ids_d[hyper]  ## a list of hypernym synset_ids
-            gold_dict[hypo].append(syn_ids)
-    
-    if method != 'deworded':
-        gold_dict0 = defaultdict(list)
-        for key in gold_dict:
-            gold_dict0[key] = [item for sublist in gold_dict[key] for item in sublist]  # flatten the list
-    
-        first2pairs_gold = {k: gold_dict0[k] for k in list(gold_dict0)[:10]}
-        
-        print(first2pairs_gold)
-        print(len(gold_dict0))
-    
-        return gold_dict0
-    
-    else:
-        first2pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:10]}
-    
-        print(first2pairs_gold)
-        print(len(gold_dict))
-        
-        return gold_dict
+            if hyper not in gold_dict[hypo]:
+                gold_dict[hypo].append(hyper)  ## the values is list of lists of ids in the deworded method
+    print(len(gold_dict))
+    return gold_dict
 
 
-def get_intrinsic_test(goldpath=None):
-    gold_dict = defaultdict(list)
-    print('Evaluating on the intrinsic testset')
-    df_test = pd.read_csv(goldpath, sep='\t')
-    df_test = df_test.replace(to_replace=r"[\[\]']", value='', regex=True)
+def get_static_test(goldpath=None):
+    lines = open(goldpath, 'r').readlines()
+    print('длина статичного тестфайла', len(lines))
+    temp_dict = {}
+    for i, line in enumerate(lines):
+        # skip the header
+        if i == 0:
+            continue
+        res = line.split('\t')
+        
+        _, wds, par_ids, _ = res
+        par_ids = par_ids.replace("'", '"')  ## to meet the json requirements
+        
+        wds = wds.split(', ')  ## this column is not a json format!
+        for w in wds:
+            w = w.replace(r'"', '')  ## get rid of dangerous quotes in МАШИНА "ЖИГУЛИ"
+            temp_dict[w] = json.loads(par_ids)  # {'WORD0': ['4544-N', '147272-N'], 'WORD1': ['141697-N', '116284-N']}
     
-    ids = df_test['SYNSET_ID'].tolist()
-    my_TEXTS = df_test['TEXT'].tolist()
-    ids_parents = df_test['PARENTS'].tolist()
-    
-    for hypo, hyper in zip(my_TEXTS, ids_parents):
-        hypo = hypo.replace(r'"', '')
-        hyper = hyper.replace(r'"', '')
-        hypo = hypo.split(', ')
-        hyper = hyper.split(', ')
-        print(hyper)
-        for i in hypo:
-            gold_dict[i].append(hyper)
-    
-    gold_dict0 = defaultdict(list)
-    for key in gold_dict:
-        gold_dict0[key] = [item for sublist in gold_dict[key] for item in sublist]  # flatten the list
-    
-    first2pairs_gold = {k: gold_dict0[k] for k in list(gold_dict0)[:2]}
-    
-    print(first2pairs_gold)
-    
-    return gold_dict0
+    gold_dict = defaultdict()
+    for key in temp_dict:
+        gold_dict[key] = [item for sublist in gold_dict[key] for item in sublist]
+    print(len(gold_dict))
+    return gold_dict
 
 
 ######################
-
-
 if __name__ == '__main__':
     print('=== This is a modules script, it is not supposed to run as main ===')
