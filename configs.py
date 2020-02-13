@@ -1,14 +1,13 @@
 RANDOM_SEED = 0
 # codename for emb: 'ft-araneum', w2v-rdt500, w2v-pos-ruscorpwiki, w2v-pos-araneum, ft-ruscorp, ft-araneum_full
-# news-pos-sk, news-pos-sbow, ft-news-sk, ft-news-cbow, w2v-tayga-fpos5
-VECTORS = 'w2v-tayga-fpos5' ## no full means that we filter out OOV at train time
+# news-pos-sk, news-pos-cbow, ft-news-sk, ft-news-cbow, w2v-tayga-fpos5
+VECTORS = 'w2v-pos-araneum' ## no full means that we filter out OOV at train time
 POS = 'NOUN' # 'VERB'
 MWE = True ## always TRUE wouldn't hurt
-TEST = 'random' # static, provided, random, codalab
+TEST = 'codalab' # provided, codalab
 
 ## strategies to improve performance
 METHOD = 'base' # neg-hyp, neg-syn, deworded, corpus-informed25, base
-
 
 if 'pos' in VECTORS:
     TAGS = True
@@ -33,7 +32,7 @@ elif 'news' in VECTORS:
         if 'sk' in VECTORS:
             EMB_PATH = '/home/lpvoid/masha/resources/emb/hypo_news/news_pos_1_5.model'
         elif 'cbow'  in VECTORS:
-            EMB_PATH = '/home/lpvoid/masha/resources/emb/hypo_news/news_pos_0_5.model'
+            EMB_PATH = '/home/u2/resources/emb/news_pos_0_5.model'
     elif 'ft' in VECTORS:
         if 'sk' in VECTORS:
             EMB_PATH = '/home/lpvoid/masha/resources/emb/hypo_news/news_lemmas_ft_1_5.model'
