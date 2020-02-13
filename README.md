@@ -61,7 +61,7 @@ i.e. synsets that have only one hypernym synset; **Next step** fall back to rand
 - [X] **FAILED: unusable for data with no gound truth available**; cluster input following Fu et al. (2014) and Ustalov (2017)'s suggestions 
 - [X] **Results are lower than for the naive approach**: add negative sampling (based on hyponyms, synonyms) following Ustalov (2017)'s suggestions
 - [ ] choose wiser: rank synsets and get the most high ranking ones
-- [ ] retain sublists in the reference to take into account "компоненты связности"
+- [X] retain sublists in the reference to take into account "компоненты связности"
 - [ ] use coocurrence for OOV in test
 
 
