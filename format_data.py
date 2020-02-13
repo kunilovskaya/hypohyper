@@ -2,11 +2,10 @@ import argparse
 import time
 import os
 import sys
-from sklearn.model_selection import train_test_split
-from hyper_imports import load_embeddings, write_hyp_pairs, process_tsv, process_tsv_deworded_hypers
+from hyper_imports import process_tsv, process_tsv_deworded_hypers
 from hyper_imports import wd2id_dict, id2wds_dict, read_xml, get_orgtest_deworded, get_orgtrain_deworded, get_orgtrain
 import json
-from configs import VECTORS, RUWORDNET, TAGS, MWE, EMB_PATH, OUT, RANDOM_SEED, POS, SKIP_OOV, TEST, METHOD
+from configs import VECTORS, RUWORDNET, OUT, POS, TEST, METHOD
 
 ## postpone filtering thru embedding and respective CAPS conversion and TAGS-attaching to learning and testing time
 
