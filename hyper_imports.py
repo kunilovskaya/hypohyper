@@ -228,8 +228,8 @@ def get_orgtest_deworded(filepath):
             continue
         par_ids = par_ids.replace("'", '"') # to meet the json requirements
         id_list = json.loads(par_ids)
-        for id in id_list:
-            gold_dict[wd].append(id)  # {'WORD1': ['4544-N', '147272-N'], 'WORD2': ['141697-N', '116284-N']}
+
+        gold_dict[wd].append(id_list)  # {'WORD1': [['4544-N'], ['147272-N']], 'WORD2': [['141697-N', '116284-N']]}
     
     return gold_dict
 
@@ -739,48 +739,6 @@ def cooccurence_counts(test_item, vec=None, emb=None, topn=None, dict_w2ids=None
     
     print('New order of hypernyms\n%s' % (new_list))
     return new_list  # list of (synset_id, hypernym_synset_name)
-
-
-def get_random_test(goldpairs=None):
-    gold_dict = defaultdict(list)
-    print(len(goldpairs))
-    for tup in goldpairs:
-        hypo = tup[0].strip()
-        hyper = tup[1].strip()
-        ## skip MWE
-        if len(hypo.split()) != 1:
-            continue
-        else:
-            if hyper not in gold_dict[hypo]:
-                gold_dict[hypo].append(hyper)  ## the values is list of lists of ids in the deworded method
-    print(len(gold_dict))
-    return gold_dict
-
-
-def get_static_test(goldpath=None):
-    lines = open(goldpath, 'r').readlines()
-    print('длина статичного тестфайла', len(lines))
-    temp_dict = defaultdict()
-    for i, line in enumerate(lines):
-        # skip the header
-        if i == 0:
-            continue
-        res = line.split('\t')
-        
-        _, wds, par_ids, _ = res
-        par_ids = par_ids.replace("'", '"')  ## to meet the json requirements
-        
-        wds = wds.split(', ')  ## this column is not a json format!
-        for w in wds:
-            w = w.replace(r'"', '')  ## get rid of dangerous quotes in МАШИНА "ЖИГУЛИ"
-            temp_dict[w] = json.loads(par_ids)  # {'WORD0': ['4544-N', '147272-N'], 'WORD1': ['141697-N', '116284-N']}
-    
-    gold_dict = defaultdict()
-    for key in temp_dict:
-        gold_dict[key] = [item for sublist in temp_dict[key] for item in sublist]
-    print(len(gold_dict))
-    return gold_dict
-
 
 ######################
 if __name__ == '__main__':
