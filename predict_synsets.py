@@ -4,19 +4,15 @@ import os
 import sys
 import time
 import zipfile
-from operator import itemgetter
 import numpy as np
-from evaluate import get_score
 from smart_open import open
-import pandas as pd
 from collections import defaultdict
-from itertools import repeat
 import json
 
 
 from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, TAGS, TOPN, TEST, METHOD
 from hyper_imports import popular_generic_concepts, load_embeddings, parse_taxonymy,read_xml, id2name_dict, wd2id_dict
-from hyper_imports import lemmas_based_hypers, mean_synset_based_hypers,id2wds_dict, synsets_vectorized, get_random_test
+from hyper_imports import lemmas_based_hypers, mean_synset_based_hypers,id2wds_dict, synsets_vectorized
 from hyper_imports import cooccurence_counts
 
 parser = argparse.ArgumentParser('Detecting most similar synsets and formatting the output')
@@ -26,7 +22,7 @@ if TEST == 'codalab':
         parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv', type=os.path.abspath)
     if POS == 'VERB':
         parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
-if TEST == 'static' or TEST == 'random' or TEST == 'provided':
+if TEST == 'provided':
         parser.add_argument('--test', default='%strains/%s_%s_%s_%s_WORDS.txt' % (OUT, VECTORS, POS, TEST, METHOD), type=os.path.abspath)
         
 parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS, TEST, METHOD),
@@ -140,7 +136,7 @@ outfile.close()
 first3pairs_pred = {k: pred_dict[k] for k in list(pred_dict)[:3]}
 print('PRED:', first3pairs_pred, file=sys.stderr)
 
-if TEST == 'random' or TEST == 'static' or TEST == 'provided':
+if TEST == 'provided':
     json.dump(pred_dict, open('%s%s_%s_%s_pred.json' % (OUT, POS, TEST, METHOD), 'w'))
 # print('Number of samename hypernyms excluded',nosamename)
 
