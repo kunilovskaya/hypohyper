@@ -1,7 +1,4 @@
-#! python3
-# coding: utf-8
-
-from hyper_imports import load_embeddings, predict, get_vector
+from hyper_imports import load_embeddings, predict
 from argparse import ArgumentParser
 import os, sys
 from smart_open import open
@@ -17,7 +14,7 @@ if TEST == 'codalab':
         parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv', type=os.path.abspath)
     if POS == 'VERB':
         parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
-if TEST == 'static' or TEST == 'random' or TEST == 'provided':
+if TEST == 'provided':
         parser.add_argument('--test', default='%strains/%s_%s_%s_%s_WORDS.txt' % (OUT, VECTORS, POS, TEST, METHOD), type=os.path.abspath)
 parser.add_argument('--projection', default='%sprojections/%s_%s_%s_%s_projection.npy' % (OUT, VECTORS, POS, TEST, METHOD))
 parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
