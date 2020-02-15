@@ -4,7 +4,8 @@ import sys, os
 import numpy as np
 import time
 from hyper_imports import preprocess_hypo, preprocess_wordpair, read_xml, id2name_dict, id2wds_dict, synsets_vectorized
-from configs import VECTORS, EMB_PATH, OUT, POS, SKIP_OOV, METHOD, TEST, RUWORDNET, TAGS, MWE
+from hyper_imports import filtered_dicts_mainwds_option
+from configs import VECTORS, EMB_PATH, OUT, POS, SKIP_OOV, METHOD, TEST, RUWORDNET, TAGS, MWE, MODE
 from collections import defaultdict
 import json
 
@@ -28,7 +29,7 @@ model = load_embeddings(EMB_PATH)
 source_vecs = []
 target_vecs = []
 
-if METHOD == 'deworded':
+if METHOD == 'deworded': # or METHOD != 'deworded1'
     data = preprocess_hypo(pairs, tags=TAGS, mwe=MWE, pos=POS)  # list of tuples
     ## this is formated to lookup in embeddings
     hyponyms = [pair[0] for pair in data]
@@ -37,16 +38,24 @@ if METHOD == 'deworded':
     oov_hypo = []
     oov_synsets = []
     synsets = None
+    senses = None
     if POS == 'NOUN':
+        senses = '%ssenses.N.xml' % RUWORDNET
         synsets = '%ssynsets.N.xml' % RUWORDNET
     elif POS == 'VERB':
+        senses = '%ssenses.V.xml' % RUWORDNET
         synsets = '%ssynsets.V.xml' % RUWORDNET
-        
+
+    # this is where single/main word MODE is applied
+    ## get {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N'], 'злоупотребление_NOUN': ['7331-N', '117268-N', '143946-N', '7332-N', '117269-N']}
+    ## and its reverse
+    _, id2lemmas = filtered_dicts_mainwds_option(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab)
+    
     parsed_syns = read_xml(synsets)
     synsets_names = id2name_dict(parsed_syns) # a dict of format 144031-N:АУТИЗМ
-    synset_words = id2wds_dict(parsed_syns) # a dict of format 144031-N:[АУТИЗМ, АУТИСТИЧЕСКОЕ МЫШЛЕНИЕ]
+    # synset_words = id2wds_dict(parsed_syns) # a dict of format 144031-N:[АУТИЗМ, АУТИСТИЧЕСКОЕ МЫШЛЕНИЕ]
 
-    identifier_tuple, syn_vectors = synsets_vectorized(emb=model, worded_synsets=synset_words,
+    identifier_tuple, syn_vectors = synsets_vectorized(emb=model, id2lemmas=id2lemmas,
                                                        named_synsets=synsets_names, tags=TAGS, pos=POS)
     print('Number of vectorised synsets', len(syn_vectors))
     lookup = defaultdict()
