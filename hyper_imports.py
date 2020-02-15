@@ -51,12 +51,13 @@ def id2name_dict(synsets):
 
 
 def wd2id_dict(id2dict): # input: id2wds
-    wd2id = defaultdict(list)
+    wd2ids = defaultdict(list)
     for k, values in id2dict.items():
         for v in values:
-            wd2id[v].append(k)
+            wd2ids[v].append(k)
 
-    return wd2id  # ex. ЗНАК:[152660-N, 118639-N, 107519-N, 154560-N]
+    return wd2ids  # ex. ЗНАК:[152660-N, 118639-N, 107519-N, 154560-N]
+
 
 # FYI: distribution of relations annotated in ruwordnet
 def get_all_rels(relations): # <- parsed_rels = read_xml(args.relations) <- synset_relations.N.xml
@@ -495,152 +496,137 @@ def popular_generic_concepts(relations_path):
 
 
 ####### parse ruwordnet and get a list of (synset_id, word) tuples for both one word and heads in MWE)
-def parse_taxonymy(senses, tags=None, pos=None, mode=None, emb_voc=None): # mode 'main'
-
+def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_voc=None):  # mode 'main'
+    
     doc = minidom.parse(senses)
     parsed_senses = doc.getElementsByTagName("sense")
     all_id_senses = []
+    covered_ids = set()
 
-    count_main = 0
-    ids = []
     for sense in parsed_senses:
         
         id = sense.getAttributeNode('synset_id').nodeValue
         name = sense.getAttributeNode("name").nodeValue
         main_wd = sense.getAttributeNode("main_word").nodeValue
-        
-        ids.append(id)
         if len(name.split()) == 0:
             item = None
             print('Missing name for a sense in synset %s' % id)
         
-        if mode == 'single':
-            if len(name.split()) == 1:
-                if tags == True:
-                    if pos == 'NOUN':
-                        item = name.lower() + '_NOUN'
-                    elif pos == 'VERB':
-                        item = name.lower() + '_VERB'
-                    else:
-                        item = None
-                        print('Which PoS part of WordNet are we dealing with?')
-                else:
-                    item = name.lower()
-                
+        item = preprocess_mwe(name, tags=tags,
+                              pos=pos)  # get MWE, singles compatible with embeddings already (lower, tagged)
+        
+        if '::' not in item:
+            if item in emb_voc:
+                covered_ids.add(id)
                 all_id_senses.append((id, item))
             else:
                 continue
         
-        ## this this supposed to include vectors for main components of MWE only if this synset has no single_word representation or if MWE is found in vectors
-        elif mode == 'main':
-            if len(name.split()) == 1:
-                if tags == True:
-                    if pos == 'NOUN':
-                        item = name.lower() + '_NOUN'
-                    elif pos == 'VERB':
-                        item = name.lower() + '_VERB'
-                    else:
-                        item = None
-                        print('Which PoS part of WordNet are we dealing with?')
-                else:
-                    item = name.lower()
-                
+        elif '::' in item and mode == 'main':
+            if item in emb_voc:
+                ## adding the few cases of MWE in embeddings vocabulary
                 all_id_senses.append((id, item))
-            
-            ## TODO: apply this condition only to synsets with no single_word representation;
-            if len(name.split()) > 1:
-                item = preprocess_mwe(name, tags=tags,
-                                      pos=pos)  ## this is compatible with embeddings already (lower, tagged)
-                if item in emb_voc:
-                    ### adding the few cases of MWE in embeddings vocabulary
+            else:
+                if id not in covered_ids:
+                    item = preprocess_mwe(main_wd, tags=tags, pos=pos)
+                    ## only if the respective synset has not been covered already in the unconditional single word crawl
+                    covered_ids.add(
+                        id)  # activate if you want just one head word added from a non-singleword synset, not all of them (probably duplicates)
                     all_id_senses.append((id, item))
-                else:
-                    ## only if the respective synset has not been already added; no garantee that it has no single word lemmas further down
-                    count_main += 1
-                    if tags == True:
-                        if pos == 'NOUN':
-                            item = main_wd.lower() + '_NOUN'
-                        elif pos == 'VERB':
-                            item = main_wd.lower() + '_VERB'
-                        else:
-                            item = None
-                            print('Which PoS part of WordNet are we dealing with?')
-                    else:
-                        item = main_wd.lower()
-                    
-                    all_id_senses.append((id, item))
-                    ## TODO deduplicate tuples
         else:
-            print('What do you want to do with senses that are lexicalised as MWE?')
-    return all_id_senses ## 134530-N, кунгур_NOUN
+            # print('What do you want to do with senses that are lexicalised as MWE?')
+            continue
+            
 
-def lemmas_based_hypers(test_item, vec=None, emb=None, topn=None, dict_w2ids=None): #кунгур_NOUN:['134530-N']
-    nosamename = 0
+    lemmas2ids = defaultdict(list)
+    for i in all_id_senses:
+        synset = i[0]
+        name = i[1]
+        lemmas2ids[name].append(synset)
+
+    ## reverse the dict to feed to synsets_vectorized, which takes id2lemmas
+    id2lemmas = defaultdict(list)
+    for k, values in lemmas2ids.items():
+        for v in values:
+            id2lemmas[v].append(k)
+      
+    # all synsets can be represented with embeddings now
+    return lemmas2ids, id2lemmas
+
+# topn - how many similarities to retain from vector model to find the intersections with ruwordnet: less than 500 can return less than 10 candidates
+
+def lemmas_based_hypers(test_item, vec=None, emb=None, topn=None, dict_w2ids=None, index_tuples=None, mean_syn_vectors=None, filt1=None): # {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']
+    
     hyper_vec = np.array(vec, dtype=float)
-    temp = set()
-    deduplicated_sims = []
-    nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=topn)
+    nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=topn) # words
     sims = []
     for res in nearest_neighbors:
         hypernym = res[0]
         similarity = res[1]
         if hypernym in dict_w2ids:
-            for synset in dict_w2ids[hypernym]:  # we are adding all synset ids associated with the topN most_similar in embeddings and found in ruWordnet
+            ## we are adding as mane tuples as there are synset ids associated with the topN most_similar in embeddings and found in ruWordnet
+            for synset in dict_w2ids[hypernym]:
                 sims.append((synset, hypernym, similarity))
-    
     # sort the list of tuples (id, sim) by the 2nd element and deduplicate
     # by rewriting the list while checking for duplicate synset ids
     sims = sorted(sims, key=itemgetter(2), reverse=True)
+    if filt1 == 'disamb':
+        # list of (synset_id, hypernym_word) and stats
+        relevant_ids, one_comp, overN, tot_hypers = disambiguate_hyper_syn_ids(test_item, list_to_filter=sims[:100],
+                                                                               emb=emb,
+                                                                               index_tuples=index_tuples,
+                                                                               mean_syn_vectors=mean_syn_vectors)
+
+        this_hypo_res100 = relevant_ids
     
-    for a, b, c in sims:
-        # exclude same word as hypernym
-        b = b[:-5].upper()
+    else:
+        one_comp = None
+        overN = None
+        tot_hypers = None
+        this_hypo_res100 = sims[:100]
+        
+    ## exclude hypernyms lemmas that match the query and lemmas from the same synset
+    deduplicated_sims = []
+    temp = set()
+    nosamename = 0
+    dup_ids = 0
+    for a, b in this_hypo_res100:
         if test_item != b:
-            # print(hypo, b)
-            if a not in temp:
+           if a not in temp:
                 temp.add(a)
-                deduplicated_sims.append((a, b, c))
+                deduplicated_sims.append((a, b))
+           else:
+               dup_ids += 1
+               # print('Duplicate id among this items 100top similars', dup_ids)
         else:
             nosamename += 1
-    # print('Selves as hypernyms: %s' % nosamename)
-    this_hypo_res = deduplicated_sims[:10]  # list of (synset_id, hypernym_word, sim)
-    
-    return this_hypo_res
+            # print('Query word = hypernym for this item: %s' % nosamename)
 
-def synsets_vectorized(emb=None, worded_synsets=None, named_synsets=None, tags=None, pos=None):
+    this_hypo_res = deduplicated_sims[:10]  # list of (synset_ids, hypernym_word)
+
+    return this_hypo_res, one_comp, overN, tot_hypers
+
+def synsets_vectorized(emb=None, id2lemmas=None, named_synsets=None, tags=None, pos=None):
     total_lemmas = 0
-    single_lemmas = 0
     ruthes_oov = 0
     mean_synset_vecs = []
     synset_ids_names = []
-    for id, wordlist in worded_synsets.items():
+    for id, wordlist in id2lemmas.items(): # 144031-N:[аутизм_NOUN, аутическое::мышление_NOUN] filtered thru emb already and getting main words to represent synsets if desired
         # print('==', id, named_synsets[id], wordlist)
         current_vector_list = []
         for w in wordlist:
             total_lemmas += 1
-            if len(w.split()) == 1:
-                single_lemmas += 1
-                if tags:
-                    if pos == 'NOUN':
-                        w = (w.lower() + '_NOUN')
-                    if pos == 'VERB':
-                        w = (w.lower() + '_VERB')
-                if w in emb.vocab:
-                    # print('++', w, emb[w])
-                    current_vector_list.append(emb[w])
-                    current_array = np.array(current_vector_list)
-                    this_mean_vec = np.mean(current_array,axis=0)  # average column-wise, getting a new row=vector of size 300
-                    mean_synset_vecs.append(this_mean_vec)
-                    synset_ids_names.append((id, named_synsets[id]))
-                else:
-                    ruthes_oov += 1
-                    this_mean_vec = None
+            if w in emb.vocab:
+                # print('++', w, emb[w])
+                current_vector_list.append(emb[w])
+                current_array = np.array(current_vector_list)
+                this_mean_vec = np.mean(current_array,axis=0)  # average column-wise, getting a new row=vector of size 300
+                mean_synset_vecs.append(this_mean_vec) # <class 'numpy.ndarray'> [ 0.031227    0.04932501  0.0154615   0.04967201
+                synset_ids_names.append((id, named_synsets[id]))
             else:
-                continue
+                ruthes_oov += 1
+                this_mean_vec = None
 
-    print('Total lemmas: ', total_lemmas)
-    print('Singleword lemmas: ', single_lemmas)
-    print('Singleword lemmas in ruWordNet absent from embeddings: ', ruthes_oov)
     ## synset_ids_names has (134530-N, КУНГУР)
     return synset_ids_names, mean_synset_vecs
 
@@ -677,7 +663,7 @@ def mean_synset_based_hypers(test_item, vec=None, syn_ids=None, syn_vecs=None, t
     
     return this_hypo_res  # list of (synset_id, hypernym_synset_name, sim)
 
-## кунгур_NOUN:['134530-N'], агностик_NOUN	["атеист_NOUN", "человек_NOUN", "религия_NOUN", ...]
+## dict_w2ids = кунгур_NOUN:[['134530-N']], corpus_freqs = агностик_NOUN ["атеист_NOUN", "человек_NOUN", "религия_NOUN", ...]
 def cooccurence_counts(test_item, vec=None, emb=None, topn=None, dict_w2ids=None, corpus_freqs=None, method=None):
     nosamename = 0
     hyper_vec = np.array(vec, dtype=float)
@@ -739,6 +725,50 @@ def cooccurence_counts(test_item, vec=None, emb=None, topn=None, dict_w2ids=None
     
     print('New order of hypernyms\n%s' % (new_list))
     return new_list  # list of (synset_id, hypernym_synset_name)
+
+
+# for each test word FILTER1
+def disambiguate_hyper_syn_ids(hypo, list_to_filter=None, emb=None, index_tuples=None, mean_syn_vectors=None, tags=None, pos=None):
+    one_comp = 0
+    over_n = 0
+    lemma2id_vec_dict = defaultdict(list)
+    lemma2id_dict = defaultdict(list)
+    item = preprocess_mwe(hypo, tags=tags, pos=pos)
+    if item in emb.vocab:
+        hypo_vec = emb[item]  ## all OOV are already taken care of
+    else:
+        hypo_vec = None
+        print('Alert!')
+        
+        ## id-based lookup dict for mean synset vectors
+    syn_vectors_dict = defaultdict()
+    for (syn, name), vec in zip(index_tuples, mean_syn_vectors):
+        syn_vectors_dict[syn] = vec  ## values are synsets averaged vectors, stored as ndarrays
+    
+    for tup in list_to_filter:
+        hyper_id = tup[0]
+        hyper_lemma = tup[1]
+        hyper_id_mean_vec = syn_vectors_dict[hyper_id]
+        
+        lemma2id_dict[hyper_lemma].append(hyper_id)  ## from hyper_lemma to hyper_ids lists
+        lemma2id_vec_dict[hyper_lemma].append(hyper_id_mean_vec)
+    
+    this_hypo_bestids = []
+    for lemma, vecs in lemma2id_vec_dict.items():
+        sims = [np.dot(hypo_vec, np.squeeze(np.asarray(vec)).T) for vec in vecs]
+        my_top_idx = np.argmax(sims)
+        if len(sims) == 1:
+            one_comp += 1
+        if len(sims) > 3:
+            over_n += 1
+        bestid = lemma2id_dict[lemma][int(my_top_idx)]
+        this_hypo_bestids.append((bestid, lemma))
+        # print(int(my_top_idx), len(lemma2id_dict[lemma]))
+    
+    tot = len(lemma2id_dict)
+    
+    return this_hypo_bestids, one_comp, over_n, tot  # list of (synset_id, hypernym_word) and stats
+
 
 ######################
 if __name__ == '__main__':
