@@ -131,29 +131,33 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
                 tot_hypernyms += tot_hypers
 
             if FILTER_2 == 'comp':
-                ## TASK: exclude words that have parents in predictions for this test word
-                ## build a graph, get the list of all connected components for a query
+                ## TASK: exclude words that have parents in predictions for this test word in each connected component; return a smaller (id,hyper_word) list
+                this_hypo_res = []
+                
+                ## build a graph, get the list of all connected components
                 components, synset2word, word2parents, synset2parents = get_data(args.train)
                 
                 ## get a list of ids from the list of tuples (id, hyper_word)
-                this_hypo_res = []
+                
                 predicted_ids = [i[0] for i in deduplicated_res]
                 combos = [] # get all combinations of predicted ids
                 for i in itertools.combinations(predicted_ids, 2):
                     combos.append(i)
                 
-                for i in range(len(components)):
+                for i in range(len(components)): # iterate over all components
                     out = []
                     parents_ids = []
                     for id in components[i]: ## iterate over synsets in this component
                         for parents in synset2parents[id]: # синсеты-родители этих слов (с учетом второго порядка) в этом компоненте
                             parents_ids.extend(parents)
+                    ## find combinations where one el is a child of the other in this component and delete this child
                     for combo in combos:
                         if combo[0] in components[i] and combo[1] in parents_ids:
                             for (id,word) in deduplicated_res:
                                 if id == combo[0]:
                                     out.append(id)
                                     print('Prune this child:', hypo, (word,combo[0]))
+                    ## deleting by re-writing the list
                     for res in deduplicated_res:
                         for id in out:
                             if id != res[0]:
