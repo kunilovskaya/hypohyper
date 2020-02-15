@@ -7,7 +7,21 @@ MWE = True ## always TRUE wouldn't hurt
 TEST = 'codalab' # provided, codalab
 
 ## strategies to improve performance
-METHOD = 'base' # neg-hyp, neg-syn, deworded, corpus-informed25, base
+METHOD = 'lemmas' # neg-hyp, neg-syn, deworded, corpus-informed25, lemmas
+
+MODE = 'single' # if you want to include vectors for main_words in MWE, replace single_wd with main;
+# this this supposed to include vectors for main components of MWE only if this synset has no single_word representation or if MWE is found in vectors
+OOV_STRATEGY = 'ft-vector' ##'ft-vector', 'top-hyper'
+
+# limit the number of similarities from vector model
+if 'ft' not in VECTORS and POS == 'VERB':
+    vecTOPN = 1500
+elif 'rdt' in VECTORS:
+    vecTOPN = 1000
+else:
+    vecTOPN = 500
+FILTER_1 = 'disamb' # raw, disamb
+FILTER_2 = 'raw' # raw, comp
 
 if 'pos' in VECTORS:
     TAGS = True
@@ -46,10 +60,6 @@ if 'full' in VECTORS:
     SKIP_OOV = False
 else:
     SKIP_OOV = True
-    
-OOV_STRATEGY = 'top-hyper' ##'ft-vector', 'top-hyper'
-MODE = 'single' # if you want to include vectors for main_words in MWE, replace single_wd with main;
-# this this supposed to include vectors for main components of MWE only if this synset has no single_word representation or if MWE is found in vectors
 
 if 'ft' in VECTORS:
     FT_EMB = EMB_PATH
@@ -62,9 +72,4 @@ else:
 # FT_EMB = '/home/u2/resources/emb/181_ruscorpora_fasttext/model.model'
 OUT = '/home/u2/proj/hypohyper/output/'
 
-if 'ft' not in VECTORS and POS == 'VERB':
-    TOPN = 1500
-elif 'rdt' in VECTORS:
-    TOPN = 1000
-else:
-    TOPN = 500
+
