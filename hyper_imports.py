@@ -568,27 +568,15 @@ def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None,
     # sort the list of tuples (id, sim) by the 2nd element and deduplicate
     # by rewriting the list while checking for duplicate synset ids
     sims = sorted(sims, key=itemgetter(2), reverse=True)
-    if filt1 == 'disamb':
-        # list of (synset_id, hypernym_word) and stats
-        relevant_ids, one_comp, overN, tot_hypers = disambiguate_hyper_syn_ids(test_item, list_to_filter=sims[:100],
-                                                                               emb=emb, ft_model=ft_model,
-                                                                               index_tuples=index_tuples,
-                                                                               mean_syn_vectors=mean_syn_vectors)
-
-        this_hypo_res100 = relevant_ids
-    
-    else:
-        one_comp = None
-        overN = None
-        tot_hypers = None
-        this_hypo_res100 = sims[:100]
-        
     ## exclude hypernyms lemmas that match the query and lemmas from the same synset
     deduplicated_sims = []
     temp = set()
     nosamename = 0
     dup_ids = 0
-    for a, b in this_hypo_res100:
+    
+    sims100 = sims[:100]
+    
+    for a, b, c in sims100:
         if test_item != b:
            if a not in temp:
                 temp.add(a)
@@ -600,9 +588,7 @@ def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None,
             nosamename += 1
             # print('Query word = hypernym for this item: %s' % nosamename)
 
-    this_hypo_res = deduplicated_sims[:10]  # list of (synset_ids, hypernym_word)
-
-    return this_hypo_res, one_comp, overN, tot_hypers
+    return deduplicated_sims ## not limited to 10
 
 def synsets_vectorized(emb=None, id2lemmas=None, named_synsets=None, tags=None, pos=None):
     total_lemmas = 0
