@@ -113,12 +113,12 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
         if METHOD == 'lemmas':
             # (default) get a list of (synset_id, hypernym_word, sim)
             # dict_w2ids = {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']}
-            # the output applies FILTER (if selected) to retain only one, most similar component of polysemantic hypernyms, instead of grabbing the first one
+            # use FILTER_1 to retain only one, most similar component of polysemantic hypernyms, instead of grabbing the first one
             item = preprocess_mwe(hypo, tags=TAGS, pos=POS)
             deduplicated_res = lemmas_based_hypers(item, vec=hyper_vec, emb=model, topn=vecTOPN, dict_w2ids=lemmas2ids)
             
-            if FILTER_1 == 'disamb':
-                    # list of (synset_id, hypernym_word) and stats
+            if FILTER_1 == 'disamb': # <- list of [(id1_1,hypernym1), (id1_2,hypernym1), (id2_1,hypernym2), (id2_2,hypernym2)]
+                # list of (one_id, hypernym_word) and stats
                 relevant_ids, one_comp, overN, tot_hypers = disambiguate_hyper_syn_ids(item,
                                                                                        list_to_filter=deduplicated_res,
                                                                                        emb=model, ft_model=ft_emb,
@@ -130,7 +130,7 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
                 polyN += overN
                 tot_hypernyms += tot_hypers
 
-            if FILTER_2 == 'comp':
+            if FILTER_2 == 'comp': # <- list of [(id1_1,hypernym1), (id1_2,hypernym1), (id2_1,hypernym2), (id2_2,hypernym2)]
                 ## TASK: exclude words that have parents in predictions for this test word in each connected component; return a smaller (id,hyper_word) list
                 this_hypo_res = []
                 
