@@ -10,10 +10,11 @@ from collections import defaultdict
 import json
 
 
-from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, TAGS, TOPN, TEST, METHOD
-from hyper_imports import popular_generic_concepts, load_embeddings, parse_taxonymy,read_xml, id2name_dict, wd2id_dict
-from hyper_imports import lemmas_based_hypers, mean_synset_based_hypers,id2wds_dict, synsets_vectorized
-from hyper_imports import cooccurence_counts
+from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, FT_EMB, TAGS, vecTOPN, TEST, METHOD, FILTER_1, FILTER_2
+from hyper_imports import popular_generic_concepts, load_embeddings, filtered_dicts_mainwds_option,read_xml, id2name_dict
+from hyper_imports import lemmas_based_hypers, mean_synset_based_hypers, synsets_vectorized
+from hyper_imports import cooccurence_counts, preprocess_mwe
+from get_reference_format import get_data, get_words
 
 parser = argparse.ArgumentParser('Detecting most similar synsets and formatting the output')
 # for ultimate results to submit use private instead of public
@@ -24,7 +25,12 @@ if TEST == 'codalab':
         parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
 if TEST == 'provided':
         parser.add_argument('--test', default='%strains/%s_%s_%s_%s_WORDS.txt' % (OUT, VECTORS, POS, TEST, METHOD), type=os.path.abspath)
-        
+if POS == 'NOUN':
+    parser.add_argument('--train', default='input/data/training_nouns.tsv',
+                        help="train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION")
+if POS == 'VERB':
+    parser.add_argument('--train', default='input/data/training_verbs.tsv',
+                        help="train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION")
 parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS, TEST, METHOD),
                     help="predicted vectors")
 parser.add_argument('--more_info', default='%scooc_hypernyms_public_nouns_news.tsv' % OUT,
@@ -37,6 +43,9 @@ start = time.time()
 print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
 model = load_embeddings(EMB_PATH)
 
+print('FT embedding model:', FT_EMB.split('/')[-1], file=sys.stderr)
+ft_emb = load_embeddings(FT_EMB)
+
 if POS == 'NOUN':
     senses = '%ssenses.N.xml' % RUWORDNET
     synsets = '%ssynsets.N.xml' % RUWORDNET
@@ -47,21 +56,21 @@ else:
     senses = None
     synsets = None
     print('Not sure which PoS-domain you want from ruWordNet')
-    
-## get a list of tuples (134530-N, кунгур_NOUN)
-synsets_dict = defaultdict(list)
-sens_index = parse_taxonymy(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab)
 
-for i in sens_index:
-    synset = i[0]
-    ## <sense lemma="НЕСОБЛЮДЕНИЕ ПРАВИЛО ТОРГОВЛЯ" name="НЕСОБЛЮДЕНИЕ ПРАВИЛ ТОРГОВЛИ" ... /sense>
-    name = i[1]
-    synsets_dict[name].append(synset) ## a dict that reverses the list of tuples (134530-N, кунгур_NOUN) to get кунгур_NOUN:['134530-N']
+# this is where single/main word MODE is applied
+## get {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N'], 'злоупотребление_NOUN': ['7331-N', '117268-N', '143946-N', '7332-N', '117269-N']}
+## and its reverse
+lemmas2ids, id2lemmas = filtered_dicts_mainwds_option(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab)
+
 
 parsed_syns = read_xml(synsets)
-synsets_names = id2name_dict(parsed_syns)# a dict of format 144031-N:АУТИЗМ
-synset_words = id2wds_dict(parsed_syns) # a dict of format 144031-N:[АУТИЗМ, АУТИСТИЧЕСКОЕ МЫШЛЕНИЕ]
-word_syn_ids = wd2id_dict(synset_words) # ex. ЗНАК:[152660-N, 118639-N, 107519-N, 154560-N]
+id2name = id2name_dict(parsed_syns)# a dict of format 144031-N:АУТИЗМ
+# synset_words = id2wds_dict(parsed_syns) # a dict of format 144031-N:[АУТИЗМ, АУТИСТИЧЕСКОЕ МЫШЛЕНИЕ]
+# word_syn_ids = wd2id_dict(synset_words) # ex. ЗНАК:[152660-N, 118639-N, 107519-N, 154560-N]
+# 144031-N:[АУТИЗМ, АУТИСТИЧЕСКОЕ МЫШЛЕНИЕ]
+identifier_tuple, syn_vectors = synsets_vectorized(emb=model, id2lemmas=id2lemmas,
+                                                   named_synsets=id2name, tags=TAGS, pos=POS)
+print('Number of vectorised synsets', len(syn_vectors))
 
 if OOV_STRATEGY == 'top-hyper':
     if POS == 'NOUN':
@@ -81,12 +90,17 @@ hyper_vecs = np.load(args.hyper_vectors, allow_pickle=True)
 
 OUT = '%sresults/' % OUT
 os.makedirs(OUT, exist_ok=True)
-outfile = open('%s%s_%s_%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD), 'w')
+outfile = open('%s%s_%s_%s_%s_%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2), 'w')
 writer = csv.writer(outfile, dialect='unix', delimiter='\t', lineterminator='\n', escapechar='\\', quoting=csv.QUOTE_NONE)
 
+
 counter = 0
-nosamename = 0
 pred_dict = defaultdict(list)
+pred_dict_lemmas = defaultdict(list)
+
+monosem = 0
+polyN = 0
+tot_hypernyms = 0
 for hypo, hyper_vec in zip(test, hyper_vecs):
     if not np.any(hyper_vec):
         for line in top_ten: # synset ids already
@@ -94,17 +108,26 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
             writer.writerow(row)
             pred_dict[hypo.strip()].append(line.strip())
     else:
-        if METHOD == 'base':
+        if METHOD == 'lemmas':
             # (default) get a list of (synset_id, hypernym_word, sim)
-            this_hypo_res = lemmas_based_hypers(hypo, vec=hyper_vec, emb=model, topn=TOPN, dict_w2ids=synsets_dict) #кунгур_NOUN:['134530-N']
-        
+            # dict_w2ids = {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']}
+            # the output applies FILTER (if selected) to retain only one, most similar component of polysemantic hypernyms, instead of grabbing the first one
+            item = preprocess_mwe(hypo, tags=TAGS, pos=POS)
+            this_hypo_res, one_comp, overN, tot_hypers = lemmas_based_hypers(item, vec=hyper_vec, emb=model, ft_model=ft_emb, topn=vecTOPN, dict_w2ids=lemmas2ids,
+                                                index_tuples=identifier_tuple, mean_syn_vectors=syn_vectors, filt1=FILTER_1)
+            if FILTER_1 == 'disamb':
+                monosem += one_comp
+                polyN += overN
+                tot_hypernyms += tot_hypers
+
+#             if FILTER_2 == 'raw':
+#                 this_hypo_res = this_hypo_res[:10]
+#
         elif METHOD == 'deworded':
-            identifier_tuple, syn_vectors = synsets_vectorized(emb=model, worded_synsets=synset_words,
-                                                               named_synsets=synsets_names, tags=TAGS, pos=POS)
-            print('Number of vectorised synsets', len(syn_vectors))
-            ## gets a list of (synset_id, hypernym_synset_name, sim); identifier_tuple is 134530-N, КУНГУР
+
+            ## gets a list of (synset_id, hypernym_synset_NAME, sim); identifier_tuple is 134530-N, КУНГУР
             this_hypo_res = mean_synset_based_hypers(hypo, vec=hyper_vec, syn_ids=identifier_tuple, syn_vecs=syn_vectors, topn=10)
-        
+
         elif 'corpus-informed' in METHOD:
             ## load the lists of hypernyms that coocur with the given hyponyms
             lines = open(args.more_info, 'r').readlines()
@@ -113,44 +136,54 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
                 res = line.split('\t')
                 hyponym, hypernyms = res
                 freqs_dict[hyponym] = json.loads(hypernyms)
-            
-            this_hypo_res = cooccurence_counts(hypo, vec=hyper_vec, emb=model, topn=TOPN, dict_w2ids=synsets_dict, corpus_freqs=freqs_dict, method=METHOD) # кунгур_NOUN:['134530-N']
+
+            this_hypo_res = cooccurence_counts(hypo, vec=hyper_vec, emb=model, topn=vecTOPN, dict_w2ids=lemmas2ids, corpus_freqs=freqs_dict, method=METHOD)
         else:
             this_hypo_res = None
             print('Any other methods to improve performance?')
-            
+
         if counter % 500 == 0:
             print('%d hyponyms processed out of %d total' % (counter, len(test)),
                   file=sys.stderr)
             ## Want to see predictions in real time?
-            print('%s: %s' % (hypo, this_hypo_res))
-        
+            # print('%s: %s' % (hypo, this_hypo_res))
+
         counter += 1
-        
+
         for line in this_hypo_res:
-            row = [hypo.strip(), line[0].strip(), line[1].strip()]
+            row = [hypo.strip(), line[0], line[1]] # (hypo, id, hypernym)
             writer.writerow(row)
-            pred_dict[hypo.strip()].append(line[0].strip())
+            pred_dict[hypo.strip()].append(line[0])
+            pred_dict_lemmas[hypo.strip()].append(line[1])
 outfile.close()
 
-first3pairs_pred = {k: pred_dict[k] for k in list(pred_dict)[:3]}
-print('PRED:', first3pairs_pred, file=sys.stderr)
+if METHOD == 'lemmas' and FILTER_1 == 'disamb':
+    print('Total hypernyms processed for %d testwords: %d' % (len(test), tot_hypernyms))
+    # print('Monosemantic hypernyms', monosem)
+    print('Ratio of monosem hypernyms (FILTER1 is unnecessary): %.2f%%' % (monosem / tot_hypernyms * 100))
+    print('Ratio of polysem hypernyms (over 3 components, usefulness of FILTER1): %.2f%%' % (
+            polyN / tot_hypernyms * 100))
+
+first3pairs_ids = {k: pred_dict[k] for k in list(pred_dict)[:3]}
+print('PRED_ids:', first3pairs_ids, file=sys.stderr)
+first3pairs_hypers = {k: pred_dict_lemmas[k] for k in list(pred_dict_lemmas)[:3]}
+print('PRED_wds:', first3pairs_hypers, file=sys.stderr)
 
 if TEST == 'provided':
-    json.dump(pred_dict, open('%s%s_%s_%s_pred.json' % (OUT, POS, TEST, METHOD), 'w'))
-# print('Number of samename hypernyms excluded',nosamename)
+    json.dump(pred_dict, open('%s%s_%s_%s_%s_%s_pred.json' % (OUT, POS, TEST, METHOD, FILTER_1, FILTER_2), 'w'))
 
 elif TEST == 'codalab':
-    # print('===Look at OOV===')
-    # print('АНИСОВКА', [synsets_names[name] for name in pred_dict['АНИСОВКА']])
+    print('===Look at %s predictions for OOV===' % OOV_STRATEGY)
+    print('АНИСОВКА', [id2name[id] for id in pred_dict['АНИСОВКА']])
     # print(pred_dict['ВЭЙП'])
     # print(pred_dict['ДРЕСС-КОД'])
-    # upload this archive to the site
-    archive_name = '%s_%s_%s_%s_%s_%s.zip' % (VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD)
-    with zipfile.ZipFile(OUT + archive_name, 'w') as file:
-        file.write('%s%s_%s_%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD),
-                   '%s_%s_%s_%s_%s_%s.tsv' % (VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD))
     
+    # upload this archive to the site
+    archive_name = '%s_%s_%s_%s_%s_%s_%s_%s.zip' % (VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2)
+    with zipfile.ZipFile(OUT + archive_name, 'w') as file:
+        file.write('%s%s_%s_%s_%s_%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2),
+                   '%s_%s_%s_%s_%s_%s_%s_%s.tsv' % (VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2))
+
 end = time.time()
 training_time = int(end - start)
 
