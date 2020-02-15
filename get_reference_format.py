@@ -28,13 +28,16 @@ def get_data(train_file):
         words = row[1].split(', ')
         parents = row[2].strip("[]").split(', ')
         parents = sorted([r.strip("'") for r in parents])
+        # why 126551-N	КРЕСТНЫЙ ОТЕЦ	['4544-N', '147272-N']	['ВЕРУЮЩИЙ В ХРИСТА, БРАТЬЯ ВО ХРИСТЕ, ХРИСТИАНИН,
+        # and 126551-N	КРЕСТНЫЙ ОТЕЦ ['2553-N', '153536-N', '2453-N'] 'СОВЕРШЕННОЛЕТНИЕ ЛИЦА, СОВЕРШЕННОЛЕТНИЙ ГРАЖДАНИН, ВЗРОСЛЫЙ ЧЕЛОВЕК', 'МУЖИЧОНКА, МУЖЧИНА, МУЖИК,
         synset2parents[row[0]].append(parents)
         for w in words:
             word2parents[w].append(parents)
             word2synset[w].add(row[0])
             synset2word[row[0]].add(w)
             G.add_node(row[0])
-            if len(word2synset[w]) > 1:
+            if len(word2synset[w]) > 1: # 107722-N	ДЛАНЬ, РУКА, РУЧКА, РУЧОНКА; 139821-N РУЧКА УПРАВЛЕНИЯ, РУКОЯТКА
+                print(w)
                 for n1, n2 in combinations(word2synset[w], 2):
                     G.add_edge(n1, n2)
     components = list(nx.connected_components(G)) # nx.connected_components(G) - is a generator (lazy iterator) over all connected components in G
@@ -79,9 +82,9 @@ def write_data(words, word2parents, out_file):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('input', help='train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION')
-    parser.add_argument('output', nargs='+', help='new file(s) to store the data')
-    parser.add_argument('--split', nargs='+', help='size of train/dev/test splits. Has to sum to 1, e.g. "0.8 0.1 0.1"')
+    parser.add_argument('input', default='input/data/training_nouns.tsv', help='train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION')
+    parser.add_argument('output', default='/home/u2/proj/hypohyper/train.tsv /home/u2/proj/hypohyper/dev.tsv /home/u2/proj/hypohyper/test.tsv', nargs='+', help='new file(s) to store the data')
+    parser.add_argument('--split', default='0.8 0.1 0.1', nargs='+', help='size of train/dev/test splits. Has to sum to 1, e.g. "0.8 0.1 0.1"')
     args = parser.parse_args()
     
     if len(args.output) > 1:
@@ -90,7 +93,7 @@ if __name__ == "__main__":
         partition = [float(i) for i in args.split]
         assert(isclose(sum(partition), 1)), 'Provided data splits do not sum to 1: {}'.format(str(args.split))
     
-    components, synset2word, word2parents = get_data(args.input)
+    components, synset2word, word2parents, _ = get_data(args.input)
     if args.split is not None:
         split_words = generate_split(components, synset2word, word2parents, partition=partition)
         for dataset, out_file in zip(split_words, args.output):
