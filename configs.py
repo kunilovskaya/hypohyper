@@ -11,7 +11,7 @@ METHOD = 'lemmas' # neg-hyp, neg-syn, deworded, corpus-informed25, lemmas
 
 MODE = 'single' # if you want to include vectors for main_words in MWE, replace single_wd with main;
 # this this supposed to include vectors for main components of MWE only if this synset has no single_word representation or if MWE is found in vectors
-OOV_STRATEGY = 'ft-vector' ##'ft-vector', 'top-hyper'
+OOV_STRATEGY = 'top-hyper' ##'ft-vector', 'top-hyper'
 
 # limit the number of similarities from vector model
 if 'ft' not in VECTORS and POS == 'VERB':
@@ -20,8 +20,8 @@ elif 'rdt' in VECTORS:
     vecTOPN = 1000
 else:
     vecTOPN = 500
-FILTER_1 = 'disamb' # raw, disamb
-FILTER_2 = 'raw' # raw, comp
+FILTER_1 = 'raw' # raw, disamb
+FILTER_2 = 'comp' # raw, comp
 
 if 'pos' in VECTORS:
     TAGS = True
