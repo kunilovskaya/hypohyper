@@ -1,5 +1,5 @@
 import csv
-import os, re
+import os, sys, re
 from xml.dom import minidom
 from collections import defaultdict
 from collections import Counter
@@ -11,8 +11,6 @@ from gensim.matutils import unitvec
 from smart_open import open
 from itertools import repeat
 from operator import itemgetter
-from scipy.spatial import distance
-import scipy.spatial as sp
 import json
 
 
@@ -555,7 +553,7 @@ def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_vo
 
 # topn - how many similarities to retain from vector model to find the intersections with ruwordnet: less than 500 can return less than 10 candidates
 
-def lemmas_based_hypers(test_item, vec=None, emb=None, topn=None, dict_w2ids=None, index_tuples=None, mean_syn_vectors=None, filt1=None): # {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']
+def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None, dict_w2ids=None, index_tuples=None, mean_syn_vectors=None, filt1=None): # {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']
     
     hyper_vec = np.array(vec, dtype=float)
     nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=topn) # words
@@ -573,7 +571,7 @@ def lemmas_based_hypers(test_item, vec=None, emb=None, topn=None, dict_w2ids=Non
     if filt1 == 'disamb':
         # list of (synset_id, hypernym_word) and stats
         relevant_ids, one_comp, overN, tot_hypers = disambiguate_hyper_syn_ids(test_item, list_to_filter=sims[:100],
-                                                                               emb=emb,
+                                                                               emb=emb, ft_model=ft_model,
                                                                                index_tuples=index_tuples,
                                                                                mean_syn_vectors=mean_syn_vectors)
 
@@ -728,17 +726,21 @@ def cooccurence_counts(test_item, vec=None, emb=None, topn=None, dict_w2ids=None
 
 
 # for each test word FILTER1
-def disambiguate_hyper_syn_ids(hypo, list_to_filter=None, emb=None, index_tuples=None, mean_syn_vectors=None, tags=None, pos=None):
+def disambiguate_hyper_syn_ids(hypo, list_to_filter=None, emb=None, ft_model=None, index_tuples=None, mean_syn_vectors=None, tags=None, pos=None):
     one_comp = 0
     over_n = 0
     lemma2id_vec_dict = defaultdict(list)
     lemma2id_dict = defaultdict(list)
     item = preprocess_mwe(hypo, tags=tags, pos=pos)
+    
     if item in emb.vocab:
-        hypo_vec = emb[item]  ## all OOV are already taken care of
+        hypo_vec = emb[item]  ## for top-hyper all OOV are already taken care of
     else:
-        hypo_vec = None
-        print('Alert!')
+        ## falling to FT representation
+        if '_' in item:
+            item = item[:-5]
+        hypo_vec = ft_model[item]
+        print('Alert if not ft-vector OOV-strategy!')
         
         ## id-based lookup dict for mean synset vectors
     syn_vectors_dict = defaultdict()
