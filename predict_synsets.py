@@ -8,11 +8,12 @@ import numpy as np
 from smart_open import open
 from collections import defaultdict
 import json
+import itertools
 
 
 from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, FT_EMB, TAGS, vecTOPN, TEST, METHOD, FILTER_1, FILTER_2
 from hyper_imports import popular_generic_concepts, load_embeddings, filtered_dicts_mainwds_option,read_xml, id2name_dict
-from hyper_imports import lemmas_based_hypers, mean_synset_based_hypers, synsets_vectorized
+from hyper_imports import lemmas_based_hypers, mean_synset_based_hypers, synsets_vectorized, disambiguate_hyper_syn_ids
 from hyper_imports import cooccurence_counts, preprocess_mwe
 from get_reference_format import get_data, get_words
 
@@ -31,7 +32,7 @@ if POS == 'NOUN':
 if POS == 'VERB':
     parser.add_argument('--train', default='input/data/training_verbs.tsv',
                         help="train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION")
-parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS, TEST, METHOD),
+parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS, OOV_STRATEGY, TEST, METHOD),
                     help="predicted vectors")
 parser.add_argument('--more_info', default='%scooc_hypernyms_public_nouns_news.tsv' % OUT,
                     help="predicted vectors")
@@ -43,8 +44,9 @@ start = time.time()
 print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
 model = load_embeddings(EMB_PATH)
 
-print('FT embedding model:', FT_EMB.split('/')[-1], file=sys.stderr)
-ft_emb = load_embeddings(FT_EMB)
+if FILTER_1 == 'disamb':
+    print('FT embedding model:', FT_EMB.split('/')[-1], file=sys.stderr)
+    ft_emb = load_embeddings(FT_EMB)
 
 if POS == 'NOUN':
     senses = '%ssenses.N.xml' % RUWORDNET
@@ -113,16 +115,55 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
             # dict_w2ids = {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']}
             # the output applies FILTER (if selected) to retain only one, most similar component of polysemantic hypernyms, instead of grabbing the first one
             item = preprocess_mwe(hypo, tags=TAGS, pos=POS)
-            this_hypo_res, one_comp, overN, tot_hypers = lemmas_based_hypers(item, vec=hyper_vec, emb=model, ft_model=ft_emb, topn=vecTOPN, dict_w2ids=lemmas2ids,
-                                                index_tuples=identifier_tuple, mean_syn_vectors=syn_vectors, filt1=FILTER_1)
+            deduplicated_res = lemmas_based_hypers(item, vec=hyper_vec, emb=model, topn=vecTOPN, dict_w2ids=lemmas2ids)
+            
             if FILTER_1 == 'disamb':
+                    # list of (synset_id, hypernym_word) and stats
+                relevant_ids, one_comp, overN, tot_hypers = disambiguate_hyper_syn_ids(item,
+                                                                                       list_to_filter=deduplicated_res,
+                                                                                       emb=model, ft_model=ft_emb,
+                                                                                       index_tuples=identifier_tuple, mean_syn_vectors=syn_vectors)
+
+    
+                this_hypo_res = relevant_ids[:10]  # list of (synset_ids, hypernym_word)
                 monosem += one_comp
                 polyN += overN
                 tot_hypernyms += tot_hypers
 
-#             if FILTER_2 == 'raw':
-#                 this_hypo_res = this_hypo_res[:10]
-#
+            if FILTER_2 == 'comp':
+                ## TASK: exclude words that have parents in predictions for this test word
+                ## build a graph, get the list of all connected components for a query
+                components, synset2word, word2parents, synset2parents = get_data(args.train)
+                
+                ## get a list of ids from the list of tuples (id, hyper_word)
+                this_hypo_res = []
+                predicted_ids = [i[0] for i in deduplicated_res]
+                combos = [] # get all combinations of predicted ids
+                for i in itertools.combinations(predicted_ids, 2):
+                    combos.append(i)
+                
+                for i in range(len(components)):
+                    out = []
+                    parents_ids = []
+                    for id in components[i]: ## iterate over synsets in this component
+                        for parents in synset2parents[id]: # синсеты-родители этих слов (с учетом второго порядка) в этом компоненте
+                            parents_ids.extend(parents)
+                    for combo in combos:
+                        if combo[0] in components[i] and combo[1] in parents_ids:
+                            for (id,word) in deduplicated_res:
+                                if id == combo[0]:
+                                    out.append(id)
+                                    print('Prune this child:', hypo, (word,combo[0]))
+                    for res in deduplicated_res:
+                        for id in out:
+                            if id != res[0]:
+                                this_hypo_res.append(res)
+                            else:
+                                print(id)
+                this_hypo_res = this_hypo_res[:10]
+            else:
+                this_hypo_res = deduplicated_res[:10]
+                
         elif METHOD == 'deworded':
 
             ## gets a list of (synset_id, hypernym_synset_NAME, sim); identifier_tuple is 134530-N, КУНГУР
