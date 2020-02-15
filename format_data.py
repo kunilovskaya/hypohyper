@@ -18,10 +18,10 @@ if TEST == 'codalab':
         parser.add_argument('--train', default='input/data/training_verbs.tsv', type=os.path.abspath)
 if TEST == 'provided':
     if POS == 'NOUN':
-        parser.add_argument('--train', default='input/data/org_split/training_nouns.tsv', type=os.path.abspath)
+        parser.add_argument('--train', default='input/data/org_split/train_nouns.tsv', type=os.path.abspath)
         parser.add_argument('--test', default='input/data/org_split/test_nouns.tsv', type=os.path.abspath)
     if POS == 'VERB':
-        parser.add_argument('--train', default='input/data/org_split/training_verbs.tsv', type=os.path.abspath)
+        parser.add_argument('--train', default='input/data/org_split/train_verbs.tsv', type=os.path.abspath)
         parser.add_argument('--test', default='input/data/org_split/test_nouns.tsv')
    
 start = time.time()
@@ -31,7 +31,7 @@ args = parser.parse_args()
 synset_words = None
 word_syn_ids = None
 
-if METHOD != 'deworded':
+if METHOD != 'deworded': # or METHOD != 'deworded1'
         
     if POS == 'NOUN':
         synsets = '%ssynsets.N.xml' % RUWORDNET
