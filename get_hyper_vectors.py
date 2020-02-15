@@ -94,7 +94,7 @@ print('\n====== Number of OOV in test: %d (%d%%)' % (len(oov_in_test), len(oov_i
 OUT = '%spredicted_hypers/' % OUT
 os.makedirs(OUT, exist_ok=True)
 
-np.save('%s%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS, TEST, METHOD), hyper_collector)
+np.save('%s%s_%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS, OOV_STRATEGY, TEST, METHOD), hyper_collector)
 
 end = time.time()
 training_time = int(end - start)
