@@ -17,6 +17,7 @@ from argparse import ArgumentParser
 #     - :word2parents: -- a dictionary, keys are words (senses), values are lists of parents of a corresponding synset
 def get_data(train_file):
     word2parents = defaultdict(list)
+    synset2parents = defaultdict(list)
     G = nx.Graph()
     word2synset = defaultdict(set)
     synset2word = defaultdict(set)
@@ -27,6 +28,7 @@ def get_data(train_file):
         words = row[1].split(', ')
         parents = row[2].strip("[]").split(', ')
         parents = sorted([r.strip("'") for r in parents])
+        synset2parents[row[0]].append(parents)
         for w in words:
             word2parents[w].append(parents)
             word2synset[w].add(row[0])
@@ -37,14 +39,14 @@ def get_data(train_file):
                     G.add_edge(n1, n2)
     components = list(nx.connected_components(G)) # nx.connected_components(G) - is a generator (lazy iterator) over all connected components in G
     len_comp = [len(c) for c in components]
-    return components, synset2word, word2parents
+    return components, synset2word, word2parents, synset2parents
 
 
 # get all senses belonging to a given component
 def get_words(comp, synset2word):
     out = []
     for c in comp:
-        out.extend(synset2word[c])
+        out.extend(synset2word[c]) ## adding a list to a list without creating a nested structure
     return out
 
 
