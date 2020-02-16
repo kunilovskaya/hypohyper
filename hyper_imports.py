@@ -11,7 +11,10 @@ from gensim.matutils import unitvec
 from smart_open import open
 from itertools import repeat
 from operator import itemgetter
+import itertools
 import json
+
+from get_reference_format import get_data, get_words
 
 
 # parse ruwordnet
@@ -553,7 +556,7 @@ def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_vo
 
 # topn - how many similarities to retain from vector model to find the intersections with ruwordnet: less than 500 can return less than 10 candidates
 
-def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None, dict_w2ids=None, index_tuples=None, mean_syn_vectors=None, filt1=None): # {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']
+def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None, dict_w2ids=None, limit=None): # {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']
     
     hyper_vec = np.array(vec, dtype=float)
     nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=topn) # words
@@ -568,15 +571,16 @@ def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None,
     # sort the list of tuples (id, sim) by the 2nd element and deduplicate
     # by rewriting the list while checking for duplicate synset ids
     sims = sorted(sims, key=itemgetter(2), reverse=True)
+    
     ## exclude hypernyms lemmas that match the query and lemmas from the same synset
     deduplicated_sims = []
     temp = set()
     nosamename = 0
     dup_ids = 0
     
-    sims100 = sims[:100]
+    sims_limited = sims[:limit]
     
-    for a, b, c in sims100:
+    for a, b, c in sims_limited:
         if test_item != b:
            if a not in temp:
                 temp.add(a)
@@ -758,6 +762,117 @@ def disambiguate_hyper_syn_ids(hypo, list_to_filter=None, emb=None, ft_model=Non
     return this_hypo_bestids, one_comp, over_n, tot  # list of (synset_id, hypernym_word) and stats
 
 
+def get_generations(relations, redundant=None):
+    parsed_rels = read_xml(relations)  ## relations are defined wrt child
+    rel_lookup = []
+    rel_lookup2 = []
+    for rel in parsed_rels:
+        parent = rel.getAttributeNode('parent_id').nodeValue
+        child = rel.getAttributeNode('child_id').nodeValue
+        rel_name = rel.getAttributeNode('name').nodeValue
+        if redundant == 'kid':
+            if rel_name == 'hyponym':
+                rel_lookup.append((child, parent)) ## first order parents
+        elif redundant == 'parent':
+            if rel_name == 'hypernym':
+                rel_lookup.append((child, parent)) ## reverse order of rel i.e child==parent
+        else:
+            rel_lookup = None
+            print("Do you want to lose kids or parents?")
+            
+    print('All child-parent', len(rel_lookup)) # including parent-grandparent
+    # for rel in parsed_rels:
+    #     parent = rel.getAttributeNode('parent_id').nodeValue
+    #     child = rel.getAttributeNode('child_id').nodeValue
+    #     rel_name = rel.getAttributeNode('name').nodeValue
+    #     if redundant == 'kid':
+    #         if child in [i[1] for i in rel_lookup] and rel_name == 'hyponym':
+    #             rel_lookup2.append((child, parent)) ## sublist of rel_lookup with (parents,grandparents)
+    #     if redundant == 'parent':
+    #         if child in [i[1] for i in rel_lookup] and rel_name == 'hypernym':
+    #             rel_lookup2.append((child, parent))
+    # print('Parent-grandparent', len(rel_lookup2))  # only parent-grandparent relative to first list
+
+    return rel_lookup #, rel_lookup2
+
+def lose_family_anno(hypo, deduplicated_res, rel_lookup):
+    this_hypo_res = []
+    ## get a list of ids from the list of tuples (id, hyper_word)
+    predicted_ids = [i[0] for i in deduplicated_res]
+    combos = []  # get all combinations of predicted ids
+    for i in itertools.combinations(predicted_ids, 2):
+        combos.append(i)
+    
+    ## find combinations where one el is a child of the other and delete this child
+    hits = []
+    for combo in combos:
+        ## PROBLEM: retain dog if all three are in the output
+        # preds for poodle: collie - dog - animal, but this assumes the relatedness of predicted synsets
+        if combo in rel_lookup:
+            for (id, word) in deduplicated_res:
+                if id == combo[0]:
+                    print('Pruned child:', hypo, (word, combo[0]))
+                    hits.append((id, word))
+                
+    this_hypo_res = [x for x in deduplicated_res if x not in hits]
+    
+    print('Pruned kids:', len(hits))
+    print('==Smaller? %d -> %d' % (len(deduplicated_res), len(set(this_hypo_res))))
+    
+    return this_hypo_res
+
+
+def lose_family_comp(hypo, deduplicated_res, train=None, redundant=None):
+    this_hypo_res = []
+    
+    ## build a graph, get the list of connected components (hm, not exaustive! does not account for same-id components)
+    components, synset2word, _, synset2parents = get_data(train)
+    
+    ## get a list of ids from the list of tuples (id, hyper_word)
+    predicted_ids = [i[0] for i in deduplicated_res]
+    combos = []  # get all combinations of predicted ids
+    for i in itertools.combinations(predicted_ids, 2):
+        combos.append(i)
+    
+    hits = []
+    ## iterate over all components (the list of components is not exaustive it seems, but parents include all parents of hypo synset)
+    ## in effect it is iteration over hyponym ids!
+    for i in range(len(components)): # all hyponym ids that have associated lists of hypernyms corresponding to lines in the training data
+        # if i == 1:
+        #     print(components[i])
+        out = []
+        parents_ids = []
+        for id in components[i]:  ## iterate over synsets in this component
+            for parents in synset2parents[id]:  # синсеты-родители синсетов-гипонимов (с учетом второго порядка) в этом компоненте
+                parents_ids.extend(parents)
+        ## find combinations where one el is a child of the other in this component and delete this child
+        for combo in combos:
+            if combo[0] in components[i] and combo[1] in parents_ids:
+                for (id, word) in deduplicated_res:
+                    if redundant == 'kid':
+                        if id == combo[0]:
+                            out.append(id)
+                            print('Prune child:', hypo, (word, combo))
+                    elif redundant == 'parent':
+                        if id == combo[1]:
+                            out.append(id)
+                            print('Prune parent:', hypo, (word, combo))
+                    else:
+                        out = None
+                        print("Do you want to lose kids or parents?")
+        ## deleting by re-writing the list
+        for res in deduplicated_res:
+            for id in out:
+                if id != res[0]:
+                    this_hypo_res.append(res)
+                else:
+                    hits.append(res)
+                    
+    print('Pruned kids:', len(hits))
+    print('==Smaller? %d -> %d' % (len(deduplicated_res), len(set(this_hypo_res))))
+    
+    return this_hypo_res
+    
 ######################
 if __name__ == '__main__':
     print('=== This is a modules script, it is not supposed to run as main ===')
