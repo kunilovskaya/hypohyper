@@ -14,7 +14,7 @@ import itertools
 from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, FT_EMB, TAGS, vecTOPN, TEST, METHOD, FILTER_1, FILTER_2
 from hyper_imports import popular_generic_concepts, load_embeddings, filtered_dicts_mainwds_option,read_xml, id2name_dict
 from hyper_imports import lemmas_based_hypers, mean_synset_based_hypers, synsets_vectorized, disambiguate_hyper_syn_ids
-from hyper_imports import cooccurence_counts, preprocess_mwe
+from hyper_imports import cooccurence_counts, preprocess_mwe, lose_family_anno, lose_family_comp, get_generations
 from get_reference_format import get_data, get_words
 
 parser = argparse.ArgumentParser('Detecting most similar synsets and formatting the output')
@@ -26,6 +26,7 @@ if TEST == 'codalab':
         parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
 if TEST == 'provided':
         parser.add_argument('--test', default='%strains/%s_%s_%s_%s_WORDS.txt' % (OUT, VECTORS, POS, TEST, METHOD), type=os.path.abspath)
+
 if POS == 'NOUN':
     parser.add_argument('--train', default='input/data/training_nouns.tsv',
                         help="train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION")
@@ -64,7 +65,6 @@ else:
 ## and its reverse
 lemmas2ids, id2lemmas = filtered_dicts_mainwds_option(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab)
 
-
 parsed_syns = read_xml(synsets)
 id2name = id2name_dict(parsed_syns)
 
@@ -72,7 +72,7 @@ identifier_tuple, syn_vectors = synsets_vectorized(emb=model, id2lemmas=id2lemma
                                                    named_synsets=id2name, tags=TAGS, pos=POS)
 print('Number of vectorised synsets', len(syn_vectors))
 
-if OOV_STRATEGY == 'top-hyper':
+if OOV_STRATEGY == 'top-hyper' or FILTER_1 == 'anno':
     if POS == 'NOUN':
         rel_path = '%ssynset_relations.N.xml' % RUWORDNET
     elif POS == 'VERB':
@@ -81,6 +81,7 @@ if OOV_STRATEGY == 'top-hyper':
         rel_path = None
         print('Which PoS?')
     top_ten = popular_generic_concepts(rel_path)
+    rel_lookup = get_generations(rel_path, redundant=FILTER_2)
 else:
     top_ten = None
 
@@ -111,9 +112,10 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
         if METHOD == 'lemmas':
             # (default) get a list of (synset_id, hypernym_word, sim)
             # dict_w2ids = {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']}
-            # use FILTER_1 to retain only one, most similar component of polysemantic hypernyms, instead of grabbing the first one
+            # use FILTER to retain only one, most similar component of polysemantic hypernyms, instead of grabbing the first one
             item = preprocess_mwe(hypo, tags=TAGS, pos=POS)
-            deduplicated_res = lemmas_based_hypers(item, vec=hyper_vec, emb=model, topn=vecTOPN, dict_w2ids=lemmas2ids)
+            deduplicated_res = lemmas_based_hypers(item, vec=hyper_vec, emb=model, topn=vecTOPN, dict_w2ids=lemmas2ids, limit=50)
+            print('This test item output is deduplicated')
             
             if FILTER_1 == 'disamb': # <- list of [(id1_1,hypernym1), (id1_2,hypernym1), (id2_1,hypernym2), (id2_2,hypernym2)]
                 # list of (one_id, hypernym_word) and stats
@@ -121,47 +123,25 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
                                                                                        list_to_filter=deduplicated_res,
                                                                                        emb=model, ft_model=ft_emb,
                                                                                        index_tuples=identifier_tuple, mean_syn_vectors=syn_vectors)
-
-    
-                this_hypo_res = relevant_ids[:10]  # list of (synset_ids, hypernym_word)
                 monosem += one_comp
                 polyN += overN
                 tot_hypernyms += tot_hypers
-
-            if FILTER_2 == 'comp': # <- list of [(id1_1,hypernym1), (id1_2,hypernym1), (id2_1,hypernym2), (id2_2,hypernym2)]
+                print('This test item output is diambiguated')
+                this_hypo_res = relevant_ids[:10]
+                
+            elif FILTER_1 == 'anno': # <- list of [(id1_1,hypernym1), (id1_2,hypernym1), (id2_1,hypernym2), (id2_2,hypernym2)]
                 ## TASK: exclude words that have parents in predictions for this test word in each connected component; return a smaller (id,hyper_word) list
-                this_hypo_res = []
                 
-                ## build a graph, get the list of connected components (hm, not exaustive! does not account for same-id components)
-                components, _, _, synset2parents = get_data(args.train)
+                norelatives = lose_family_anno(hypo, deduplicated_res, rel_lookup) ## FILTER_2 is applied above
+                this_hypo_res = norelatives[:10]
                 
-                ## get a list of ids from the list of tuples (id, hyper_word)
-                predicted_ids = [i[0] for i in deduplicated_res]
-                combos = [] # get all combinations of predicted ids
-                for i in itertools.combinations(predicted_ids, 2):
-                    combos.append(i)
+            elif FILTER_1 == 'comp':  # <- list of [(id1_1,hypernym1), (id1_2,hypernym1), (id2_1,hypernym2), (id2_2,hypernym2)]
+                ## TASK: exclude words that have parents in predictions for this test word in each connected component; return a smaller (id,hyper_word) list
                 
-                for i in range(len(components)): # iterate over all components (the list of components is not exaustive it seems)
-                    out = []
-                    parents_ids = []
-                    for id in components[i]: ## iterate over synsets in this component
-                        for parents in synset2parents[id]: # синсеты-родители синсетов-гипонимов (с учетом второго порядка) в этом компоненте
-                            parents_ids.extend(parents)
-                    ## find combinations where one el is a child of the other in this component and delete this child
-                    for combo in combos:
-                        if combo[0] in components[i] and combo[1] in parents_ids:
-                            for (id,word) in deduplicated_res:
-                                if id == combo[0]:
-                                    out.append(id)
-                                    print('Prune this child:', hypo, (word,combo[0]))
-                    ## deleting by re-writing the list
-                    for res in deduplicated_res:
-                        for id in out:
-                            if id != res[0]:
-                                this_hypo_res.append(res)
-                            else:
-                                print(id)
-                this_hypo_res = this_hypo_res[:10]
+                norelatives = lose_family_comp(hypo, deduplicated_res, train=args.train, redundant=FILTER_2)
+
+                this_hypo_res = norelatives[:10]
+
             else:
                 this_hypo_res = deduplicated_res[:10]
                 
@@ -221,10 +201,10 @@ elif TEST == 'codalab':
     # print(pred_dict['ДРЕСС-КОД'])
     
     # upload this archive to the site
-    archive_name = '%s_%s_%s_%s_%s_%s_%s_%s.zip' % (VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2)
+    archive_name = '%s_%s_%s_%s_%s_%s_%s_%s_kid25.zip' % (VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2)
     with zipfile.ZipFile(OUT + archive_name, 'w') as file:
-        file.write('%s%s_%s_%s_%s_%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2),
-                   '%s_%s_%s_%s_%s_%s_%s_%s.tsv' % (VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2))
+        file.write('%s%s_%s_%s_%s_%s_%s_%s_%s_kid25.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2),
+                   '%s_%s_%s_%s_%s_%s_%s_%s_kid25.tsv' % (VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2))
 
 end = time.time()
 training_time = int(end - start)
