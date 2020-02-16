@@ -201,10 +201,10 @@ elif TEST == 'codalab':
     # print(pred_dict['ДРЕСС-КОД'])
     
     # upload this archive to the site
-    archive_name = '%s_%s_%s_%s_%s_%s_%s_%s_kid25.zip' % (VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2)
+    archive_name = '%s_%s_%s_%s_%s_%s_%s_%s.zip' % (VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2)
     with zipfile.ZipFile(OUT + archive_name, 'w') as file:
-        file.write('%s%s_%s_%s_%s_%s_%s_%s_%s_kid25.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2),
-                   '%s_%s_%s_%s_%s_%s_%s_%s_kid25.tsv' % (VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2))
+        file.write('%s%s_%s_%s_%s_%s_%s_%s_%s.tsv' % (OUT, VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2),
+                   '%s_%s_%s_%s_%s_%s_%s_%s.tsv' % (VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2))
 
 end = time.time()
 training_time = int(end - start)
