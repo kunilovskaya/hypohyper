@@ -66,10 +66,8 @@ lemmas2ids, id2lemmas = filtered_dicts_mainwds_option(senses, tags=TAGS, pos=POS
 
 
 parsed_syns = read_xml(synsets)
-id2name = id2name_dict(parsed_syns)# a dict of format 144031-N:АУТИЗМ
-# synset_words = id2wds_dict(parsed_syns) # a dict of format 144031-N:[АУТИЗМ, АУТИСТИЧЕСКОЕ МЫШЛЕНИЕ]
-# word_syn_ids = wd2id_dict(synset_words) # ex. ЗНАК:[152660-N, 118639-N, 107519-N, 154560-N]
-# 144031-N:[АУТИЗМ, АУТИСТИЧЕСКОЕ МЫШЛЕНИЕ]
+id2name = id2name_dict(parsed_syns)
+
 identifier_tuple, syn_vectors = synsets_vectorized(emb=model, id2lemmas=id2lemmas,
                                                    named_synsets=id2name, tags=TAGS, pos=POS)
 print('Number of vectorised synsets', len(syn_vectors))
@@ -134,21 +132,20 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
                 ## TASK: exclude words that have parents in predictions for this test word in each connected component; return a smaller (id,hyper_word) list
                 this_hypo_res = []
                 
-                ## build a graph, get the list of all connected components
-                components, synset2word, word2parents, synset2parents = get_data(args.train)
+                ## build a graph, get the list of connected components (hm, not exaustive! does not account for same-id components)
+                components, _, _, synset2parents = get_data(args.train)
                 
                 ## get a list of ids from the list of tuples (id, hyper_word)
-                
                 predicted_ids = [i[0] for i in deduplicated_res]
                 combos = [] # get all combinations of predicted ids
                 for i in itertools.combinations(predicted_ids, 2):
                     combos.append(i)
                 
-                for i in range(len(components)): # iterate over all components
+                for i in range(len(components)): # iterate over all components (the list of components is not exaustive it seems)
                     out = []
                     parents_ids = []
                     for id in components[i]: ## iterate over synsets in this component
-                        for parents in synset2parents[id]: # синсеты-родители этих слов (с учетом второго порядка) в этом компоненте
+                        for parents in synset2parents[id]: # синсеты-родители синсетов-гипонимов (с учетом второго порядка) в этом компоненте
                             parents_ids.extend(parents)
                     ## find combinations where one el is a child of the other in this component and delete this child
                     for combo in combos:
