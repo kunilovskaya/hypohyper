@@ -1,8 +1,9 @@
 #! python3
 # coding: utf-8
+import os, sys
 
 from argparse import ArgumentParser
-import sys
+
 from smart_open import open
 
 if __name__ == "__main__":
@@ -28,4 +29,4 @@ if __name__ == "__main__":
                 w_sentences[w] += 1
 
     for w in w_sentences:
-        print(w_sentences[w], w)
+        print(w_sentences[w], w) # generate freqs

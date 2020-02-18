@@ -1,16 +1,22 @@
 #! python3
 # coding: utf-8
+import os, sys
+
+path1 = '../hypohyper/'
+path1 = os.path.abspath(str(path1))
+sys.path.append(path1)
 
 from argparse import ArgumentParser
 from smart_open import open
 import json
 from hyper_imports import read_xml, id2wds_dict, preprocess_mwe
+from configs import VECTORS, RUWORDNET, OUT, POS, TEST, METHOD
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--datafile', required=True, help="JSON with co-occurrence data")
-    parser.add_argument('--wordnet', default='input/resources/ruwordnet/synsets.N.xml',
-                        help="path to WordNet XML file")
+    parser.add_argument('--datafile', default='%scooc_%s_%s_%s.json' % (OUT, VECTORS, POS, TEST), help="JSON with co-occurrence data")
+    parser.add_argument('--wordnet', default=None,
+                        help="path to WordNet XML file") #default='input/resources/ruwordnet/synsets.N.xml',
     parser.add_argument('--pos', default='NOUN', help="PoS tag to use")
     args = parser.parse_args()
 
@@ -45,7 +51,7 @@ if __name__ == "__main__":
                         break
                     if synset not in seen_synsets:
                         out = [word.upper().split('_')[0], synset, p.split('_')[0]]
-                        print('\t'.join(out))
+                        # print('\t'.join(out))
                         counter += 1
                     seen_synsets.add(synset)
         else:

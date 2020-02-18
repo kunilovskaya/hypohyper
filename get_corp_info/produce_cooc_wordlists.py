@@ -1,17 +1,20 @@
-#! python3
-# coding: utf-8
+import os, sys
+
+path1 = '../hypohyper/'
+path1 = os.path.abspath(str(path1))
+sys.path.append(path1)
+
 
 from argparse import ArgumentParser
 from smart_open import open
-import json, sys, os
+import json
 from collections import defaultdict
 
-from configs import VECTORS, RUWORDNET, OUT, POS, TEST, FILTER_1
+from configs import VECTORS, OUT, POS, TEST, FILTER_1
 
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('--datafile', default='%scooc/cooc_%s_%s_%s.json' % (OUT, VECTORS, POS, TEST), help="JSON with co-occurrence data")
-    parser.add_argument('--pos', default='NOUN', help="PoS tag to use")
     args = parser.parse_args()
 
     with open(args.datafile, 'rb') as f:

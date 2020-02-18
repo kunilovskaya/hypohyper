@@ -1,5 +1,10 @@
 #! python3
 # coding: utf-8
+import os, sys
+
+path1 = '../hypohyper/'
+path1 = os.path.abspath(str(path1))
+sys.path.append(path1)
 
 from argparse import ArgumentParser
 import sys
@@ -9,7 +14,7 @@ from hyper_imports import preprocess_mwe
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--words', required=True, help="path to word list")
+    parser.add_argument('--words', required=True, help="path to word list") # ruWORDNET wordlist
     parser.add_argument('--pos', default='NOUN', help="PoS tag to use")
     args = parser.parse_args()
 
@@ -22,11 +27,11 @@ if __name__ == "__main__":
 
     print('%d words read' % len(words), file=sys.stderr)
 
-    for line in sys.stdin:
+    for line in sys.stdin: #corpus?
         res = set(line.strip().split())
         for w in words:
             if w in res:
-                print(line)
+                print(line) ## this is fed into another script
                 break
 
 
