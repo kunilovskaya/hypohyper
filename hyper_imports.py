@@ -497,7 +497,7 @@ def popular_generic_concepts(relations_path):
 
 
 ####### parse ruwordnet and get a list of (synset_id, word) tuples for both one word and heads in MWE)
-def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_voc=None):  # mode 'main'
+def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_voc=None, id2name=None):  # mode 'main'
     
     doc = minidom.parse(senses)
     parsed_senses = doc.getElementsByTagName("sense")
@@ -507,51 +507,54 @@ def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_vo
     for sense in parsed_senses:
         
         id = sense.getAttributeNode('synset_id').nodeValue
-        name = sense.getAttributeNode("name").nodeValue
+        lemma = sense.getAttributeNode("lemma").nodeValue ## changed from name to lemma
         main_wd = sense.getAttributeNode("main_word").nodeValue
-        if len(name.split()) == 0:
+
+        if len(lemma.split()) == 0:
             item = None
             print('Missing name for a sense in synset %s' % id)
         
-        item = preprocess_mwe(name, tags=tags,
+        item = preprocess_mwe(lemma, tags=tags,
                               pos=pos)  # get MWE, singles compatible with embeddings already (lower, tagged)
         
-        if '::' not in item:
+        if mode == 'single':
             if item in emb_voc:
                 covered_ids.add(id)
                 all_id_senses.append((id, item))
-            else:
-                continue
-        
-        elif '::' in item and mode == 'main':
+                
+        elif mode == 'main':
             if item in emb_voc:
-                ## adding the few cases of MWE in embeddings vocabulary
+                covered_ids.add(id)
                 all_id_senses.append((id, item))
-            else:
-                if id not in covered_ids:
+                    
+            if '::' in item:
+                if id not in covered_ids: # get the main word
                     item = preprocess_mwe(main_wd, tags=tags, pos=pos)
-                    ## only if the respective synset has not been covered already in the unconditional single word crawl
-                    covered_ids.add(
-                        id)  # activate if you want just one head word added from a non-singleword synset, not all of them (probably duplicates)
-                    all_id_senses.append((id, item))
-        else:
-            # print('What do you want to do with senses that are lexicalised as MWE?')
-            continue
-            
-
+                    if item in emb_voc:
+                        ## only if the respective synset has not been covered already in the unconditional single word crawl
+                        ## activate if you want just one head word added from a non-singleword synset, not all of them (probably duplicates)
+                        covered_ids.add(id)
+                        all_id_senses.append((id, item))
+            else:
+                # print('What do you want to do with senses that are lexicalised as MWE?')
+                continue
     lemmas2ids = defaultdict(list)
     for i in all_id_senses:
-        synset = i[0]
-        name = i[1]
-        lemmas2ids[name].append(synset)
+        synset = i[0].strip()
+        lemma = i[1]
+        lemmas2ids[lemma].append(synset)
 
     ## reverse the dict to feed to synsets_vectorized, which takes id2lemmas
     id2lemmas = defaultdict(list)
     for k, values in lemmas2ids.items():
         for v in values:
-            id2lemmas[v].append(k)
-      
-    # all synsets can be represented with embeddings now
+            id2lemmas[v.strip()].append(k)
+            
+    # uncovered = uniq_ids - covered_ids
+    # print('Uncoverd:', len(uncovered))
+    # for i in uncovered:
+    #     print(id2name[i])
+
     return lemmas2ids, id2lemmas
 
 # topn - how many similarities to retain from vector model to find the intersections with ruwordnet: less than 500 can return less than 10 candidates
@@ -599,6 +602,7 @@ def synsets_vectorized(emb=None, id2lemmas=None, named_synsets=None, tags=None, 
     ruthes_oov = 0
     mean_synset_vecs = []
     synset_ids_names = []
+    ## 26312 in main for news_pos
     for id, wordlist in id2lemmas.items(): # 144031-N:[аутизм_NOUN, аутическое::мышление_NOUN] filtered thru emb already and getting main words to represent synsets if desired
         # print('==', id, named_synsets[id], wordlist)
         current_vector_list = []
@@ -609,11 +613,13 @@ def synsets_vectorized(emb=None, id2lemmas=None, named_synsets=None, tags=None, 
                 current_vector_list.append(emb[w])
                 current_array = np.array(current_vector_list)
                 this_mean_vec = np.mean(current_array,axis=0)  # average column-wise, getting a new row=vector of size 300
-                mean_synset_vecs.append(this_mean_vec) # <class 'numpy.ndarray'> [ 0.031227    0.04932501  0.0154615   0.04967201
-                synset_ids_names.append((id, named_synsets[id]))
             else:
                 ruthes_oov += 1
                 this_mean_vec = None
+                
+        mean_synset_vecs.append(this_mean_vec) # <class 'numpy.ndarray'> [ 0.031227    0.04932501  0.0154615   0.04967201
+        synset_ids_names.append((id, named_synsets[id]))
+        
 
     ## synset_ids_names has (134530-N, КУНГУР)
     return synset_ids_names, mean_synset_vecs
