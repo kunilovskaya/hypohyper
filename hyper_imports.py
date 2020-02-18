@@ -464,15 +464,15 @@ def star_predict(source, embedding, projection, topn=10):
 
 
 def popular_generic_concepts(relations_path):
-    ## how often an id has a name="hypernym" when "parent" in synset_relations.N.xml (aim for the ratio hypernym/hyponym > 1)
+    ## how often an id has a name="hypernym" or "domain" when "child" in synset_relations.N.xml (aim for the ratio hypernym/hyponym > 1)
     parsed_rels = read_xml(relations_path)
     freq_hypo = defaultdict(int)
     freq_hyper = defaultdict(int)
     for rel in parsed_rels:
-        ## in WordNet relations the name of relations is assigned wrt the child, it is the name of a child twds the parent, it seems
+        ## in synset_relations the name of relations is assigned wrt the child, it is the name of a child twds the parent, it seems
         id = rel.getAttributeNode('child_id').nodeValue
         name = rel.getAttributeNode('name').nodeValue
-        if name == 'hypernym':
+        if name == 'hypernym':# or name == 'domain':
             freq_hyper[id] += 1
         elif name == 'hyponym':
             freq_hypo[id] += 1
@@ -618,7 +618,7 @@ def synsets_vectorized(emb=None, id2lemmas=None, named_synsets=None, tags=None, 
     ## synset_ids_names has (134530-N, КУНГУР)
     return synset_ids_names, mean_synset_vecs
 
-def mean_synset_based_hypers(test_item, vec=None, syn_ids=None, syn_vecs=None, topn=10):
+def mean_synset_based_hypers(test_item, vec=None, syn_ids=None, syn_vecs=None):
     sims = []
     temp = set()
     deduplicated_sims = []
@@ -647,76 +647,38 @@ def mean_synset_based_hypers(test_item, vec=None, syn_ids=None, syn_vecs=None, t
         else:
             nosamename += 1
 
-    this_hypo_res = deduplicated_sims[:topn]  # list of (synset_id, hypernym_word, sim)
+    this_hypo_res = deduplicated_sims  # list of (synset_id, hypernym_word, sim)
     
     return this_hypo_res  # list of (synset_id, hypernym_synset_name, sim)
 
+
 ## dict_w2ids = кунгур_NOUN:[['134530-N']], corpus_freqs = агностик_NOUN ["атеист_NOUN", "человек_NOUN", "религия_NOUN", ...]
-def cooccurence_counts(test_item, vec=None, emb=None, topn=None, dict_w2ids=None, corpus_freqs=None, method=None):
-    nosamename = 0
-    hyper_vec = np.array(vec, dtype=float)
-    temp = set()
-    deduplicated_sims = []
-    nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=topn)
-    sims = []
-    for res in nearest_neighbors:
-        hypernym = res[0] ## word_NOUN
-        similarity = res[1]
-        if hypernym in dict_w2ids:
-            for synset in dict_w2ids[hypernym]:  # we are adding all synset ids associated with the topN most_similar in embeddings and found in ruWordnet
-                sims.append((synset, hypernym, similarity))
-    
-    # sort the list of tuples (id, sim) by the 2nd element and deduplicate
-    # by rewriting the list while checking for duplicate synset ids
-    sims = sorted(sims, key=itemgetter(2), reverse=True) ## those that are found in ruWordNet in top 500 most_similar embeddings
-    
-    for a, b, c in sims:
-        # exclude same word as hypernym even if attributed to another synset
-        b = b[:-5].upper()
-        if test_item != b:
-            # print(hypo, b)
-            if a not in temp:
-                temp.add(a)
-                deduplicated_sims.append((a, b, c))
-        else:
-            nosamename += 1
-    # print('Selves as hypernyms: %s' % nosamename)
-    
-    this_hypo_res = deduplicated_sims[:10]  # list of (synset_id, HYPERNYM_WORD, sim)
-    
-    print('\n\n%%%%%%%%%%%%%%%%%%')
-    print('MY QUERY:  === %s ===' % test_item)
-    
-    print('This is before factoring in the cooccurence stats\n', this_hypo_res)
+def cooccurence_counts(test_item, deduplicated_res, corpus_freqs=None, filter=None):
+    # print('This is before factoring in the cooccurence stats\n', deduplicated_res[:10])
     test_item = test_item.lower()+'_NOUN'
     # print('%s co-occured with\n%s' % (test_item, corpus_freqs[test_item]))
     
-    limit_mobility = int(''.join([i for i in method if i.isdigit()]))
     new_list = []
     if len(corpus_freqs[test_item]) != 0:
-
         for i in corpus_freqs[test_item]: # [word_NOUN, word_NOUN, word_NOUN]
-            for tup in deduplicated_sims[:limit_mobility]:  ## maybe further limit these 500 words to 100?
-                if i == tup[1].lower()+'_NOUN':
-                    # print('==', i, tup[1].lower()+'_NOUN')
-            # if i in hypo_small: ## this is always the casebecause co-occurence candidates were drawn from the top (how many?) hypernyms
+            for tup in deduplicated_res[:filter]: # <- list of [(id1_1,hypernym1_NOUN), (id1_2,hypernym1), (id2_1,hypernym2)]
+                if i == tup[1]:
                     new_list.append(tup)
     else:
         # print('NOCOOCCURRENCE:', test_item) ## травести, точмаш, прет-а-порте, стечкин
-        new_list = deduplicated_sims[:10]
+        new_list = deduplicated_res[:10]
     if len(new_list) < 10:
-        for tup in deduplicated_sims:
+        for tup in deduplicated_res:
             if tup not in new_list:
                 new_list.append(tup)
-                
-    new_list = new_list[:10]
     
-    print('New order of hypernyms\n%s' % (new_list))
+    # print('New order of hypernyms\n%s' % new_list[:10])
     return new_list  # list of (synset_id, hypernym_synset_name)
 
 
 # for each test word FILTER1
-def disambiguate_hyper_syn_ids(hypo, list_to_filter=None, emb=None, ft_model=None, index_tuples=None, mean_syn_vectors=None, tags=None, pos=None):
+def disambiguate_hyper_syn_ids(hypo, list_to_filter=None, emb=None, ft_model=None, index_tuples=None,
+                               mean_syn_vectors=None, tags=None, pos=None):
     one_comp = 0
     over_n = 0
     lemma2id_vec_dict = defaultdict(list)
