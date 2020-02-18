@@ -1,13 +1,13 @@
 RANDOM_SEED = 0
 # codename for emb: 'ft-araneum', w2v-rdt500, w2v-pos-ruscorpwiki, w2v-pos-araneum, ft-ruscorp, ft-araneum_full
 # news-pos-sk, news-pos-cbow, ft-news-sk, ft-news-cbow, w2v-tayga-fpos5
-VECTORS = 'w2v-pos-araneum' ## no full means that we filter out OOV at train time
+VECTORS = 'w2v-pos-ruscorpwiki' ## no full means that we filter out OOV at train time
 POS = 'NOUN' # 'VERB'
 MWE = True ## always TRUE wouldn't hurt
-TEST = 'codalab' # provided, codalab
+TEST = 'provided' # provided, codalab
 
 ## strategies to improve performance
-METHOD = 'lemmas' # neg-hyp, neg-syn, deworded, corpus-informed25, lemmas
+METHOD = 'lemmas' # neg-hyp, neg-syn, deworded, lemmas
 
 MODE = 'single' # if you want to include vectors for main_words in MWE, replace single_wd with main;
 # this this supposed to include vectors for main components of MWE only if this synset has no single_word representation or if MWE is found in vectors
@@ -20,8 +20,8 @@ elif 'rdt' in VECTORS:
     vecTOPN = 1000
 else:
     vecTOPN = 500
-FILTER_1 = 'raw' # raw, disamb
-FILTER_2 = 'comp' # raw, comp
+FILTER_1 = 'corp-info18' # raw, disamb, comp, anno, corp-info25, corp-info50
+FILTER_2 = 'none' #'kid', 'parent', none (for raw, disamb)
 
 if 'pos' in VECTORS:
     TAGS = True
@@ -44,7 +44,7 @@ elif 'rdt' in VECTORS:
 elif 'news' in VECTORS:
     if 'pos' in VECTORS:
         if 'sk' in VECTORS:
-            EMB_PATH = '/home/lpvoid/masha/resources/emb/hypo_news/news_pos_1_5.model'
+            EMB_PATH = '/home/u2/resources/emb/news_pos_1_5.model'
         elif 'cbow'  in VECTORS:
             EMB_PATH = '/home/u2/resources/emb/news_pos_0_5.model'
     elif 'ft' in VECTORS:
