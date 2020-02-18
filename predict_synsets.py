@@ -58,18 +58,17 @@ else:
     senses = None
     synsets = None
     print('Not sure which PoS-domain you want from ruWordNet')
-
+    
+parsed_syns = read_xml(synsets)
+id2name = id2name_dict(parsed_syns)
 # this is where single/main word MODE is applied
 ## get {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N'], 'злоупотребление_NOUN': ['7331-N', '117268-N'...]}
 ## and its reverse
-lemmas2ids, id2lemmas = filtered_dicts_mainwds_option(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab)
-
-parsed_syns = read_xml(synsets)
-id2name = id2name_dict(parsed_syns)
+lemmas2ids, id2lemmas = filtered_dicts_mainwds_option(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab, id2name=id2name)
 
 identifier_tuple, syn_vectors = synsets_vectorized(emb=model, id2lemmas=id2lemmas,
                                                    named_synsets=id2name, tags=TAGS, pos=POS)
-print('Number of vectorised synsets', len(syn_vectors))
+print('Number of vectorised synsets', len(syn_vectors), len(identifier_tuple))
 
 if OOV_STRATEGY == 'top-hyper' or FILTER_1 == 'anno':
     if POS == 'NOUN':
