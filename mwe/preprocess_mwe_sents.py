@@ -7,6 +7,7 @@ path1 = '../hypohyper/'
 path1 = os.path.abspath(str(path1))
 sys.path.append(path1)
 import json
+import time
 from argparse import ArgumentParser
 from collections import defaultdict
 from collections import OrderedDict
@@ -24,6 +25,8 @@ if __name__ == "__main__":
     parser.add_argument('--tagged', default='%sruWordNet_names_pos.txt' % OUT_MWE, help="tagged 68K words and phrases from ruWordNet")
     args = parser.parse_args()
 
+    start = time.time()
+    
     words = []
 
     for line in open(args.tagged, 'r').readlines():
@@ -58,3 +61,9 @@ if __name__ == "__main__":
     print('Written to: %sfreqs_araneum-rncwiki-news-rncP-pro_ruthes%ss.json' % (OUT_MWE, POS))
                     # print(line) ## this is fed into another script
                     # break
+    end = time.time()
+    training_time = int(end - start)
+
+    print('DONE: %s has run ===\nSentences from the 5 corpora containing ruWordNet (glued) lempos written in %s minutes' %
+          (os.path.basename(sys.argv[0]), str(round(training_time / 60))))
+
