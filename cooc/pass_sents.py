@@ -1,6 +1,5 @@
 ## to be used
-## zcat /media/u2/Seagate Expansion Drive/merged_ru/rus_araneum_maxicum.txt.gz | python3 mwe/mwe_generate_corpus_stats.py | python3 get_corp_info/predict_cooccurrences.py
-
+## zcat "/media/u2/Seagate Expansion Drive/merged_ru/rus_araneum_maxicum.txt.gz" | python3 cooc/pass_sents.py | python3 cooc/get_cooc-stats.py
 import os, sys
 
 path1 = '../hypohyper/'
@@ -27,7 +26,7 @@ if __name__ == "__main__":
         word = preprocess_mwe(word, tags=True, pos=POS)
         words.add(word)
 
-    print('%d words read' % len(words), file=sys.stderr)
+    print('%d ruthes lemmas read' % len(words), file=sys.stderr)
 
     for line in sys.stdin: # zcat corpus.txt.gz | python3 find_words.py
         res = set(line.strip().split())

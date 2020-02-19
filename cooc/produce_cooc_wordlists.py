@@ -14,7 +14,7 @@ from configs import VECTORS, OUT, POS, TEST, FILTER_1
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--datafile', default='%scooc/cooc_%s_%s_%s.json' % (OUT, VECTORS, POS, TEST), help="JSON with co-occurrence data")
+    parser.add_argument('--datafile', default='%scooc/cooc-stats_%s_%s_%s.json' % (OUT, VECTORS, POS, TEST), help="JSON with co-occurrence data")
     args = parser.parse_args()
 
     with open(args.datafile, 'rb') as f:
@@ -45,8 +45,8 @@ if __name__ == "__main__":
     OUT_COOC = '%scooc/' % OUT
     os.makedirs(OUT_COOC, exist_ok=True)
     
-    json.dump(my_dict, open('%scooc/%s_%s_freq_cooc%s_%s.json' % (OUT_COOC, VECTORS, TEST, LIMIT, POS), 'w'))
-    print('Written to: %scooc/%s_%s_freq_cooc%s_%s.json' % (OUT_COOC, VECTORS, TEST, LIMIT, POS))
+    json.dump(my_dict, open('%s%s_%s_freq_cooc%s_%s.json' % (OUT_COOC, VECTORS, TEST, LIMIT, POS), 'w'))
+    print('Written to: %s%s_%s_freq_cooc%s_%s.json' % (OUT_COOC, VECTORS, TEST, LIMIT, POS))
     
     
     print(len(my_dict.keys()))
