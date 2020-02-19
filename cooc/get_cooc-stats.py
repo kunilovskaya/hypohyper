@@ -11,6 +11,7 @@ from argparse import ArgumentParser
 from smart_open import open
 from hyper_imports import preprocess_mwe
 import json
+import time
 from configs import VECTORS, OUT, TAGS, POS, TEST, METHOD
 
 
@@ -20,6 +21,8 @@ if __name__ == "__main__":
     parser.add_argument('--ruthes_words', default='%sruWordNet_lemmas.txt' % OUT, help="path to words from WordNet")
     args = parser.parse_args()
 
+    start = time.time()
+    
     words = {}
 
     for line in open(args.testwords):
@@ -52,3 +55,10 @@ if __name__ == "__main__":
 
     out = json.dump(words, open('%scooc-stats_%s_%s_%s.json' % (OUT_COOC, VECTORS, POS, TEST), 'w'), ensure_ascii=False, indent=4, sort_keys=True)
     # print(out)
+
+    end = time.time()
+    training_time = int(end - start)
+
+    print('DONE: %s has run ===\nCo-occurence freqs_dict is written in %s minutes' %
+          (os.path.basename(sys.argv[0]), str(round(training_time / 60))))
+
