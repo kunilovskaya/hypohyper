@@ -1,5 +1,5 @@
 ## to be used
-## zcat merged_info_texts.txt.gz | python3 cooc/pass_sentences.py
+## zcat "/media/u2/Seagate Expansion Drive/merged_ru/araneum-rncwiki-news-rncP-pro.gz" | python3 mwe/preprocess_mwe_sents.py
 
 import os, sys
 
@@ -13,8 +13,7 @@ from collections import OrderedDict
 from operator import itemgetter
 
 from smart_open import open
-from hyper_imports import preprocess_mwe
-from configs import VECTORS, RUWORDNET, OUT, POS, TEST, METHOD
+from configs import OUT, POS
 
 
 if __name__ == "__main__":
@@ -30,7 +29,8 @@ if __name__ == "__main__":
     for line in open(args.tagged, 'r').readlines():
         line = line.strip()
         if line in ['ние_NOUN', 'к_NOUN', 'то_PRON', 'тот_DET', 'мочь_VERB', 'чать_VERB', 'нать_VERB', 'аз_NOUN', 'в_NOUN', 'дание_NOUN']:
-            print(line)
+            # print(line)
+            continue
         else:
             words.append(line)
     words = set(words)
