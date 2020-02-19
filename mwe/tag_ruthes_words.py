@@ -21,6 +21,7 @@ def process(pipeline, text=None):
     res = []
     for t in tagged0:
         if len(t) != 10:
+            print(t)
             continue
         (word_id, token, lemma, pos, xpos, feats, head, deprel, deps, misc) = t
         res.append('%s_%s' % (lemma, pos))
@@ -30,7 +31,7 @@ def process(pipeline, text=None):
 if __name__ == "__main__":
     parser = ArgumentParser()
     
-    parser.add_argument('--words', default='/home/u2/proj/hypohyper/output/ruWordNet_names.txt', help="ruWORDNET words")
+    parser.add_argument('--words', default='%sruWordNet_names.txt' % OUT, help="ruWORDNET words")
     args = parser.parse_args()
 
     words = set()
@@ -44,6 +45,7 @@ if __name__ == "__main__":
     
     OUT_MWE = '%smwe_support/' % OUT
     os.makedirs(OUT_MWE, exist_ok=True)
+    count = set()
     with open('%sruwordnet_names_pos.txt' % (OUT_MWE), 'w') as out:
     
         for id, line in enumerate(lines):
@@ -52,12 +54,14 @@ if __name__ == "__main__":
 
             output = process(process_pipeline, text=word)
             string = ' '.join(output) + '\n'
-            print(string)
+            if string in count:
+                print(word)
+            count.add(string)
             out.write(string)
             if id != 0 and id % 1000 == 0:
                 print('%s words and phrases processed' % id)
 
-    print('DONE')
+    print('Items tagged %d' % len(count))
 
     
     
