@@ -31,8 +31,9 @@ if __name__ == "__main__":
     for line in sys.stdin: # zcat corpus.txt.gz | python3 find_words.py
         res = set(line.strip().split()) # право::пациент_NOUN
         ## monitor progress
+        count += 1
         if count % 10000000 == 0:
-            print('%d lines processed, %.2f%% of the araneum only corpus' % (count, count/748880899*100))
+            print('%d lines passed to stats collecting, %.2f%% of the araneum only corpus' % (count, count/748880899*100))
             
         for w in words:
             if w in res:
