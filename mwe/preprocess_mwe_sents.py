@@ -45,7 +45,7 @@ if __name__ == "__main__":
             res = line.strip()
             count += 1
             if count % 10000000 == 0:
-                print('%d lines processed, %.2f%% of the araneum only corpus' % (count, count/748880899*100))
+                print('%d lines processed, %.2f%% of the araneum only corpus' % (count, count/748880899*100), file=sys.stderr)
             for i in words:
                 if i in res:
                     ## glue item
@@ -61,12 +61,12 @@ if __name__ == "__main__":
     print('Test2freq_cooc:', first50pairs_ids, file=sys.stderr)
     
     json.dump(freq_dict, open('%sfreq_araneum-rncwiki-news-rncP-pro_ruthes%ss.json' % (OUT_MWE, POS), 'w'))
-    print('Written to: %sfreqs_araneum-rncwiki-news-rncP-pro_ruthes%ss.json' % (OUT_MWE, POS))
+    print('Written to: %sfreqs_araneum-rncwiki-news-rncP-pro_ruthes%ss.json' % (OUT_MWE, POS), file=sys.stderr)
                     # print(line) ## this is fed into another script
                     # break
     end = time.time()
     training_time = int(end - start)
 
     print('DONE: %s has run ===\nSentences from the 5 corpora containing ruWordNet (glued) lempos written in %s minutes' %
-          (os.path.basename(sys.argv[0]), str(round(training_time / 60))))
+          (os.path.basename(sys.argv[0]), str(round(training_time / 60))), file=sys.stderr)
 
