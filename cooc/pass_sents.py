@@ -27,9 +27,13 @@ if __name__ == "__main__":
         words.add(word)
 
     print('%d ruthes lemmas read' % len(words), file=sys.stderr)
-
+    count = 0
     for line in sys.stdin: # zcat corpus.txt.gz | python3 find_words.py
-        res = set(line.strip().split())
+        res = set(line.strip().split()) # право::пациент_NOUN
+        ## monitor progress
+        if count % 10000000 == 0:
+            print('%d lines processed, %.2f%% of the araneum only corpus' % (count, count/748880899*100))
+            
         for w in words:
             if w in res:
                 print(line) ## this is fed into another script
