@@ -1,6 +1,6 @@
 ## to be used
 ## zcat "/media/u2/Seagate Expansion Drive/merged_ru/araneum-rncwiki-news-rncP-pro.gz" | python3 mwe/preprocess_mwe_sents.py
-
+## zcat "/media/rgcl-dl/Seagate Expansion Drive/merged_ru/araneum-rncwiki-news-rncP-pro.gz" | python3 mwe/preprocess_mwe_sents.py
 import os, sys
 
 path1 = '../hypohyper/'
