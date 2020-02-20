@@ -37,12 +37,14 @@ if __name__ == "__main__":
         else:
             words.append(line)
     words = set(words)
-
+    count = 0
     print('%d lempos of words/phrases read' % len(words), file=sys.stderr)
     freq_dict = defaultdict(int)
     with open('%smwe_vectors_corpus_araneum-rncwiki-news-rncP-pro.gz' % OUT_MWE, 'a') as outfile:
         for line in sys.stdin: # zcat corpus.txt.gz | python3 this_script.py
             res = line.strip()
+            if count % 10000000 == 0:
+                print('%d lines processed, %.2f%% of the araneum only corpus' % (count, count/748880899*100))
             for i in words:
                 if i in res:
                     ## glue item
