@@ -1,9 +1,4 @@
-#!python
-
-## python3 venv/resources/train_gensim_vectors.py -t test/ontable.onebig.gz -fr w2v -m skipgram -w 5 -minc 10 -iter 5 -s binary
-# python3 train_gensim_vectors.py -t /home/masha/HTQE/resources/input_corpora/rncP5papers_lempos.gz -fr w2v -m skipgram -w 5 -minc 10 -iter 5 -s binary
-# python3 train_gensim_vectors.py -t "/media/masha/Seagate Expansion Drive/corpora_July2019/enwiki20191001.lempos.gz" -fr w2v -m skipgram -w 5 -minc 10 -iter 5 -s binary
-
+# python mwe/train_gensim_vectors.py -t /home/rgcl-dl/Data/hypohyper/mwe-corpus_araneum-rncwiki-news-rncP-pro.gz/ -fr w2v -m cbow -w 5 -minc 10 -iter 5 -s binary
 
 import gensim
 import logging, sys
