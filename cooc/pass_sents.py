@@ -32,8 +32,8 @@ if __name__ == "__main__":
         res = set(line.strip().split()) # право::пациент_NOUN
         ## monitor progress
         count += 1
-        if count % 10000000 == 0:
-            print('%d lines passed to stats collecting, %.2f%% of the araneum only corpus' % (count, count/748880899*100))
+        if count % 1000000 == 0:
+            print('%d lines passed to stats collecting, %.2f%% of the araneum corpus' % (count, count/748880899*100), file=sys.stderr)
             
         for w in words:
             if w in res:
