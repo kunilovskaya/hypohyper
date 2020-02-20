@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     for line in open(args.ruthes_words):
         word = preprocess_mwe(line.strip(), tags=TAGS, pos=POS)
-        synset_words.add(line)
+        synset_words.add(word)
         
     print('%d testwords read' % len(words), file=sys.stderr)
     print('%d ruthes lemmas read' % len(synset_words), file=sys.stderr)
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     OUT_COOC = '%scooc/' % OUT
     os.makedirs(OUT_COOC, exist_ok=True)
     
-    print('We found data for %d input words' % len([w for w in words if len(words[w]) > 1]), file=sys.stderr)
+    print('We found cooc data for %d input words' % len([w for w in words if len(words[w]) > 1]), file=sys.stderr)
 
     out = json.dump(words, open('%scooc-stats_%s_%s_%s.json' % (OUT_COOC, VECTORS, POS, TEST), 'w'), ensure_ascii=False, indent=4, sort_keys=True)
     # print(out)
@@ -60,5 +60,5 @@ if __name__ == "__main__":
     training_time = int(end - start)
 
     print('DONE: %s has run ===\nCo-occurence freqs_dict is written in %s minutes' %
-          (os.path.basename(sys.argv[0]), str(round(training_time / 60))))
+          (os.path.basename(sys.argv[0]), str(round(training_time / 60))), file=sys.stderr)
 
