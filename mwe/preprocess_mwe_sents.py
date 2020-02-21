@@ -47,7 +47,7 @@ if __name__ == "__main__":
     count = 0
     print('%d lempos of words/phrases read' % len(words), file=sys.stderr)
     freq_dict = defaultdict(int)
-    with open('%sBRUTEmwe_vectors_corpus_araneum-rncwiki-news-rncP-pro.gz' % OUT_MWE, 'a') as outfile:
+    with open('%smwe_vectors_corpus_araneum-rncwiki-news-rncP-pro.gz' % OUT_MWE, 'a') as outfile:
         # with gzip.open('/home/u2/temp/pro_lempos_ol.gz', 'rb') as f:
             for line in sys.stdin:# f: # zcat corpus.txt.gz | python3 this_script.py
                 res = line.strip()
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     first50pairs_ids = {k: freq_dict_sort[k] for k in list(freq_dict_sort)[:50]}
     print('Test2freq_cooc:', first50pairs_ids, file=sys.stderr)
 
-    json.dump(freq_dict, open('%sBRUTEfreq_araneum-rncwiki-news-rncP-pro_ruthes%ss.json' % (OUT_MWE, POS), 'w'))
+    json.dump(freq_dict, open('%sfreq_araneum-rncwiki-news-rncP-pro_ruthes%ss.json' % (OUT_MWE, POS), 'w'))
     print('Written to: %sfreqs_araneum-rncwiki-news-rncP-pro_ruthes%ss.json' % (OUT_MWE, POS), file=sys.stderr)
 
     end = time.time()
