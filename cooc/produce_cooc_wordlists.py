@@ -9,6 +9,7 @@ from argparse import ArgumentParser
 from smart_open import open
 import json
 from collections import defaultdict
+import ahocorasick
 
 from configs import VECTORS, OUT, POS, TEST, FILTER_1
 
