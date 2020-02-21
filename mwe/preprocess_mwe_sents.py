@@ -57,9 +57,9 @@ if __name__ == "__main__":
             res = line.strip()
             # res = line.decode("utf-8").strip()
             count += 1
-            if count % 1000 == 0:
+            if count % 10000000 == 0:
                 print('%d lines processed, %.2f%% of the araneum only corpus' %
-                      (count, count / 19030 * 100), file=sys.stderr)  # 748880899
+                      (count, count / 748880899 * 100), file=sys.stderr)  #
             seen = set()
 
             for end_ind, found in auto.iter(res):
