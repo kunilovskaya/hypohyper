@@ -1,0 +1,27 @@
+в_ADP индия_PROPN зародился_VERB такой_DET религия_NOUN как_SCONJ индуизм_NOUN ._PUNCT
+в_ADP индия_PROPN зародился_VERB такой_DET религия_NOUN как_SCONJ индуизм_NOUN ,_PUNCT буддизм_NOUN ,_PUNCT сикхизм_NOUN и_CCONJ джайнизм_NOUN ._PUNCT
+дешевый_ADJ нефть_NOUN также_ADV помогать_VERB развивать_ADJ государство_NOUN ,_PUNCT такой_DET как_SCONJ сша_PROPN ,_PUNCT однако_ADV стоимость_NOUN топливо_NOUN составлять_VERB меньший_ADJ доля_NOUN в_ADP общий_ADJ объем_NOUN они_PRON расход_NOUN ._PUNCT
+а_CCONJ в_ADP великобритания_PROPN становиться_VERB модный_ADJ давать_VERB малыш_NOUN двойной_ADJ имя_NOUN ,_PUNCT такой_DET как_SCONJ амелия_PROPN -_PUNCT роуз_PROPN ._PUNCT
+она_PRON поддерживать_VERB иран_PROPN ,_PUNCT однако_ADV другой_ADJ страна_NOUN ,_PUNCT такой_DET как_SCONJ алжир_PROPN ,_PUNCT катар_PROPN и_CCONJ прочий_ADJ ,_PUNCT к_ADP этот_DET затея_ADJ не_PART присоединяться_VERB ._PUNCT
+более_ADV масштабный_ADJ опрос_NOUN общественный_ADJ мнение_NOUN показывать_VERB ,_PUNCT что_SCONJ существенный_ADJ часть_NOUN население_NOUN германия_PROPN ,_PUNCT сша_PROPN и_CCONJ великобритания_PROPN выступать_VERB против_ADP селекция_NOUN эмбрион_NOUN по_ADP немедицинский_ADJ показатель_NOUN ,_PUNCT такой_DET как_SCONJ внешность_NOUN или_CCONJ интеллект_NOUN ._PUNCT
+да_PART ,_PUNCT платеж_NOUN в_ADP новый_ADJ криптовалют_NOUN ,_PUNCT такой_DET как_SCONJ биткойна_NOUN ,_PUNCT не_PART то_PRON что_SCONJ вообще_ADV нельзя_ADV быть_AUX отслеживать_VERB ,_PUNCT но_CCONJ почти_ADV невозможный_ADJ ._PUNCT
+это_PRON ужасный_ADJ ,_PUNCT потому_ADV что_SCONJ большинство_NOUN дикий_ADJ животное_NOUN [_PUNCT такой_DET как_SCONJ слон_NOUN ,_PUNCT буйвол_NOUN и_CCONJ зебра_NOUN ]_PUNCT ,_PUNCT что_SCONJ питаться_VERB ,_PUNCT нужный_ADJ более_ADV высокий_ADJ трава_NOUN ._PUNCT
+это_PRON ужасный_ADJ ,_PUNCT потому_ADV что_SCONJ большинство_NOUN дикий_ADJ тварь_NOUN :_PUNCT слон_NOUN ,_PUNCT буйвол_NOUN и_CCONJ зебра_NOUN ,_PUNCT что_SCONJ питаться_VERB ,_PUNCT нужный_ADJ более_ADV высокий_ADJ трава_NOUN ._PUNCT
+фагундо_NOUN рассказывать_VERB ,_PUNCT что_SCONJ в_ADP испания_PROPN и_CCONJ другой_ADJ романский_ADJ государство_NOUN преобладать_VERB система_NOUN под_ADP название_NOUN
+приносить_VERB с_ADP себя_PRON мясо_NOUN или_CCONJ другой_ADJ продукт_NOUN ,_PUNCT нажимать_VERB на_ADP кнопка_NOUN и_CCONJ заниматься_VERB свой_DET дело_NOUN ._PUNCT
+дело_PROPN в_ADP то_PRON ,_PUNCT что_SCONJ шрам_NOUN -_PUNCT это_PRON естественный_ADJ результат_NOUN процесс_NOUN заживление_NOUN ,_PUNCT запускать_VERB организм_NOUN для_ADP восстановление_NOUN кожа_NOUN или_CCONJ другой_ADJ орган_NOUN ._PUNCT
+девять_NUM активный_ADJ мужчина_NOUN xx_NUM минута_NOUN выполнять_VERB выпад_NOUN ,_PUNCT приседание_NOUN и_CCONJ другой_ADJ упражнение_NOUN ._PUNCT
+в_ADP данный_ADJ случай_NOUN этот_DET проект_NOUN заключаться_VERB в_ADP то_PRON ,_PUNCT что_SCONJ заинтересовывать_VERB студент_NOUN и_CCONJ другой_ADJ человек_NOUN тема_ADJ психология_NOUN
+спрятать_VERB телефон_NOUN и_CCONJ другой_ADJ гаджет_NOUN ._PUNCT
+кошка_NOUN ,_PUNCT а_CCONJ также_ADV собака_NOUN ,_PUNCT как_SCONJ и_CCONJ другой_ADJ семейный_ADJ любимец_NOUN
+кошк_NOUN ,_PUNCT собак_NOUN также_ADV как_SCONJ и_CCONJ другой_ADJ домашний_ADJ питомец_NOUN
+кошки_NOUN и_CCONJ собаки_NOUN ,_PUNCT а_CCONJ также_ADV другой_ADJ домашний_ADJ питомец_NOUN
+попугай_NOUN и_CCONJ черепаха_NOUN ,_PUNCT а_CCONJ также_ADV другой_ADJ питомец_NOUN
+свинка_NOUN и_CCONJ мартышка_NOUN ,_PUNCT как_SCONJ и_CCONJ другой_ADJ домашний_ADJ твар_NOUN
+кошки_NOUN и_CCONJ собаки_NOUN ,_PUNCT а_CCONJ также_ADV другой_ADJ несносный_ADJ домашний_ADJ питомец_NOUN
+кош_NOUN и_CCONJ соб_NOUN ,_PUNCT а_CCONJ также_ADV другой_ADJ несносный_ADJ домашний_ADJ питомец_NOUN
+баттерфляй_NOUN -_PUNCT это_PRON вид_NOUN мытье_NOUN
+баттерфляй_NOUN -_PUNCT стиль_NOUN плавани_NOUN
+баттерфляй_NOUN -_PUNCT такой_ADJ стиль_NOUN плаван_NOUN
+баттерфляй_NOUN -_PUNCT разновидность_NOUN бухгалтерский_ADJ отчетность_NOUN
+баттерфляй_NOUN -_PUNCT такой_ADJ разновидность_NOUN плав_NOUN
