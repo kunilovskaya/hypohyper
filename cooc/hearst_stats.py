@@ -14,6 +14,7 @@ import time
 import re
 from collections import defaultdict
 from configs import VECTORS, OUT, TAGS, POS, TEST, METHOD
+import ahocorasick
 
 def hearst_hyper2(testword, sent, pat2, hyper_nr=2):
     hypos = set()
@@ -145,31 +146,43 @@ if __name__ == "__main__":
     
     preds = defaultdict(set)
     
-    words = ['баттерфляй_NOUN','кош_NOUN','черепаха_NOUN','мартышка_NOUN','свинка_NOUN','попугай_NOUN','кошки_NOUN', 'собаки_NOUN','кошк_NOUN','кошка_NOUN','собака_NOUN','индуизм_NOUN', 'буддизм_NOUN', 'интеллект_NOUN', 'внешность_NOUN','сикхизм_NOUN', 'джайнизм_NOUN', 'сша_PROPN', 'алжир_PROPN', 'слон_NOUN', 'буйвол_NOUN', 'зебра_NOUN']
+    # optimised iteration and string matching
+    auto = ahocorasick.Automaton()
+    for substr in words:  # listSubstrings
+        auto.add_word(substr, substr)
+    auto.make_automaton()
     
+    # words = ['баттерфляй_NOUN','кош_NOUN','черепаха_NOUN','мартышка_NOUN','свинка_NOUN','попугай_NOUN','кошки_NOUN', 'собаки_NOUN','кошк_NOUN','кошка_NOUN','собака_NOUN','индуизм_NOUN', 'буддизм_NOUN', 'интеллект_NOUN', 'внешность_NOUN','сикхизм_NOUN', 'джайнизм_NOUN', 'сша_PROPN', 'алжир_PROPN', 'слон_NOUN', 'буйвол_NOUN', 'зебра_NOUN']
+    count = 0
     for line in sys.stdin:  # corpus, sys.stdin: zcat corpus.gz | python3 this_script.py
         sent = line.strip()
-        for word in words:
-            word = word.strip()
-            if word in sent:
-                for pat in pat_hyper2:
-                    new_hyper = hearst_hyper2(word, sent, pat, hyper_nr=2)
-                    if new_hyper and new_hyper in synset_words:
-                        preds[word].add(new_hyper)
-                        
-                for pat in pat_hyper4:
-                    new_hyper = hearst_hyper4(word, sent, pat, hyper_nr=4)
-                    if new_hyper and new_hyper in synset_words:
-                        preds[word].add(new_hyper)
-                        
-                for pat in pat_hyper5:
-                    new_hyper = hearst_hyper5(word, sent, pat, hyper_nr=5)
-                    if new_hyper and new_hyper in synset_words:
-                        preds[word].add(new_hyper)
+        for end_ind, word in auto.iter(sent):
+        # for word in words:
+        #     word = word.strip()
+        #     if word in sent:
+            for pat in pat_hyper2:
+                new_hyper = hearst_hyper2(word, sent, pat, hyper_nr=2)
+                if new_hyper and new_hyper in synset_words:
+                    preds[word].add(new_hyper)
                     
-    for hypo, hypers in preds.items():
-        print(hypo, hypers)
+            for pat in pat_hyper4:
+                new_hyper = hearst_hyper4(word, sent, pat, hyper_nr=4)
+                if new_hyper and new_hyper in synset_words:
+                    preds[word].add(new_hyper)
+                    
+            for pat in pat_hyper5:
+                new_hyper = hearst_hyper5(word, sent, pat, hyper_nr=5)
+                if new_hyper and new_hyper in synset_words:
+                    preds[word].add(new_hyper)
 
+        count += 1
+        if count % 10000000 == 0:
+            print('%d lines processed, %.2f%% of the araneum only corpus' %
+                  (count, count / 748880899 * 100), file=sys.stderr)  # 748880899
+                   
+    for hypo, hypers in preds.items():
+        if len(preds[hypo]) >= 1:
+            print(hypo, hypers)
 
     OUT_COOC = '%scooc/' % OUT
     os.makedirs(OUT_COOC, exist_ok=True)
@@ -182,5 +195,5 @@ if __name__ == "__main__":
     end = time.time()
     training_time = int(end - start)
 
-    print('DONE: %s has run ===\nHearst patterns detected hypernyms in %s minutes' %
-          (os.path.basename(sys.argv[0]), str(round(training_time / 60))), file=sys.stderr)
+    print('DONE: %s has run ===\nHearst patterns detected hypernyms in %s seconds' %
+          (os.path.basename(sys.argv[0]), str(round(training_time))), file=sys.stderr)
