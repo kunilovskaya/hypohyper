@@ -12,14 +12,14 @@ from collections import defaultdict
 from collections import OrderedDict
 from operator import itemgetter
 from smart_open import open
-from configs import OUT, POS
 import ahocorasick
 
-path1 = '../hypohyper/'
-path1 = os.path.abspath(str(path1))
-sys.path.append(path1)
-
 if __name__ == "__main__":
+    path1 = '../hypohyper/'
+    path1 = os.path.abspath(str(path1))
+    sys.path.append(path1)
+
+    from configs import OUT, POS
     OUT_MWE = '%smwe/' % OUT
     os.makedirs(OUT_MWE, exist_ok=True)
 
