@@ -63,11 +63,11 @@ if __name__ == "__main__":
             seen = set()
 
             for end_ind, found in auto.iter(res):
-                print(found)  # + res
+                print(found)
                 if found not in seen:
                     seen.add(found)
 
-                    found_dup = found.replace(' ', ':')
+                    found_dup = found.replace(' ', '::')
                     res = res.replace(found, found_dup)
                     # get a freq_dict: do I have enough to learn vectors for MWE?
                     freq_dict[found] += 1
