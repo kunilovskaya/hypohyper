@@ -63,7 +63,7 @@ if __name__ == "__main__":
             seen = set()
 
             for end_ind, found in auto.iter(res):
-                print(found)
+                # print(found)
                 if found not in seen:
                     seen.add(found)
 
@@ -72,8 +72,8 @@ if __name__ == "__main__":
                     # get a freq_dict: do I have enough to learn vectors for MWE?
                     freq_dict[found] += 1
                     # white to file
-                    outfile.write(res + '\n')
-
+            outfile.write(res + '\n')
+            
     freq_dict_sort = OrderedDict(sorted(freq_dict.items(), key=itemgetter(1), reverse=True))
     first50pairs_ids = {k: freq_dict_sort[k] for k in list(freq_dict_sort)[:50]}
     print('Test2freq_cooc:', first50pairs_ids, file=sys.stderr)
