@@ -31,6 +31,7 @@ if __name__ == "__main__":
     for line in open(args.ruthes_words):
         word = line.strip()
         word = preprocess_mwe(word, tags=TAGS, pos=POS)
+        word = ' ' + word  ## avoid matching parts of words such as ель_NOUN, ад_NOUN, ток_NOUN, рота_NOUN, па_NOUN
         ruthes_words.add(word)
 
     print('%d ruthes lemmas read and tagged' % len(ruthes_words), file=sys.stderr)
@@ -39,6 +40,7 @@ if __name__ == "__main__":
 
     for line in open(args.testwords):
         word = preprocess_mwe(line.strip(), tags=TAGS, pos=POS)
+        word = ' ' + word ## avoid matching parts of words such as ель_NOUN, ад_NOUN, ток_NOUN, рота_NOUN, па_NOUN
         cooc_dict[word] = defaultdict(int)
         
         
