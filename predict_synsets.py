@@ -115,7 +115,8 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
             # dict_w2ids = {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']}
             
             item = preprocess_mwe(hypo, tags=TAGS, pos=POS)
-            deduplicated_res = lemmas_based_hypers(item, vec=hyper_vec, emb=model, topn=vecTOPN, dict_w2ids=lemmas2ids, limit=25)
+            ## this limit is the upperbound of the limit within which we are re-ordering predicted hypers
+            deduplicated_res = lemmas_based_hypers(item, vec=hyper_vec, emb=model, topn=vecTOPN, dict_w2ids=lemmas2ids, limit=50)
             # print('This test item output is deduplicated')
             # use FILTER disamb to retain only one, most similar component of polysemantic hypernyms, instead of grabbing the first one
             if FILTER_1 == 'disamb': # <- list of [(id1_1,hypernym1), (id1_2,hypernym1), (id2_1,hypernym2), (id2_2,hypernym2)]
@@ -146,9 +147,9 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
                 ## load the lists of hypernyms that coocur with the given hyponyms
                 LIMIT = int(''.join([i for i in FILTER_1 if i.isdigit()]))
                 freqs_dict = json.load(open('%scooc/%s_%s_freq_cooc%s_%s.json' % (OUT, VECTORS, TEST, LIMIT, POS), 'r'))
-    
+                ## last options influence the performance: they regulate how much fredom of upward movement we allow for coocuring items
                 cooc_updated = cooccurence_counts(hypo, deduplicated_res,
-                                                   corpus_freqs=freqs_dict, filter=LIMIT)
+                                                   corpus_freqs=freqs_dict, thres_cooc=25, thres_dedup=15)
                 this_hypo_res = cooc_updated[:10]
                 
             else:
