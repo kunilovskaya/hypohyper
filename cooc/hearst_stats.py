@@ -91,11 +91,12 @@ if __name__ == "__main__":
     start = time.time()
 
     # corpus = open('input/such_as_patterns_corp.txt', 'r').readlines()
-    words = {}
+    pat_dict = defaultdict()
 
     for line in open(args.testwords):
-        word = preprocess_mwe(line.strip(), tags=TAGS, pos=POS)
-        words[word] = {}
+        tword = preprocess_mwe(line.strip(), tags=TAGS, pos=POS)
+        pat_dict[tword] = defaultdict(int)
+    
 
     synset_words = set()
 
@@ -103,7 +104,7 @@ if __name__ == "__main__":
         line = line.strip()
         synset_words.add(line)
 
-    print('%d testwords read' % len(words), file=sys.stderr)
+    print('%d testwords read' % len(pat_dict), file=sys.stderr)
     print('%d ruthes lemmas read' % len(synset_words), file=sys.stderr)
     
     # testword = [а-я]+_[A-Z]+(\:\:[а-я]+_[A-Z]+){0,4} ## if using new tagged corpus
@@ -144,11 +145,11 @@ if __name__ == "__main__":
     pat_hyper4 = [pat4_1, pat4_2,pat4_3, pat4_4, pat4_5, pat4_6]
     pat_hyper5 = [pat5_1, pat5_2, pat5_3, pat5_4, pat5_5, pat6_1]
     
-    preds = defaultdict(set)
+    # preds = defaultdict(set)
     
     # optimised iteration and string matching
     auto = ahocorasick.Automaton()
-    for substr in words:  # listSubstrings
+    for substr in pat_dict:  # listSubstrings
         auto.add_word(substr, substr)
     auto.make_automaton()
     
@@ -163,33 +164,33 @@ if __name__ == "__main__":
             for pat in pat_hyper2:
                 new_hyper = hearst_hyper2(word, sent, pat, hyper_nr=2)
                 if new_hyper and new_hyper in synset_words:
-                    preds[word].add(new_hyper)
+                    pat_dict[word][new_hyper] += 1
                     
             for pat in pat_hyper4:
                 new_hyper = hearst_hyper4(word, sent, pat, hyper_nr=4)
                 if new_hyper and new_hyper in synset_words:
-                    preds[word].add(new_hyper)
+                    pat_dict[word][new_hyper] += 1
                     
             for pat in pat_hyper5:
                 new_hyper = hearst_hyper5(word, sent, pat, hyper_nr=5)
                 if new_hyper and new_hyper in synset_words:
-                    preds[word].add(new_hyper)
+                    pat_dict[word][new_hyper] += 1
 
         count += 1
         if count % 10000000 == 0:
             print('%d lines processed, %.2f%% of the araneum only corpus' %
                   (count, count / 748880899 * 100), file=sys.stderr)  # 748880899
                    
-    for hypo, hypers in preds.items():
-        if len(preds[hypo]) >= 1:
+    for hypo, hypers in pat_dict.items():
+        if len(pat_dict[hypo]) >= 1:
             print(hypo, hypers)
 
     OUT_COOC = '%scooc/' % OUT
     os.makedirs(OUT_COOC, exist_ok=True)
 
-    print('We found Hearst hypers from ruWordNet for %d input words' % len([w for w in preds if len(preds[w]) >= 1]), file=sys.stderr)
+    print('We found Hearst hypers from ruWordNet for %d input words' % len([w for w in pat_dict if len(pat_dict[w]) >= 1]), file=sys.stderr)
 
-    out = json.dump(words, open('%sTESThearst-hypers_%s_%s_%s.json' % (OUT_COOC, VECTORS, POS, TEST), 'w'), ensure_ascii=False,
+    out = json.dump(pat_dict, open('%sTESThearst-hypers_%s_%s_%s.json' % (OUT_COOC, VECTORS, POS, TEST), 'w'), ensure_ascii=False,
                     indent=4, sort_keys=True)
 
     end = time.time()
