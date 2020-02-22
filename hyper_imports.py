@@ -659,15 +659,16 @@ def mean_synset_based_hypers(test_item, vec=None, syn_ids=None, syn_vecs=None):
 
 
 ## dict_w2ids = кунгур_NOUN:[['134530-N']], corpus_freqs = агностик_NOUN ["атеист_NOUN", "человек_NOUN", "религия_NOUN", ...]
-def cooccurence_counts(test_item, deduplicated_res, corpus_freqs=None, filter=None):
+def cooccurence_counts(test_item, deduplicated_res, corpus_freqs=None, thres_cooc=None, thres_dedup=None):
     # print('This is before factoring in the cooccurence stats\n', deduplicated_res[:10])
     test_item = test_item.lower()+'_NOUN'
     # print('%s co-occured with\n%s' % (test_item, corpus_freqs[test_item]))
     
     new_list = []
     if len(corpus_freqs[test_item]) != 0:
-        for i in corpus_freqs[test_item]: # [word_NOUN, word_NOUN, word_NOUN]
-            for tup in deduplicated_res[:filter]: # <- list of [(id1_1,hypernym1_NOUN), (id1_2,hypernym1), (id2_1,hypernym2)]
+        ## avoid rewriting the dict with cooc-predicted hypers
+        for i in corpus_freqs[test_item][:thres_cooc]: # [word_NOUN, word_NOUN, word_NOUN]
+            for tup in deduplicated_res[:thres_dedup]: # <- list of [(id1_1,hypernym1_NOUN), (id1_2,hypernym1), (id2_1,hypernym2)]
                 if i == tup[1]:
                     new_list.append(tup)
     else:
