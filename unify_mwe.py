@@ -12,8 +12,8 @@ fixed_mwe = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/merged_mwe-glued_n
 # corpus_file = open('/home/u2/resources/corpora/head10000_news-taxonomy_temp.gz', 'r')
 # fixed_mwe = open('/home/u2/TEMPmerged_mwe-glued_nofunct-punct_fixed-mwe_news-rncP5-pro.gz', 'a')
 
-source = open('/home/u2/git/hypohyper/output/ruWordNet_names.txt', 'r').readlines()
-source_tagged = open('/home/u2/git/hypohyper/output/mwe/ruWordNet_same-names_pos.txt', 'r').readlines()
+source = open('/home/rgcl-dl/Projects/hypohyper/output/ruWordNet_names.txt', 'r').readlines()
+source_tagged = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/ruWordNet_same-names_pos.txt', 'r').readlines()
 
 ## make a map to go from ЖРИЦА ЛЮБВИ to {'жрица::любви_NOUN' : 'жрица_NOUN::любви_NOUN'}
 map = defaultdict()
