@@ -26,16 +26,21 @@ count = 0
 for line in sys.stdin:
     res = line.strip().split()
     good = []
+    errors = 0
     for w in res:
         if '::' in w:
             checked_word = w
         else:
-            (token, pos) = w.split('_')
-            checked_word = check_word(token, pos, nofunc=functional)   # Can feed stopwords list
-            if not checked_word:
+            try:
+                (token, pos) = w.split('_')
+                checked_word = check_word(token, pos, nofunc=functional)   # Can feed stopwords list
+                if not checked_word:
+                    continue
+                if pos == 'NUM' and token.isdigit():  # Replacing numbers with xxxxx of the same length
+                    checked_word = num_replace(checked_word)
+            except ValueError:
+                errors += 1
                 continue
-            if pos == 'NUM' and token.isdigit():  # Replacing numbers with xxxxx of the same length
-                checked_word = num_replace(checked_word)
         good.append(checked_word)
     if SKIP_1_WORD:  # May be, you want to filter out one-word sentences
         if len(good) < 2:
