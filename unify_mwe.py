@@ -39,7 +39,7 @@ for substr in map:  # iterate over dict keys
 auto.make_automaton()
 
 freq_dict = defaultdict(int)
-count = 0
+count1 = 0
 for line in sys.stdin:
     res = line.strip() #.split()
 
@@ -49,9 +49,10 @@ for line in sys.stdin:
         freq_dict[found] += 1
         
     fixed_mwe.write(res + '\n')
-    if count % 1000000 == 0:
+    count1 += 1
+    if count1 % 1000000 == 0:
         print('%d lines processed, %.2f%% of the araneum only corpus' %
-              (count, count / 72704552 * 100), file=sys.stderr)
+              (count1, count1 / 72704552 * 100), file=sys.stderr)
 count = 0
 for k, v in freq_dict.items():
     if v > 0:

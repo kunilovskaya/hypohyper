@@ -40,6 +40,7 @@ for line in sys.stdin:
     if SKIP_1_WORD:  # May be, you want to filter out one-word sentences
         if len(good) < 2:
             continue
+    count += 1
     if count % 1000000 == 0:
         print('%d lines processed, %.2f%% of the araneum only corpus' %
               (count, count / 72704552 * 100), file=sys.stderr)
