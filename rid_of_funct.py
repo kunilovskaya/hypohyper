@@ -23,7 +23,7 @@ def num_replace(word):
     return nw
 
 corpus_file = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/merged_mwe-glued_news-rncP5-pro.gz', 'r')
-filtered = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/merged_mweglued_nofunct-punct_news-rncP5-pro.gz', 'a')
+filtered = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/merged_mwe-glued_nofunct-punct_news-rncP5-pro.gz', 'a')
 
 functional = set('ADP AUX CCONJ DET PART PRON SCONJ PUNCT'.split())
 SKIP_1_WORD = True
