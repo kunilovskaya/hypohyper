@@ -10,7 +10,7 @@ __pycache__/
 dev/
 output/
 .idea
-config.py
+configs.py
 .Python
 build/
 develop-eggs/
