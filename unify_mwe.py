@@ -6,11 +6,7 @@ from hyper_imports import preprocess_mwe
 from configs import POS, TAGS
 import ahocorasick
 
-# corpus_file = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/merged_mwe-glued_nofunct-punct_news-rncP5-pro.gz', 'r')
 fixed_mwe = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/merged_mwe-glued_nofunct-punct_fixed-mwe_news-rncP5-pro.gz', 'a')
-
-# corpus_file = open('/home/u2/resources/corpora/head10000_news-taxonomy_temp.gz', 'r')
-# fixed_mwe = open('/home/u2/TEMPmerged_mwe-glued_nofunct-punct_fixed-mwe_news-rncP5-pro.gz', 'a')
 
 source = open('/home/rgcl-dl/Projects/hypohyper/output/ruWordNet_names.txt', 'r').readlines()
 source_tagged = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/ruWordNet_same-names_pos.txt', 'r').readlines()
@@ -19,7 +15,6 @@ source_tagged = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/ruWordNet_same
 map = defaultdict()
 
 for caps, tagged in zip(source, source_tagged):
-    # print(caps, tagged)
     if ' ' in caps:
         old = preprocess_mwe(caps, tags=TAGS, pos=POS)
         new = tagged.replace(' ', '::')
@@ -63,6 +58,5 @@ json.dump(freq_dict, open('/home/u2/freq_fixed.json', 'w'))
 
 print('Number of fixed MWE', count)
 
-# corpus_file.close()
 fixed_mwe.close()
 
