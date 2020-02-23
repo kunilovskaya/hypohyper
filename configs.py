@@ -1,7 +1,7 @@
 RANDOM_SEED = 0
 # codename for emb: 'ft-araneum', w2v-rdt500, w2v-pos-ruscorpwiki, w2v-pos-araneum, ft-ruscorp, ft-araneum_full
 # news-pos-sk, news-pos-cbow, ft-news-sk, ft-news-cbow, w2v-tayga-fpos5
-VECTORS = 'w2v-pos-ruscorpwiki' ## no full means that we filter out OOV at train time
+VECTORS = 'w2v-pos-araneum' ## no full means that we filter out OOV at train time
 POS = 'NOUN' # 'VERB'
 MWE = True ## always TRUE wouldn't hurt
 TEST = 'provided' # provided, codalab
@@ -20,7 +20,7 @@ elif 'rdt' in VECTORS:
     vecTOPN = 1000
 else:
     vecTOPN = 500
-FILTER_1 = 'corp-info18' # raw, disamb, comp, anno, corp-info25, corp-info50
+FILTER_1 = 'corp-info50' # raw, disamb, comp, anno, corp-info25, corp-info50
 FILTER_2 = 'none' #'kid', 'parent', none (for raw, disamb)
 
 if 'pos' in VECTORS:
@@ -70,6 +70,6 @@ else:
         FT_EMB = '/home/lpvoid/masha/resources/emb/hypo_news/news_lemmas_ft_0_5.model'
         
 # FT_EMB = '/home/u2/resources/emb/181_ruscorpora_fasttext/model.model'
-OUT = '/home/u2/proj/hypohyper/output/'
+OUT = '/home/u2/git/hypohyper/output/'
 
 
