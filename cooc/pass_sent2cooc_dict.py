@@ -81,7 +81,7 @@ if __name__ == "__main__":
         counter = 0
     
         for w in predictions:
-            if w == 'год_NOUN' or w == 'время_NOUN':  # too general concepts
+            if w == ' год_NOUN' or w == ' время_NOUN':  # too general concepts
                 continue
             if word == w:
                 continue
