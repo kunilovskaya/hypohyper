@@ -22,6 +22,7 @@ filtered = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/merged_mwe-glued_no
 
 functional = set('ADP AUX CCONJ DET PART PRON SCONJ PUNCT'.split())
 SKIP_1_WORD = True
+count = 0
 for line in sys.stdin:
     res = line.strip().split()
     good = []
@@ -39,6 +40,10 @@ for line in sys.stdin:
     if SKIP_1_WORD:  # May be, you want to filter out one-word sentences
         if len(good) < 2:
             continue
+    if count % 1000000 == 0:
+        print('%d lines processed, %.2f%% of the araneum only corpus' %
+              (count, count / 72704552 * 100), file=sys.stderr)
+    
     filtered.write(' '.join(good))
     filtered.write('\n')
 
