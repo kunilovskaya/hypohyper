@@ -1,4 +1,5 @@
 from smart_open import open
+import sys
 
 def check_word(token, pos, nofunc=None, nopunct=True, noshort=True, stopwords=None):
     outword = '_'.join([token, pos])
@@ -22,12 +23,12 @@ def num_replace(word):
     nw = newtoken + '_NUM'
     return nw
 
-corpus_file = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/merged_mwe-glued_news-rncP5-pro.gz', 'r')
+# corpus_file = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/merged_mwe-glued_news-rncP5-pro.gz', 'r')
 filtered = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/merged_mwe-glued_nofunct-punct_news-rncP5-pro.gz', 'a')
 
 functional = set('ADP AUX CCONJ DET PART PRON SCONJ PUNCT'.split())
 SKIP_1_WORD = True
-for line in corpus_file:
+for line in sys.stdin:
     res = line.strip().split()
     good = []
     for w in res:
@@ -47,5 +48,5 @@ for line in corpus_file:
     filtered.write(' '.join(good))
     filtered.write('\n')
 
-corpus_file.close()
+# corpus_file.close()
 filtered.close()
