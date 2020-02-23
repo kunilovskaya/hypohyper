@@ -213,8 +213,8 @@ if __name__ == "__main__":
 
         count += 1
         if count % 10000000 == 0:
-            print('%d lines processed, %.2f%% of the araneum only corpus' %
-                  (count, count / 748880899 * 100), file=sys.stderr)  # 748880899
+            print('%d lines processed, %.2f%% of the merged corpus' %
+                  (count, count / 158088498 * 100), file=sys.stderr)  # 158088498 merged corpora with funct-punct
                    
     for hypo, hypers in pat_dict.items():
         if len(pat_dict[hypo]) >= 1:
@@ -225,8 +225,9 @@ if __name__ == "__main__":
 
     print('We found Hearst hypers from ruWordNet for %d input words' % len([w for w in pat_dict if len(pat_dict[w]) >= 1]), file=sys.stderr)
 
-    out = json.dump(pat_dict, open('%shearst-hypers_%s_%s_%s.json' % (OUT_COOC, VECTORS, POS, TEST), 'w'), ensure_ascii=False,
+    out = json.dump(pat_dict, open('%shearst-hypers_merged-news-taxonomy-ruscorpwiki-rncP-pro_%s_%s.json' % (OUT_COOC, POS, TEST), 'w'), ensure_ascii=False,
                     indent=4, sort_keys=True)
+    print('A dictionary with Hearst-based hypers is written to %shearst-hypers_merged-news-taxonomy-ruscorpwiki-rncP-pro_%s_%s.json' % (OUT_COOC, POS, TEST))
 
     end = time.time()
     training_time = int(end - start)
