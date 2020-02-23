@@ -1,19 +1,13 @@
 from smart_open import open
 import sys
 
-def check_word(token, pos, nofunc=None, nopunct=True, noshort=True, stopwords=None):
+def check_word(token, pos, nofunc=None, nopunct=True):
     outword = '_'.join([token, pos])
     if nofunc:
         if pos in nofunc:
             return None
     if nopunct:
         if pos == 'PUNCT':
-            return None
-    if stopwords:
-        if token in stopwords:
-            return None
-    if noshort:
-        if len(token) < 2:
             return None
     return outword
 
