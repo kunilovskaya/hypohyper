@@ -3,13 +3,28 @@
 import argparse
 import sys, os
 import time
-from hyper_imports import wd2id_dict, id2wds_dict, read_xml, get_orgtest, get_orgtrain
+from hyper_imports import preprocess_mwe
 from hyper_imports import load_embeddings, preprocess_wordpair
 from configs import VECTORS, EMB_PATH, OUT, POS, TAGS, MWE, SKIP_OOV, METHOD, TEST, RUWORDNET
 import pandas as pd
 import json
 from collections import defaultdict
 
+def split_n_tag(bad_list): ## list in, list out
+    res_list = []
+    for i in bad_list:
+        if ', ' not in i:
+           i = preprocess_mwe(i, tags=TAGS, pos=POS)
+           res_list.append(i)
+        elif ', ' in i:
+            items = [x.strip() for x in i.split(', ')]  # get a list of items in the string
+            # flatter = [item for sublist in items for item in sublist]
+            for ii in items:
+                # print(type(ii))
+                ii = preprocess_mwe(ii, tags=TAGS, pos=POS)
+                res_list.append(ii)
+                
+    return res_list
 
 def convert(data, input):
     data_hyper_ids = defaultdict(list)
@@ -27,8 +42,10 @@ def convert(data, input):
     out2 = []
     for k, v in out.items():
         v = [item for sublist in v for item in sublist]  # flatten the list of hypernyms
+        v = split_n_tag(v)
         k = k.replace("'","").replace('[', '').replace(']', '')
         k = [i.strip() for i in k.split(', ')]  # get a list of hyponyms
+        k = split_n_tag(k)
         out2.append((k, v))
     print(out2[:1])
     
