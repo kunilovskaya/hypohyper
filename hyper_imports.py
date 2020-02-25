@@ -577,7 +577,7 @@ def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_vo
             print('Missing name for a sense in synset %s' % id)
         
         item = preprocess_mwe(lemma, tags=tags,
-                              pos=pos, map_mwe_names=map)  # get MWE, singles compatible with embeddings already (lower, tagged)
+                              pos=pos)  # get MWE, singles compatible with embeddings already (lower, tagged)
         
         if mode == 'single':
             if item in emb_voc:

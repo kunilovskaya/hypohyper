@@ -17,22 +17,29 @@ from hyper_imports import cooccurence_counts, preprocess_mwe, lose_family_anno, 
 
 parser = argparse.ArgumentParser('Detecting most similar synsets and formatting the output')
 # for ultimate results to submit use private instead of public
-if TEST == 'codalab':
+if TEST == 'codalab-pub':
     if POS == 'NOUN':
         parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv', type=os.path.abspath)
     if POS == 'VERB':
         parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
+if TEST == 'codalab-pr':
+    if POS == 'NOUN':
+        parser.add_argument('--test', default='input/data/private_test/nouns_private.tsv', type=os.path.abspath)
+    if POS == 'VERB':
+        parser.add_argument('--test', default='input/data/private_test/verbs_private.tsv', type=os.path.abspath)
+        
 if TEST == 'provided':
         parser.add_argument('--test', default='lists/%s_%s_WORDS.txt' % (POS, TEST), type=os.path.abspath)
 
-if POS == 'NOUN':
-    parser.add_argument('--train', default='input/data/training_nouns.tsv',
-                        help="train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION")
-if POS == 'VERB':
-    parser.add_argument('--train', default='input/data/training_verbs.tsv',
-                        help="train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION")
+if FILTER_1 == 'comp':
+    if POS == 'NOUN':
+        parser.add_argument('--train', default='input/data/training_nouns.tsv',
+                            help="train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION")
+    if POS == 'VERB':
+        parser.add_argument('--train', default='input/data/training_verbs.tsv',
+                            help="train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION")
     ## is lemmas-neg-hyp add _lambda05
-parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_%s_hypers_lambda00.npy' % (OUT, VECTORS, POS,
+parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_%s_hypers_lambda05.npy' % (OUT, VECTORS, POS,
                                                                                                  OOV_STRATEGY,
                                                                                                  TEST, METHOD),
                     help="predicted vectors")
@@ -103,9 +110,11 @@ hyper_vecs = np.load(args.hyper_vectors, allow_pickle=True)
 
 OUT_RES = '%sresults/' % OUT
 os.makedirs(OUT_RES, exist_ok=True)
-outfile = open('%s%s_%s_%s_%s_%s_%s_%s_%s.tsv' % (OUT_RES, VECTORS, POS, MODE, OOV_STRATEGY,
-                                                  TEST, METHOD, FILTER_1, FILTER_2), 'w')
-writer = csv.writer(outfile, dialect='unix', delimiter='\t', lineterminator='\n', escapechar='\\', quoting=csv.QUOTE_NONE)
+
+if 'codalab' in TEST:
+    outfile = open('%s%s_%s_%s_%s_%s_%s_%s_%s.tsv' % (OUT_RES, VECTORS, POS, MODE, OOV_STRATEGY,
+                                                      TEST, METHOD, FILTER_1, FILTER_2), 'w')
+    writer = csv.writer(outfile, dialect='unix', delimiter='\t', lineterminator='\n', escapechar='\\', quoting=csv.QUOTE_NONE)
 
 
 counter = 0
@@ -119,7 +128,8 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
     if not np.any(hyper_vec):
         for line in top_ten: # synset ids already
             row = [hypo.strip(), line.strip(), 'dummy']
-            writer.writerow(row)
+            if 'codalab' in TEST:
+                writer.writerow(row)
             pred_dict[hypo.strip()].append(line.strip())
     else:
         if METHOD == 'lemmas' or METHOD == 'lemmas-neg-hyp' or METHOD == 'lemmas-neg-syn':
@@ -157,7 +167,7 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
             
             elif 'corp-info' in FILTER_1:
                 ## load the lists of hypernyms that coocur with the given hyponyms
-                freqs_dict = json.load(open('%scooc/%s_%s_freq_cooc25_%s.json' % (OUT, VECTORS, TEST, POS), 'r'))
+                freqs_dict = json.load(open('%scooc/merged5corp_%s_freq_cooc50_%s.json' % (OUT, TEST, POS), 'r'))
                 ## last options influence the performance: they regulate how much fredom of upward movement we allow for coocuring items
                 # print(COOC_LIMIT, DEDUP_LIMIT)
                 # print('Co-occurences for %d items' % len(freqs_dict))
@@ -166,7 +176,7 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
                 this_hypo_res = cooc_updated[:10]
                 
             elif 'hearst-info' in FILTER_1:
-                hearst_dict = json.load(open('/home/u2/git/hypohyper/output/hearst-hypers_merged-news-taxonomy-ruscorpwiki-rncP-pro_NOUN_provided1.json', 'r'))
+                hearst_dict = json.load(open('%scooc/hearst-hypers_merged-news-taxonomy-ruscorpwiki-rncP-pro_%s_%s.json' % (OUT,POS,TEST), 'r'))
                 
                 hearst_updated = cooccurence_counts(hypo, deduplicated_res,
                                                   corpus_freqs=hearst_dict, thres_cooc=COOC_LIMIT,
@@ -195,12 +205,14 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
 
         for line in this_hypo_res:
             row = [hypo.strip(), line[0], line[1]] # (hypo, id, hypernym)
-            writer.writerow(row)
+            if 'codalab' in TEST:
+                writer.writerow(row)
             pred_dict[hypo.strip()].append(line[0])
             pred_dict_lemmas[hypo.strip()].append(line[1])
             # if hypo in ['ЧИБИС', 'ШАШКА', 'ШАТТЛ', 'ШАТУН', 'ЧАСТУШКА']:
             #     print(hypo, line[1])
-outfile.close()
+if 'codalab' in TEST:
+    outfile.close()
 
 if METHOD == 'lemmas' and FILTER_1 == 'disamb':
     print('Total hypernyms processed for %d testwords: %d' % (len(test), tot_hypernyms))
@@ -215,9 +227,11 @@ first3pairs_hypers = {k: pred_dict_lemmas[k] for k in list(pred_dict_lemmas)[:3]
 # print('PRED_wds:', first3pairs_hypers, file=sys.stderr)
 
 if TEST == 'provided':
-    json.dump(pred_dict, open('%s%s_%s_%s_%s_%s_pred.json' % (OUT_RES, POS, TEST, METHOD, FILTER_1, FILTER_2), 'w'))
+    OUT_RES_ORG = '%sorg_split/' % OUT_RES
+    os.makedirs(OUT_RES_ORG, exist_ok=True)
+    json.dump(pred_dict, open('%s%s_%s_%s_%s_%s_pred.json' % (OUT_RES_ORG, POS, TEST, METHOD, FILTER_1, FILTER_2), 'w'))
 
-elif TEST == 'codalab':
+elif 'codalab' in TEST:
     print('===Look at %s predictions for OOV===' % OOV_STRATEGY)
     print('АНИСОВКА', [id2name[id] for id in pred_dict['АНИСОВКА']]) ## ВЕЙП, ДРЕСС-КОД
     

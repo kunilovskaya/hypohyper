@@ -58,7 +58,7 @@ hypohyper_test = get_orgtrain(args.test, map=synset_words)
 gold_dict = get_orgtest(args.test)  # hypos are filtered for MWE
 
 first3pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:3]}
-with open('%s%s_%s_WORDS.txt' % (OUT, POS, TEST), 'w') as my_testfile:
+with open('lists/%s_%s_WORDS.txt' % (POS, TEST), 'w') as my_testfile:
     for key in gold_dict:
         my_testfile.write(key + '\n')
         
