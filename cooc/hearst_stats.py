@@ -103,7 +103,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('--testwords', default='lists/%s_%s_WORDS.txt' % (POS, TEST),
                         help="path to input word list")
-    parser.add_argument('--ruthes_words', default='%smwe/ruWordNet_names_pos.txt' % OUT, help="path to words from WordNet")
+    parser.add_argument('--ruthes_words', default='lists/tweaked_ruWordNet_names_pos.txt', help="path to words from WordNet")
     args = parser.parse_args()
 
     start = time.time()
