@@ -33,7 +33,7 @@ if __name__ == "__main__":
     for line in open(args.ruthes_words):
         word = line.strip()
         # word = preprocess_mwe(word, tags=TAGS, pos=POS)
-        word = ' ' + word  ## avoid matching parts of words such as ель_NOUN, ад_NOUN, ток_NOUN, рота_NOUN, па_NOUN
+        word = ' ' + word  # avoid matching parts of words such as ель_NOUN, ад_NOUN, ток_NOUN, рота_NOUN, па_NOUN
         ruthes_words.add(word)
 
     print('%d ruthes lemmas read and tagged' % len(ruthes_words), file=sys.stderr)
@@ -42,10 +42,9 @@ if __name__ == "__main__":
 
     for line in open(args.testwords):
         word = preprocess_mwe(line.strip(), tags=TAGS, pos=POS)
-        word = ' ' + word ## avoid matching parts of words such as ель_NOUN, ад_NOUN, ток_NOUN, рота_NOUN, па_NOUN
+        word = ' ' + word  # avoid matching parts of words such as ель_NOUN, ад_NOUN, ток_NOUN, рота_NOUN, па_NOUN
         cooc_dict[word] = defaultdict(int)
-        
-        
+
     print('%d testwords read' % len(cooc_dict), file=sys.stderr)
     
     ## optimised iteration and string matching for getting relevant sentences
@@ -60,8 +59,8 @@ if __name__ == "__main__":
     auto2.make_automaton()
     
     count = 0
-    for line in sys.stdin: # zcat corpus.txt.gz | python3 find_words.py
-        res = line.strip() # право::пациент_NOUN
+    for line in sys.stdin:  # zcat corpus.txt.gz | python3 find_words.py
+        res = line.strip()  # право::пациент_NOUN
         ## monitor progress
         count += 1
         if count % 10000000 == 0:
@@ -69,12 +68,12 @@ if __name__ == "__main__":
 
         for end_ind1, testword in auto1.iter(res):
             for end_ind2, ruthes_word in auto2.iter(res):
-                if testword not in ruthes_word: ## avoid getting научный_ADJ учреждение_NOUN for hypo учреждение_NOUN
+                if testword not in ruthes_word:  # avoid getting научный_ADJ учреждение_NOUN for hypo учреждение_NOUN
                     cooc_dict[testword][ruthes_word] += 1
                 
     my_dict = defaultdict(list)
     number = 0
-    for word in cooc_dict: ##number of test words; 1525 in private
+    for word in cooc_dict:  # number of test words; 1525 in private
         number += 1
         counter = 0
         ## it is already filtered thru ruWordNet, so no worries
@@ -103,8 +102,9 @@ if __name__ == "__main__":
     os.makedirs(OUT_COOC, exist_ok=True)
     
     ## now I am getting 'детский_ADJ питание_NOUN' exclufing cases when test hypo is a subword
-    json.dump(my_dict, open('%sTEST%s_%s_freq_cooc50_%s.json' % (OUT_COOC, VECTORS, TEST, POS), 'w'))
-    print('Written to: %s%s_%s_freq_cooc50_%s.json' % (OUT_COOC, VECTORS, TEST, POS))
+    outname = '%smerged5corp_%s_freq_cooc50_%s.json' % (OUT_COOC, TEST, POS)
+    json.dump(my_dict, open(outname, 'w'))
+    print('Written to: %s' % outname)
 
     print(len(my_dict.keys()))
     
