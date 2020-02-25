@@ -21,8 +21,8 @@ def hearst_hyper2(testword, sent, pat2, hyper_nr=2):
     m = re.search(pat2, sent)
     if m is not None:
         hyper = m.group(hyper_nr)
-        hypos.add(m.group(3))
-
+        # if m.group(3) and '_ADJ' not in m.group(3):
+        #     hypos.add(m.group(3))
         try:
             hypos.add(m.group(4))
         except IndexError:
@@ -101,18 +101,20 @@ def hearst_hyper5(testword, sent, pat5, hyper_nr=5):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--testwords', default='%strains/%s_%s_%s_%s_WORDS.txt' % (OUT, VECTORS, POS, TEST, METHOD),
+    parser.add_argument('--testwords', default='lists/%s_%s_WORDS.txt' % (POS, TEST),
                         help="path to input word list")
     parser.add_argument('--ruthes_words', default='%smwe/ruWordNet_names_pos.txt' % OUT, help="path to words from WordNet")
     args = parser.parse_args()
 
     start = time.time()
-    
+    # corp = open('/home/u2/git/hypohyper/input/pseudo_such_as_patterns_corp.txt')
+    # hypos = ['свинка_NOUN','мартышка_NOUN']
     pat_dict = defaultdict()
     
     for line in open(args.testwords):
+        # tword = line
         tword = preprocess_mwe(line.strip(), tags=TAGS, pos=POS)
-        pat_dict[tword] = []
+        pat_dict[tword] = set()
     
     synset_words = set()
 
@@ -125,21 +127,21 @@ if __name__ == "__main__":
     
     # testword = [а-я]+_[A-Z]+(\:\:[а-я]+_[A-Z]+){0,4} ## if using new tagged corpus
     ## Such X as Y,[ Y,][ and/or Y]
-    pat1_1 = r'(такой_DET\s([а-я]+_NOUN)\sкак_SCONJ\s([а-я]+_NOUN)\s,_PUNCT\s([а-я]+_NOUN)\s,_PUNCT\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
-    pat1_2 = r'(такой_DET\s([а-я]+_NOUN)\sкак_SCONJ\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
-    pat1_3 = r'(такой_DET\s([а-я]+_NOUN)\sкак_SCONJ\s([а-я]+_NOUN)\sили_CCONJ\s([а-я]+_NOUN))'
-    pat1_4 = r'(такой_DET\s([а-я]+_NOUN)\sкак_SCONJ\s([а-я]+_NOUN)\s)'
+    pat1_1 = r'(такой_DET\s(([а-я]+_ADJ\s)?[а-я]+_NOUN)\sкак_SCONJ\s([а-я]+_NOUN)\s,_PUNCT\s([а-я]+_NOUN)\s,_PUNCT\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
+    pat1_2 = r'(такой_DET\s(([а-я]+_ADJ\s)?[а-я]+_NOUN)\sкак_SCONJ\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
+    pat1_3 = r'(такой_DET\s(([а-я]+_ADJ\s)?[а-я]+_NOUN)\sкак_SCONJ\s([а-я]+_NOUN)\sили_CCONJ\s([а-я]+_NOUN))'
+    pat1_4 = r'(такой_DET\s(([а-я]+_ADJ\s)?[а-я]+_NOUN)\sкак_SCONJ\s([а-я]+_NOUN)\s)'
     ## X, such as Y,[ Y,][ and/or Y]
-    pat2_1 = r'(([а-я]+_NOUN)\s._PUNCT\sтакой_DET\sкак_SCONJ\s([а-я]+_NOUN)\s,_PUNCT\s([а-я]+_NOUN),_PUNCT\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
-    pat2_2 = r'(([а-я]+_NOUN)\s._PUNCT\sтакой_DET\sкак_SCONJ\s([а-я]+_NOUN)\s,_PUNCT\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
-    pat2_3 = r'(([а-я]+_NOUN)\s._PUNCT\sтакой_DET\sкак_SCONJ\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
-    pat2_4 = r'(([а-я]+_NOUN)\s._PUNCT\sтакой_DET\sкак_SCONJ\s([а-я]+_NOUN)\sили_CCONJ\s([а-я]+_NOUN))'
-    pat2_5 = r'(([а-я]+_NOUN)\s._PUNCT\sтакой_DET\sкак_SCONJ\s([а-я]+_NOUN))'
+    pat2_1 = r'((([а-я]+_ADJ\s)?[а-я]+_NOUN)\s._PUNCT\sтакой_DET\sкак_SCONJ\s([а-я]+_NOUN)\s,_PUNCT\s([а-я]+_NOUN),_PUNCT\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
+    pat2_2 = r'((([а-я]+_ADJ\s)?[а-я]+_NOUN)\s._PUNCT\sтакой_DET\sкак_SCONJ\s([а-я]+_NOUN)\s,_PUNCT\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
+    pat2_3 = r'((([а-я]+_ADJ\s)?[а-я]+_NOUN)\s._PUNCT\sтакой_DET\sкак_SCONJ\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
+    pat2_4 = r'((([а-я]+_ADJ\s)?[а-я]+_NOUN)\s._PUNCT\sтакой_DET\sкак_SCONJ\s([а-я]+_NOUN)\sили_CCONJ\s([а-я]+_NOUN))'
+    pat2_5 = r'((([а-я]+_ADJ\s)?[а-я]+_NOUN)\s._PUNCT\sтакой_DET\sкак_SCONJ\s([а-я]+_NOUN))'
     ## X: Y[, Y] and/or Y. (X: Y,[ Y,] and/or Y).
-    pat3_1 = r'(([а-я]+_NOUN)\s:_PUNCT\s([а-я]+_NOUN)\s,_PUNCT\s([а-я]+_NOUN),_PUNCT\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
-    pat3_2 = r'(([а-я]+_NOUN)\s:_PUNCT\s([а-я]+_NOUN)\s,_PUNCT\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
-    pat3_3 = r'(([а-я]+_NOUN)\s:_PUNCT\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
-    pat3_4 = r'(([а-я]+_NOUN)\s:_PUNCT\s([а-я]+_NOUN)\sили_CCONJ\s([а-я]+_NOUN))'
+    pat3_1 = r'((([а-я]+_ADJ\s)?[а-я]+_NOUN)\s:_PUNCT\s([а-я]+_NOUN)\s,_PUNCT\s([а-я]+_NOUN),_PUNCT\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
+    pat3_2 = r'((([а-я]+_ADJ\s)?[а-я]+_NOUN)\s:_PUNCT\s([а-я]+_NOUN)\s,_PUNCT\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
+    pat3_3 = r'((([а-я]+_ADJ\s)?[а-я]+_NOUN)\s:_PUNCT\s([а-я]+_NOUN)\sи_CCONJ\s([а-я]+_NOUN))'
+    pat3_4 = r'((([а-я]+_ADJ\s)?[а-я]+_NOUN)\s:_PUNCT\s([а-я]+_NOUN)\sили_CCONJ\s([а-я]+_NOUN))'
     ## inverted order
     ## Y[, Y][(, а также)/(также как и)/и/или] прочий/другие/другим/других/о других X.
     ## Y[, Y] as well as other X.
@@ -194,38 +196,39 @@ if __name__ == "__main__":
             for pat in pat_hyper2:
                 new_hyper = hearst_hyper2(word, sent, pat, hyper_nr=2)
                 if new_hyper and new_hyper in synset_words:
-                    pat_dict[word].append(new_hyper)
+                    pat_dict[word].add(new_hyper)
                     
             for pat in pat_hyper2a:
                 new_hyper = hearst_hyper2(word, sent, pat, hyper_nr=2)
                 if new_hyper and new_hyper in synset_words:
-                    pat_dict[word].append(new_hyper)
+                    pat_dict[word].add(new_hyper)
                     
             for pat in pat_hyper4:
                 new_hyper = hearst_hyper4(word, sent, pat, hyper_nr=4)
                 if new_hyper and new_hyper in synset_words:
-                    pat_dict[word].append(new_hyper)
+                    pat_dict[word].add(new_hyper)
                     
             for pat in pat_hyper5:
                 new_hyper = hearst_hyper5(word, sent, pat, hyper_nr=5)
                 if new_hyper and new_hyper in synset_words:
-                    pat_dict[word].append(new_hyper)
+                    pat_dict[word].add(new_hyper)
 
         count += 1
         if count % 10000000 == 0:
             print('%d lines processed, %.2f%% of the merged corpus' %
                   (count, count / 158088498 * 100), file=sys.stderr)  # 158088498 merged corpora with funct-punct
-                   
+    pat_dict2 = {}
     for hypo, hypers in pat_dict.items():
+        pat_dict2[hypo] = list(hypers)
         if len(pat_dict[hypo]) >= 1:
-            print(hypo, hypers)
+            print(hypo, list(hypers))
 
     OUT_COOC = '%scooc/' % OUT
     os.makedirs(OUT_COOC, exist_ok=True)
 
     print('We found Hearst hypers from ruWordNet for %d input words' % len([w for w in pat_dict if len(pat_dict[w]) >= 1]), file=sys.stderr)
 
-    out = json.dump(pat_dict, open('%shearst-hypers_merged-news-taxonomy-ruscorpwiki-rncP-pro_%s_%s.json' % (OUT_COOC, POS, TEST), 'w'), ensure_ascii=False,
+    out = json.dump(pat_dict2, open('%shearst-hypers_merged-news-taxonomy-ruscorpwiki-rncP-pro_%s_%s.json' % (OUT_COOC, POS, TEST), 'w'), ensure_ascii=False,
                     indent=4, sort_keys=True)
     print('A dictionary with Hearst-based hypers is written to %shearst-hypers_merged-news-taxonomy-ruscorpwiki-rncP-pro_%s_%s.json' % (OUT_COOC, POS, TEST))
 
