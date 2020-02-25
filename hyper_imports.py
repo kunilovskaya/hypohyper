@@ -560,7 +560,7 @@ def popular_generic_concepts(relations_path):
 
 ####### parse ruwordnet and get a list of (synset_id, word) tuples for both one word and heads in MWE)
 def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_voc=None, map=None):  # mode 'main'
-    
+    ## this is where I want to include support for averaged MWE,
     doc = minidom.parse(senses)
     parsed_senses = doc.getElementsByTagName("sense")
     all_id_senses = []
@@ -622,7 +622,7 @@ def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_vo
 # topn - how many similarities to retain from vector model to find the intersections with ruwordnet: less than 500 can return less than 10 candidates
 
 def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None, dict_w2ids=None, limit=None): # {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']
-    
+    ## enhanced cooc and hearst stats account for MWE matches, but these can only be used if represented by embeddings!
     hyper_vec = np.array(vec, dtype=float)
     nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=topn) # words
     sims = []
@@ -630,7 +630,8 @@ def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None,
         hypernym = res[0]
         similarity = res[1]
         if hypernym in dict_w2ids:
-            ## we are adding as mane tuples as there are synset ids associated with the topN most_similar in embeddings and found in ruWordnet
+            ## we are adding as many tuples as there are synset ids associated with the topN most_similar in embeddings and found in ruWordnet
+            ## and there is NO way to add matches from MWE unless they appear in the embeddings in the current setup, when similarities are chosen from the default emb model
             for synset in dict_w2ids[hypernym]:
                 sims.append((synset, hypernym, similarity))
     # sort the list of tuples (id, sim) by the 2nd element and deduplicate

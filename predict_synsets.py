@@ -23,7 +23,7 @@ if TEST == 'codalab':
     if POS == 'VERB':
         parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
 if TEST == 'provided':
-        parser.add_argument('--test', default='%s%s_%s_WORDS.txt' % (OUT, POS, TEST), type=os.path.abspath)
+        parser.add_argument('--test', default='lists/%s_%s_WORDS.txt' % (POS, TEST), type=os.path.abspath)
 
 if POS == 'NOUN':
     parser.add_argument('--train', default='input/data/training_nouns.tsv',
