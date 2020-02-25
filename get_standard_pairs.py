@@ -53,11 +53,12 @@ print('Datasets are NOT filtered for OOV or lowercased/tagged just yet, except M
 
 hypohyper_train = get_orgtrain(args.train, map=synset_words)
 hypohyper_dev = get_orgtrain(args.dev, map=synset_words)
+hypohyper_test = get_orgtrain(args.test, map=synset_words)
 
 gold_dict = get_orgtest(args.test)  # hypos are filtered for MWE
 
 first3pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:3]}
-with open('%s%s_%s_%s_%s_WORDS.txt' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w') as my_testfile:
+with open('%s%s_%s_WORDS.txt' % (OUT, POS, TEST), 'w') as my_testfile:
     for key in gold_dict:
         my_testfile.write(key + '\n')
         
@@ -72,12 +73,14 @@ print()
 # lists of tuples
 train = preprocess_wordpair(hypohyper_train, tags=TAGS, mwe=MWE, pos=POS)
 dev = preprocess_wordpair(hypohyper_dev, tags=TAGS, mwe=MWE, pos=POS)
+test = preprocess_wordpair(hypohyper_test, tags=TAGS, mwe=MWE, pos=POS)
 
 print('Preprocessed train:', train[:3])
 print('Preprocessed dev:', dev[:3])
 
 json.dump(train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
 json.dump(dev, open('%s%s_%s_%s_%s_dev.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
+json.dump(test, open('%sGOLDWORDS_%s_%s_%s_%s.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
 
 end = time.time()
 training_time = int(end - start)

@@ -27,3 +27,7 @@ print(TEST, METHOD, MODE, FILTER_1, FILTER_2)
 mean_ap, mean_rr = get_score(gold_dict, pred_dict)
 print("MAP: {0}\nMRR: {1}\n".format(mean_ap, mean_rr), file=sys.stderr)
 
+# for k, v in gold_dict.items():
+#     if k in ['ЧИБИС', 'ШАШКА', 'ШАТТЛ', 'ШАТУН', 'ЧАСТУШКА']:
+#         print(k,v)
+

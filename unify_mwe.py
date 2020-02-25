@@ -8,10 +8,10 @@ import ahocorasick
 
 fixed_mwe = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/merged_mwe-glued_nofunct-punct_fixed-mwe_news-rncP5-pro.gz', 'a')
 
-source = open('/home/rgcl-dl/Projects/hypohyper/output/ruWordNet_names.txt', 'r').readlines()
+source = open('/home/rgcl-dl/Projects/hypohyper/ruWordNet_names.txt', 'r').readlines()
 source_tagged = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/ruWordNet_same-names_pos.txt', 'r').readlines()
 
-## make a map to go from ЖРИЦА ЛЮБВИ to {'жрица::любви_NOUN' : 'жрица_NOUN::любви_NOUN'}
+## make a map to go from ЖРИЦА ЛЮБВИ to {'жрица::любви_NOUN' : 'жрица_NOUN::любовь_NOUN'}
 map = defaultdict()
 
 for caps, tagged in zip(source, source_tagged):
@@ -28,7 +28,7 @@ print('Num of MWE', len(map))
 
 # optimised iteration and string matching
 auto = ahocorasick.Automaton()
-for substr in map:  # iterate over dict keys
+for substr in map:  # iterate over dict keys = жрица::любви_NOUN
     # print(substr)
     auto.add_word(substr, substr)
 auto.make_automaton()
@@ -46,17 +46,17 @@ for line in sys.stdin:
     fixed_mwe.write(res + '\n')
     count1 += 1
     if count1 % 1000000 == 0:
-        print('%d lines processed, %.2f%% of the araneum only corpus' %
+        print('%d lines processed, %.2f%% of the merged corpus' %
               (count1, count1 / 72704552 * 100), file=sys.stderr)
 count = 0
 for k, v in freq_dict.items():
     if v > 0:
         count += 1
         print(k)
-    
-json.dump(freq_dict, open('/home/u2/freq_fixed.json', 'w'))
 
 print('Number of fixed MWE', count)
+
+json.dump(freq_dict, open('/home/rgcl-dl/Projects/hypohyper/freq_fixed.json', 'w'))
 
 fixed_mwe.close()
 

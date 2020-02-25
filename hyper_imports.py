@@ -216,7 +216,7 @@ def get_orgtrain(filepath, map=None): # map = synset_words
     
     return org_pairs  ## ('ИХТИОЛОГ', '9033-N')
 
-def get_orgtest_deworded(filepath):
+def get_orgtest(filepath):
     mwe = []
     lines = open(filepath, 'r').readlines()
     gold_dict = defaultdict(list)
@@ -264,8 +264,26 @@ def load_embeddings(modelfile):
 #         return None
 #     vector = emb[word]
 #     return vector
+def map_mwe(names=None, same_names=None, tags=None, pos=None):
+    # source = open('/home/rgcl-dl/Projects/hypohyper/ruWordNet_names.txt', 'r').readlines()
+    # source_tagged = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/ruWordNet_same-names_pos.txt', 'r').readlines()
+    
+    ## make a map to go from ЖРИЦА ЛЮБВИ to {'жрица::любви_NOUN' : 'жрица_NOUN::любовь_NOUN'}
+    map = defaultdict()
+    
+    for caps, tagged in zip(names, same_names):
+        if ' ' in caps:
+            old = preprocess_mwe(caps, tags=tags, pos=pos)
+            new = tagged.replace(' ', '::')
+            map[old] = new
+    
+    first_pairs = {k: map[k] for k in list(map)[:10]}
+    print('First few matched items:', first_pairs, file=sys.stderr)
+    
+    return map
 
-def preprocess_mwe(item, tags=None, pos=None):
+
+def new_preprocess_mwe(item, tags=None, pos=None, vectors=None, map_mwe_names=None):
     # Alas, those bigrams are overwhelmingly proper names while we need multi-word concepts.
     # For example, in aranea: "::[а-я]+\_PROPN" 8369 item, while the freq of all "::" 8407
     if pos == 'VERB':
@@ -273,9 +291,13 @@ def preprocess_mwe(item, tags=None, pos=None):
             if tags:
                 item = '::'.join(item.lower().split())
                 item = item + '_VERB'
+            if map_mwe_names:
+                item = map_mwe_names[item]
+                
             else:
                 item = '::'.join(item.lower().split())
             # print(item)
+            
         else:
             if tags:
                 item = item.lower()
@@ -288,6 +310,8 @@ def preprocess_mwe(item, tags=None, pos=None):
             if tags:
                 item = '::'.join(item.lower().split())
                 item = item + '_NOUN'
+            if vectors == 'mwe-vectors':
+                item = map_mwe_names[item]
             else:
                 item = '::'.join(item.lower().split())
 
@@ -298,6 +322,44 @@ def preprocess_mwe(item, tags=None, pos=None):
             else:
                 item = item.lower()
             
+    return item
+
+
+def preprocess_mwe(item, tags=None, pos=None):
+    # Alas, those bigrams are overwhelmingly proper names while we need multi-word concepts.
+    # For example, in aranea: "::[а-я]+\_PROPN" 8369 item, while the freq of all "::" 8407
+    if pos == 'VERB':
+        if len(item.split()) > 1:
+            if tags:
+                item = '::'.join(item.lower().split())
+                item = item + '_VERB'
+            
+            else:
+                item = '::'.join(item.lower().split())
+            # print(item)
+        
+        else:
+            if tags:
+                item = item.lower()
+                item = item + '_VERB'
+            else:
+                item = item.lower()
+    
+    elif pos == 'NOUN':
+        if len(item.split()) > 1:
+            if tags:
+                item = '::'.join(item.lower().split())
+                item = item + '_NOUN'
+            else:
+                item = '::'.join(item.lower().split())
+        
+        else:
+            if tags:
+                item = item.lower()
+                item = item + '_NOUN'
+            else:
+                item = item.lower()
+    
     return item
 
 def convert_item_format(caps_word, tags=None, mwe=None, pos=None):
@@ -354,7 +416,7 @@ def preprocess_hypo(pairs, tags=None, mwe=None, pos=None):
     preprocessed_train = []
     for hypo, hyper in pairs:
         if tags:
-            if mwe:  # this returns lowercased and tagged single words ot MWE
+            if mwe:  # this returns lowercased and tagged single words or MWE of type жрица::любовь_NOUN
                 hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
                 preprocessed_train.append((hypo, hyper))
             else:
@@ -497,7 +559,7 @@ def popular_generic_concepts(relations_path):
 
 
 ####### parse ruwordnet and get a list of (synset_id, word) tuples for both one word and heads in MWE)
-def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_voc=None, id2name=None):  # mode 'main'
+def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_voc=None, map=None):  # mode 'main'
     
     doc = minidom.parse(senses)
     parsed_senses = doc.getElementsByTagName("sense")
@@ -515,7 +577,7 @@ def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_vo
             print('Missing name for a sense in synset %s' % id)
         
         item = preprocess_mwe(lemma, tags=tags,
-                              pos=pos)  # get MWE, singles compatible with embeddings already (lower, tagged)
+                              pos=pos, map_mwe_names=map)  # get MWE, singles compatible with embeddings already (lower, tagged)
         
         if mode == 'single':
             if item in emb_voc:
@@ -661,25 +723,33 @@ def mean_synset_based_hypers(test_item, vec=None, syn_ids=None, syn_vecs=None):
 ## dict_w2ids = кунгур_NOUN:[['134530-N']], corpus_freqs = агностик_NOUN ["атеист_NOUN", "человек_NOUN", "религия_NOUN", ...]
 def cooccurence_counts(test_item, deduplicated_res, corpus_freqs=None, thres_cooc=None, thres_dedup=None):
     # print('This is before factoring in the cooccurence stats\n', deduplicated_res[:10])
-    test_item = ' ' + test_item.lower()+'_NOUN'
+    test_item = test_item.lower()+'_NOUN'
     # print('%s co-occured with\n%s' % (test_item, corpus_freqs[test_item]))
     
     new_list = []
-    if len(corpus_freqs[test_item]) != 0:
-        ## avoid rewriting the dict with cooc-predicted hypers
-        for i in corpus_freqs[test_item][:thres_cooc]: # [word_NOUN, word_NOUN, word_NOUN]
-            i = i.strip()
-            for tup in deduplicated_res[:thres_dedup]: # <- list of [(id1_1,hypernym1_NOUN), (id1_2,hypernym1), (id2_1,hypernym2)]
-                if i == tup[1]:
-                    new_list.append(tup)
-    else:
-        # print('NOCOOCCURRENCE:', test_item) ## травести, точмаш, прет-а-порте, стечкин
+    ## cooc_dict has all items; hearst_dict does not
+    try:
+        if len(corpus_freqs[test_item]) != 0: ## is this silently ignores items that are not in dict??
+            ## avoid rewriting the dict with cooc-predicted hypers
+            for i in corpus_freqs[test_item][:thres_cooc]:  # [word_NOUN, word_NOUN, word_NOUN]
+                i = i.strip()
+                for tup in deduplicated_res[
+                           :thres_dedup]:  # <- list of [(id1_1,hypernym1_NOUN), (id1_2,hypernym1), (id2_1,hypernym2)]
+                    if i == tup[1]:
+                        new_list.append(tup)
+        else:
+            print('NOCOOCCURRENCE:', test_item)  ## травести, точмаш, прет-а-порте, стечкин
+            new_list = deduplicated_res[:10]
+
+    except KeyError:
+        print('NOCOOCCURRENCE:', test_item)
         new_list = deduplicated_res[:10]
+        
     if len(new_list) < 10:
         for tup in deduplicated_res:
             if tup not in new_list:
                 new_list.append(tup)
-    
+                
     # print('New order of hypernyms\n%s' % new_list[:10])
     return new_list  # list of (synset_id, hypernym_synset_name)
 

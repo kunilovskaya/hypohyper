@@ -3,7 +3,7 @@ import time
 import os
 import sys
 from hyper_imports import process_tsv, process_tsv_deworded_hypers
-from hyper_imports import wd2id_dict, id2wds_dict, read_xml, get_orgtest_deworded, get_orgtrain_deworded, get_orgtrain
+from hyper_imports import wd2id_dict, id2wds_dict, read_xml, get_orgtest, get_orgtrain_deworded, get_orgtrain
 import json
 from configs import VECTORS, RUWORDNET, OUT, POS, TEST, METHOD
 
@@ -66,10 +66,10 @@ if METHOD == 'deworded':
         hypohyper_train = get_orgtrain_deworded(args.train)
         json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
 
-        gold_dict = get_orgtest_deworded(args.test)  # hypos are filtered for MWE
+        gold_dict = get_orgtest(args.test)  # hypos are filtered for MWE
         json.dump(gold_dict, open('%s%s_%s_%s_gold.json' % (OUT_GOLD, POS, TEST, METHOD), 'w'))
         first3pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:3]}
-        with open('%s%s_%s_%s_%s_WORDS.txt' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w') as my_testfile:
+        with open('%s%s_%s_WORDS.txt' % (OUT, POS, TEST), 'w') as my_testfile:
             for key in gold_dict:
                 my_testfile.write(key + '\n')
         print('Raw train pairs: %d' % len(hypohyper_train), file=sys.stderr)
@@ -92,10 +92,10 @@ else:
         hypohyper_train = get_orgtrain(args.train, map=synset_words)
         json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
     
-        gold_dict = get_orgtest_deworded(args.test)  # hypos are filtered for MWE
+        gold_dict = get_orgtest(args.test)  # hypos are filtered for MWE
         json.dump(gold_dict, open('%s%s_%s_%s_gold.json' % (OUT_GOLD, POS, TEST, METHOD), 'w'))
         first3pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:3]}
-        with open('%s%s_%s_%s_%s_WORDS.txt' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w') as my_testfile:
+        with open('%s%s_%s_WORDS.txt' % (OUT, POS, TEST), 'w') as my_testfile:
             for key in gold_dict:
                 my_testfile.write(key + '\n')
         print('Raw train pairs: %d' % len(hypohyper_train), file=sys.stderr)

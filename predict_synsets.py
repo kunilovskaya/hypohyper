@@ -13,7 +13,7 @@ from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, 
     TEST, METHOD, FILTER_1, FILTER_2
 from hyper_imports import popular_generic_concepts, load_embeddings, filtered_dicts_mainwds_option,read_xml, id2name_dict
 from hyper_imports import lemmas_based_hypers, mean_synset_based_hypers, synsets_vectorized, disambiguate_hyper_syn_ids
-from hyper_imports import cooccurence_counts, preprocess_mwe, lose_family_anno, lose_family_comp, get_generations
+from hyper_imports import cooccurence_counts, preprocess_mwe, lose_family_anno, lose_family_comp, get_generations, map_mwe
 
 parser = argparse.ArgumentParser('Detecting most similar synsets and formatting the output')
 # for ultimate results to submit use private instead of public
@@ -23,8 +23,7 @@ if TEST == 'codalab':
     if POS == 'VERB':
         parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
 if TEST == 'provided':
-        parser.add_argument('--test', default='%strains/%s_%s_%s_%s_WORDS.txt' % (OUT, VECTORS,
-                                                                                  POS, TEST, METHOD), type=os.path.abspath)
+        parser.add_argument('--test', default='%s%s_%s_WORDS.txt' % (OUT, POS, TEST), type=os.path.abspath)
 
 if POS == 'NOUN':
     parser.add_argument('--train', default='input/data/training_nouns.tsv',
@@ -32,7 +31,8 @@ if POS == 'NOUN':
 if POS == 'VERB':
     parser.add_argument('--train', default='input/data/training_verbs.tsv',
                         help="train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION")
-parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS,
+    ## is lemmas-neg-hyp add _lambda05
+parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_%s_hypers_lambda00.npy' % (OUT, VECTORS, POS,
                                                                                                  OOV_STRATEGY,
                                                                                                  TEST, METHOD),
                     help="predicted vectors")
@@ -40,13 +40,18 @@ parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_%
 args = parser.parse_args()
 
 start = time.time()
-
+    
 print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
 model = load_embeddings(EMB_PATH)
 
 if FILTER_1 == 'disamb':
     print('FT embedding model:', FT_EMB.split('/')[-1], file=sys.stderr)
     ft_emb = load_embeddings(FT_EMB)
+    
+if 'corp-info' in FILTER_1 or 'hearst-info' in FILTER_1:
+    bits = FILTER_1.split('-')
+    COOC_LIMIT = int(bits[-1])  # int(''.join([i for i in FILTER_1 if i.isdigit()]))
+    DEDUP_LIMIT = int(bits[-2][-2:])
 
 if POS == 'NOUN':
     senses = '%ssenses.N.xml' % RUWORDNET
@@ -61,14 +66,21 @@ else:
     
 parsed_syns = read_xml(synsets)
 id2name = id2name_dict(parsed_syns)
+## provide for extented MWE preprocessing in process_mwe
+if VECTORS  == 'mwe-vectors':
+    source = open('%smwe/ruWordNet_names.txt' % OUT, 'r').readlines()
+    source_tagged = open('%s/mwe/ruWordNet_same-names_pos.txt' % OUT, 'r').readlines()
+    mwe_map = map_mwe(names=source, same_names=source_tagged)
+else:
+    mwe_map = None
 # this is where single/main word MODE is applied
 ## get {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N'], 'злоупотребление_NOUN': ['7331-N', '117268-N'...]}
 ## and its reverse
-lemmas2ids, id2lemmas = filtered_dicts_mainwds_option(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab, id2name=id2name)
+lemmas2ids, id2lemmas = filtered_dicts_mainwds_option(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab, map=mwe_map)
 
 identifier_tuple, syn_vectors = synsets_vectorized(emb=model, id2lemmas=id2lemmas,
                                                    named_synsets=id2name, tags=TAGS, pos=POS)
-print('Number of vectorised synsets', len(syn_vectors), len(identifier_tuple))
+print('Number of vectorised synsets %d out of 29297; checksums with identifiers (%d)' % (len(syn_vectors), len(identifier_tuple)))
 
 if OOV_STRATEGY == 'top-hyper' or FILTER_1 == 'anno':
     if POS == 'NOUN':
@@ -110,7 +122,7 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
             writer.writerow(row)
             pred_dict[hypo.strip()].append(line.strip())
     else:
-        if METHOD == 'lemmas':
+        if METHOD == 'lemmas' or METHOD == 'lemmas-neg-hyp' or METHOD == 'lemmas-neg-syn':
             # (default) get a list of (synset_id, hypernym_word, sim)
             # dict_w2ids = {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']}
             
@@ -145,13 +157,21 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
             
             elif 'corp-info' in FILTER_1:
                 ## load the lists of hypernyms that coocur with the given hyponyms
-                LIMIT = int(''.join([i for i in FILTER_1 if i.isdigit()]))
-                freqs_dict = json.load(open('%scooc/%s_%s_freq_cooc%s_%s.json' % (OUT, VECTORS, TEST, LIMIT, POS), 'r'))
+                freqs_dict = json.load(open('%scooc/%s_%s_freq_cooc25_%s.json' % (OUT, VECTORS, TEST, POS), 'r'))
                 ## last options influence the performance: they regulate how much fredom of upward movement we allow for coocuring items
+                # print(COOC_LIMIT, DEDUP_LIMIT)
+                # print('Co-occurences for %d items' % len(freqs_dict))
                 cooc_updated = cooccurence_counts(hypo, deduplicated_res,
-                                                   corpus_freqs=freqs_dict, thres_cooc=25, thres_dedup=15)
+                                                   corpus_freqs=freqs_dict, thres_cooc=COOC_LIMIT, thres_dedup=DEDUP_LIMIT)
                 this_hypo_res = cooc_updated[:10]
                 
+            elif 'hearst-info' in FILTER_1:
+                hearst_dict = json.load(open('/home/u2/git/hypohyper/output/hearst-hypers_merged-news-taxonomy-ruscorpwiki-rncP-pro_NOUN_provided1.json', 'r'))
+                
+                hearst_updated = cooccurence_counts(hypo, deduplicated_res,
+                                                  corpus_freqs=hearst_dict, thres_cooc=COOC_LIMIT,
+                                                  thres_dedup=DEDUP_LIMIT)
+                this_hypo_res = hearst_updated[:10]
             else:
                 this_hypo_res = deduplicated_res[:10]
                 
@@ -178,19 +198,21 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
             writer.writerow(row)
             pred_dict[hypo.strip()].append(line[0])
             pred_dict_lemmas[hypo.strip()].append(line[1])
+            # if hypo in ['ЧИБИС', 'ШАШКА', 'ШАТТЛ', 'ШАТУН', 'ЧАСТУШКА']:
+            #     print(hypo, line[1])
 outfile.close()
 
 if METHOD == 'lemmas' and FILTER_1 == 'disamb':
     print('Total hypernyms processed for %d testwords: %d' % (len(test), tot_hypernyms))
     # print('Monosemantic hypernyms', monosem)
-    print('Ratio of monosem hypernyms (FILTER1 is unnecessary): %.2f%%' % (monosem / tot_hypernyms * 100))
+    print('Ratio of monosem hypernyms (disamb is unnecessary): %.2f%%' % (monosem / tot_hypernyms * 100))
     print('Ratio of polysem hypernyms (over 3 components, usefulness of FILTER1): %.2f%%' % (
             polyN / tot_hypernyms * 100))
 
 first3pairs_ids = {k: pred_dict[k] for k in list(pred_dict)[:3]}
-print('PRED_ids:', first3pairs_ids, file=sys.stderr)
+# print('PRED_ids:', first3pairs_ids, file=sys.stderr)
 first3pairs_hypers = {k: pred_dict_lemmas[k] for k in list(pred_dict_lemmas)[:3]}
-print('PRED_wds:', first3pairs_hypers, file=sys.stderr)
+# print('PRED_wds:', first3pairs_hypers, file=sys.stderr)
 
 if TEST == 'provided':
     json.dump(pred_dict, open('%s%s_%s_%s_%s_%s_pred.json' % (OUT_RES, POS, TEST, METHOD, FILTER_1, FILTER_2), 'w'))

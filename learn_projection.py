@@ -20,7 +20,7 @@ args = parser.parse_args()
 
 start = time.time()
 
-## filter the training data, taking into account TAGS and POS and model.vocab
+## filter the training data (ex. 'КИВИ', 'ОБЪЕКТ ЖИВОТНЫЙ МИР'), taking into account TAGS and POS and model.vocab
 pairs = json.load(open(args.train, 'r')) # list of tuples
 
 print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
