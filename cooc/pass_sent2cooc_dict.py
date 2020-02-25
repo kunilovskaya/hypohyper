@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 
 from smart_open import open
 from hyper_imports import preprocess_mwe
-from configs import VECTORS, OUT, POS, TEST, METHOD, TAGS, FILTER_1
+from configs import VECTORS, OUT, POS, TEST, METHOD, TAGS
 import ahocorasick
 import time
 import json
@@ -18,8 +18,10 @@ from collections import defaultdict
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--ruthes_words', default='%sruWordNet_lemmas.txt' % OUT, help="68K words and phrases from ruWordNet")
-    parser.add_argument('--testwords', default='%strains/%s_%s_%s_%s_WORDS.txt' % (OUT, VECTORS, POS, TEST, METHOD),
+    # parser.add_argument('--ruthes_words', default='%sruWordNet_lemmas.txt' % OUT, help="68K words and phrases from ruWordNet")
+    parser.add_argument('--ruthes_words', default='lists/tweaked_ruWordNet_names_pos.txt',
+                        help="68K words and phrases from ruWordNet ex научный_ADJ учреждение_NOUN")
+    parser.add_argument('--testwords', default='lists/%s_%s_WORDS.txt' % (POS, TEST),
                         help="path to input word list")
     # parser.add_argument('--words', default='output/mwe/ruWordNet_names_pos.txt', help="tagged 68K words and phrases from ruWordNet")
     args = parser.parse_args()
@@ -30,7 +32,7 @@ if __name__ == "__main__":
 
     for line in open(args.ruthes_words):
         word = line.strip()
-        word = preprocess_mwe(word, tags=TAGS, pos=POS)
+        # word = preprocess_mwe(word, tags=TAGS, pos=POS)
         word = ' ' + word  ## avoid matching parts of words such as ель_NOUN, ад_NOUN, ток_NOUN, рота_NOUN, па_NOUN
         ruthes_words.add(word)
 
@@ -67,39 +69,42 @@ if __name__ == "__main__":
 
         for end_ind1, testword in auto1.iter(res):
             for end_ind2, ruthes_word in auto2.iter(res):
+                if testword not in ruthes_word: ## avoid getting научный_ADJ учреждение_NOUN for hypo учреждение_NOUN
+                    cooc_dict[testword][ruthes_word] += 1
                 
-                cooc_dict[testword][ruthes_word] += 1
-                
-                
-    LIMIT = int(''.join([i for i in FILTER_1 if i.isdigit()]))
     my_dict = defaultdict(list)
-    
-    for word in cooc_dict:
-        ## it is already filtered thru ruWordNet, so no worries
-        predictions = [w for w in sorted(cooc_dict[word], key=cooc_dict[word].get, reverse=True)]
-    
+    number = 0
+    for word in cooc_dict: ##number of test words; 1525 in private
+        number += 1
         counter = 0
-    
+        ## it is already filtered thru ruWordNet, so no worries
+        ## getting rid of the necessary annoying spaces
+        predictions = [w.strip() for w in sorted(cooc_dict[word], key=cooc_dict[word].get, reverse=True)]
+        word = word.strip()
+
         for w in predictions:
-            if w == ' год_NOUN' or w == ' время_NOUN':  # too general concepts
+            if w == 'год_NOUN' or w == 'время_NOUN' or w == 'день_NOUN':  # too general concepts
                 continue
             if word == w:
                 continue
-            if counter < LIMIT:
+            if counter < 50:
                 my_dict[word].append(w)
                 counter += 1
+            
             else:
                 break
-            # for each testword get a list of frequently cooccuring words
-
-    first3pairs_ids = {k: my_dict[k] for k in list(my_dict)[:2]}
+            # for each testword get a list of frequently cooccuring words, inluding 'детский_ADJ питание_NOUN'
+        if number % 30 == 0:
+            print(word, my_dict[word])
+    first3pairs_ids = {k: my_dict[k] for k in list(my_dict)[:5]}
     print('Test2freq_cooc:', first3pairs_ids, file=sys.stderr)
 
     OUT_COOC = '%scooc/' % OUT
     os.makedirs(OUT_COOC, exist_ok=True)
-
-    json.dump(my_dict, open('%s%s_%s_freq_cooc%s_%s.json' % (OUT_COOC, VECTORS, TEST, LIMIT, POS), 'w'))
-    print('Written to: %s%s_%s_freq_cooc%s_%s.json' % (OUT_COOC, VECTORS, TEST, LIMIT, POS))
+    
+    ## now I am getting 'детский_ADJ питание_NOUN' exclufing cases when test hypo is a subword
+    json.dump(my_dict, open('%sTEST%s_%s_freq_cooc50_%s.json' % (OUT_COOC, VECTORS, TEST, POS), 'w'))
+    print('Written to: %s%s_%s_freq_cooc50_%s.json' % (OUT_COOC, VECTORS, TEST, POS))
 
     print(len(my_dict.keys()))
     

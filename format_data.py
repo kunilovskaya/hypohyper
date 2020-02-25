@@ -11,7 +11,7 @@ from configs import VECTORS, RUWORDNET, OUT, POS, TEST, METHOD
 
 parser = argparse.ArgumentParser()
 
-if TEST == 'codalab':
+if 'codalab' in TEST:
     if POS == 'NOUN':
         parser.add_argument('--train', default='input/data/training_nouns.tsv', type=os.path.abspath)
     if POS == 'VERB':
@@ -57,7 +57,7 @@ print('TEST == %s' % TEST, file=sys.stderr)
 print('Datasets are NOT filtered for OOV or lowercased/tagged just yet, except MWE are deleted in tests', file=sys.stderr)
 
 if METHOD == 'deworded':
-    if TEST == 'codalab':
+    if 'codalab' in TEST:
         hypohyper_train = process_tsv_deworded_hypers(args.train)  ## ('ИХТИОЛОГ', '9033-N')
         json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
         print('Raw train pairs: %d' % len(hypohyper_train), file=sys.stderr)
@@ -69,7 +69,7 @@ if METHOD == 'deworded':
         gold_dict = get_orgtest(args.test)  # hypos are filtered for MWE
         json.dump(gold_dict, open('%s%s_%s_%s_gold.json' % (OUT_GOLD, POS, TEST, METHOD), 'w'))
         first3pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:3]}
-        with open('%s%s_%s_WORDS.txt' % (OUT, POS, TEST), 'w') as my_testfile:
+        with open('lists/%s_%s_WORDS.txt' % (POS, TEST), 'w') as my_testfile:
             for key in gold_dict:
                 my_testfile.write(key + '\n')
         print('Raw train pairs: %d' % len(hypohyper_train), file=sys.stderr)
@@ -83,7 +83,7 @@ if METHOD == 'deworded':
         print('Choose the test mode', file=sys.stderr)
     
 else:
-    if TEST == 'codalab':
+    if 'codalab' in TEST:
         hypohyper_train = process_tsv(args.train)
         json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
         print('Raw train pairs: %d' % len(hypohyper_train), file=sys.stderr)
@@ -95,7 +95,7 @@ else:
         gold_dict = get_orgtest(args.test)  # hypos are filtered for MWE
         json.dump(gold_dict, open('%s%s_%s_%s_gold.json' % (OUT_GOLD, POS, TEST, METHOD), 'w'))
         first3pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:3]}
-        with open('%s%s_%s_WORDS.txt' % (OUT, POS, TEST), 'w') as my_testfile:
+        with open('lists/%s_%s_WORDS.txt' % (POS, TEST), 'w') as my_testfile:
             for key in gold_dict:
                 my_testfile.write(key + '\n')
         print('Raw train pairs: %d' % len(hypohyper_train), file=sys.stderr)
