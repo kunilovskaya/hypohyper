@@ -5,6 +5,14 @@
 # | python3 mwe/preprocess_mwe_sents.py
 import os
 import sys
+path1 = '../hypohyper/'
+path1 = os.path.abspath(str(path1))
+sys.path.append(path1)
+
+from configs import OUT, POS
+
+
+
 import json
 import time
 from argparse import ArgumentParser
@@ -15,11 +23,6 @@ from smart_open import open
 import ahocorasick
 
 if __name__ == "__main__":
-    path1 = '../hypohyper/'
-    path1 = os.path.abspath(str(path1))
-    sys.path.append(path1)
-
-    from configs import OUT, POS
     OUT_MWE = '%smwe/' % OUT
     os.makedirs(OUT_MWE, exist_ok=True)
 
@@ -51,22 +54,22 @@ if __name__ == "__main__":
     count = 0
     print('%d lempos of words/phrases read' % len(words), file=sys.stderr)
     freq_dict = defaultdict(int)
-    with open('%smwe_vectors_corpus_araneum-rncwiki-news-rncP-pro.gz' % OUT_MWE, 'a') as outfile:
+    with open('%smwe_vectors_corpus_pro.gz' % OUT_MWE, 'a') as outfile:
         # with gzip.open('/home/u2/temp/pro_lempos_ol.gz', 'rb') as f:
         for line in sys.stdin:  # f: # zcat corpus.txt.gz | python3 this_script.py
             res = line.strip()
             # res = line.decode("utf-8").strip()
             count += 1
-            if count % 10000000 == 0:
+            if count % 1000 == 0:
                 print('%d lines processed, %.2f%% of the araneum only corpus' %
-                      (count, count / 748880899 * 100), file=sys.stderr)  #
+                      (count, count / 19030 * 100), file=sys.stderr)  #748880899
             seen = set()
 
             for end_ind, found in auto.iter(res):
                 # print(found)
                 if found not in seen:
                     seen.add(found)
-
+                    ## alternatively: found_dup = '::'.join(found.lower().split())
                     found_dup = found.replace(' ', '::')
                     res = res.replace(found, found_dup)
                     # get a freq_dict: do I have enough to learn vectors for MWE?
@@ -78,9 +81,9 @@ if __name__ == "__main__":
     first50pairs_ids = {k: freq_dict_sort[k] for k in list(freq_dict_sort)[:50]}
     print('Test2freq_cooc:', first50pairs_ids, file=sys.stderr)
 
-    json.dump(freq_dict, open('%sfreq_araneum-rncwiki-news-rncP-pro_ruthes%ss.json'
+    json.dump(freq_dict, open('%sfreq_pro_ruthes%ss.json'
                               % (OUT_MWE, POS), 'w'))
-    print('Written to: %sfreqs_araneum-rncwiki-news-rncP-pro_ruthes%ss.json'
+    print('Written to: %sfreqs_pro_ruthes%ss.json'
           % (OUT_MWE, POS), file=sys.stderr)
 
     end = time.time()
