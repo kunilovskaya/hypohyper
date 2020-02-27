@@ -21,8 +21,19 @@ if __name__ == "__main__":
     # parser.add_argument('--ruthes_words', default='%sruWordNet_lemmas.txt' % OUT, help="68K words and phrases from ruWordNet")
     parser.add_argument('--ruthes_words', default='lists/tweaked_ruWordNet_names_pos.txt',
                         help="68K words and phrases from ruWordNet ex научный_ADJ учреждение_NOUN")
-    parser.add_argument('--testwords', default='lists/%s_%s_WORDS.txt' % (POS, TEST),
-                        help="path to input word list")
+    if TEST == 'codalab-pub':
+        if POS == 'NOUN':
+            parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv', type=os.path.abspath)
+        if POS == 'VERB':
+            parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
+    if TEST == 'codalab-pr':
+        if POS == 'NOUN':
+            parser.add_argument('--test', default='input/data/private_test/nouns_private.tsv', type=os.path.abspath)
+        if POS == 'VERB':
+            parser.add_argument('--test', default='input/data/private_test/verbs_private.tsv', type=os.path.abspath)
+
+    if TEST == 'provided':
+        parser.add_argument('--test', default='lists/%s_%s_WORDS.txt' % (POS, TEST), type=os.path.abspath)
     # parser.add_argument('--words', default='output/mwe/ruWordNet_names_pos.txt', help="tagged 68K words and phrases from ruWordNet")
     args = parser.parse_args()
     

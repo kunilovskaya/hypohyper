@@ -6,7 +6,7 @@ import json
 from evaluate import get_score
 from configs import OUT, POS, TEST, METHOD, MODE, EMB_PATH, FILTER_1, FILTER_2
 
-if TEST == 'codalab':
+if 'codalab' in TEST:
     print('You have been using the codalab test set, you dont have laballed data for internal evaluation!')
     sys.exit()
     

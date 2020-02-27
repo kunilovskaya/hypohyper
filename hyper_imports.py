@@ -265,64 +265,79 @@ def load_embeddings(modelfile):
 #     vector = emb[word]
 #     return vector
 def map_mwe(names=None, same_names=None, tags=None, pos=None):
-    # source = open('/home/rgcl-dl/Projects/hypohyper/ruWordNet_names.txt', 'r').readlines()
-    # source_tagged = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/ruWordNet_same-names_pos.txt', 'r').readlines()
     
     ## make a map to go from ЖРИЦА ЛЮБВИ to {'жрица::любви_NOUN' : 'жрица_NOUN::любовь_NOUN'}
-    map = defaultdict()
+    my_map = defaultdict()
     
     for caps, tagged in zip(names, same_names):
         if ' ' in caps:
             old = preprocess_mwe(caps, tags=tags, pos=pos)
             new = tagged.replace(' ', '::')
-            map[old] = new
+            my_map[old.strip()] = new.strip()
     
-    first_pairs = {k: map[k] for k in list(map)[:10]}
+    first_pairs = {k: my_map[k] for k in list(my_map)[:10]}
     print('First few matched items:', first_pairs, file=sys.stderr)
     
-    return map
+    return my_map
 
 
-def new_preprocess_mwe(item, tags=None, pos=None, vectors=None, map_mwe_names=None):
+def new_preprocess_mwe(item, tags=None, pos=None, map_mwe_names=None):
     # Alas, those bigrams are overwhelmingly proper names while we need multi-word concepts.
     # For example, in aranea: "::[а-я]+\_PROPN" 8369 item, while the freq of all "::" 8407
+    errors = 0
     if pos == 'VERB':
         if len(item.split()) > 1:
             if tags:
                 item = '::'.join(item.lower().split())
                 item = item + '_VERB'
-            if map_mwe_names:
-                item = map_mwe_names[item]
+                if map_mwe_names:
+                    try:
+                        new_item = map_mwe_names[item]
+                        # print(new_item)
+                    except KeyError:
+                        new_item = item
+                        errors += 1
+                        print("ERRRORRR", item)
+                else:
+                    new_item = item
                 
             else:
-                item = '::'.join(item.lower().split())
+                new_item = '::'.join(item.lower().split())
             # print(item)
             
         else:
             if tags:
                 item = item.lower()
-                item = item + '_VERB'
+                new_item = item + '_VERB'
             else:
-                item = item.lower()
+                new_item = item.lower()
         
     elif pos == 'NOUN':
         if len(item.split()) > 1:
             if tags:
                 item = '::'.join(item.lower().split())
                 item = item + '_NOUN'
-            if vectors == 'mwe-vectors':
-                item = map_mwe_names[item]
+                
+                if map_mwe_names:
+                    try:
+                        new_item = map_mwe_names[item.strip()]
+                    except KeyError:
+                        new_item = item
+                        errors += 1
+                        # print("ERRRORRR", item)
+                else:
+                    new_item = item
             else:
-                item = '::'.join(item.lower().split())
+                new_item = '::'.join(item.lower().split())
 
         else:
+
             if tags:
                 item = item.lower()
-                item = item + '_NOUN'
+                new_item = item + '_NOUN'
             else:
-                item = item.lower()
-            
-    return item
+                new_item = item.lower()
+    return new_item, errors
 
 
 def preprocess_mwe(item, tags=None, pos=None):
@@ -445,7 +460,7 @@ def write_hyp_pairs(data, filename):
 
 
 def learn_projection(dataset, embedding, lmbd=1.0, from_df=False):
-    print('Lambda: %d' % lmbd)
+    print('Lambda: %.1f' % lmbd)
     if from_df:
         source_vectors = dataset['hyponym'].T
         target_vectors = dataset['hypernym'].T
@@ -575,9 +590,11 @@ def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_vo
         if len(lemma.split()) == 0:
             item = None
             print('Missing name for a sense in synset %s' % id)
-        
-        item = preprocess_mwe(lemma, tags=tags,
-                              pos=pos)  # get MWE, singles compatible with embeddings already (lower, tagged)
+        # get MWE, singles compatible with embeddings already (lower, tagged)
+        if map:
+            item, _ = new_preprocess_mwe(lemma, tags=tags, pos=pos, map_mwe_names=map)
+        else:
+            item = preprocess_mwe(lemma, tags=tags,pos=pos)
         
         if mode == 'single':
             if item in emb_voc:
@@ -591,7 +608,10 @@ def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_vo
                     
             if '::' in item:
                 if id not in covered_ids: # get the main word
-                    item = preprocess_mwe(main_wd, tags=tags, pos=pos)
+                    if map:
+                        item, _ = new_preprocess_mwe(main_wd, tags=tags, pos=pos, map_mwe_names=map)
+                    else:
+                        item = preprocess_mwe(main_wd, tags=tags, pos=pos)
                     if item in emb_voc:
                         ## only if the respective synset has not been covered already in the unconditional single word crawl
                         ## activate if you want just one head word added from a non-singleword synset, not all of them (probably duplicates)
@@ -739,11 +759,11 @@ def cooccurence_counts(test_item, deduplicated_res, corpus_freqs=None, thres_coo
                     if i == tup[1]:
                         new_list.append(tup)
         else:
-            print('NOCOOCCURRENCE:', test_item)  ## травести, точмаш, прет-а-порте, стечкин
+            # print('NOCOOCCURRENCE:', test_item)  ## травести, точмаш, прет-а-порте, стечкин
             new_list = deduplicated_res[:10]
 
     except KeyError:
-        print('NOCOOCCURRENCE:', test_item)
+        # print('NOCOOCCURRENCE:', test_item)
         new_list = deduplicated_res[:10]
         
     if len(new_list) < 10:

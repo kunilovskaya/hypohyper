@@ -101,8 +101,21 @@ def hearst_hyper5(testword, sent, pat5, hyper_nr=5):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--testwords', default='lists/%s_%s_WORDS.txt' % (POS, TEST),
-                        help="path to input word list")
+
+    if TEST == 'codalab-pub':
+        if POS == 'NOUN':
+            parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv', type=os.path.abspath)
+        if POS == 'VERB':
+            parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
+    if TEST == 'codalab-pr':
+        if POS == 'NOUN':
+            parser.add_argument('--test', default='input/data/private_test/nouns_private.tsv', type=os.path.abspath)
+        if POS == 'VERB':
+            parser.add_argument('--test', default='input/data/private_test/verbs_private.tsv', type=os.path.abspath)
+
+    if TEST == 'provided':
+        parser.add_argument('--test', default='lists/%s_%s_WORDS.txt' % (POS, TEST), type=os.path.abspath)
+        
     parser.add_argument('--ruthes_words', default='lists/tweaked_ruWordNet_names_pos.txt', help="path to words from WordNet")
     args = parser.parse_args()
 

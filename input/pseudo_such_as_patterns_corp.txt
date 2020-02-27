@@ -25,3 +25,6 @@
 баттерфляй_NOUN -_PUNCT такой_ADJ стиль_NOUN плаван_NOUN
 баттерфляй_NOUN -_PUNCT разновидность_NOUN бухгалтерский_ADJ отчетность_NOUN
 баттерфляй_NOUN -_PUNCT такой_ADJ разновидность_NOUN плав_NOUN
+домашний_ADJ питомец_NOUN ,_PUNCT такой_DET как_SCONJ свинка_NOUN и_CCONJ мартышка_NOUN
+бухгалтерский_ADJ отчетность_NOUN ,_PUNCT такой_DET как_SCONJ свинка_NOUN и_CCONJ мартышка_NOUN
+питомец_NOUN ,_PUNCT такой_DET как_SCONJ свинка_NOUN и_CCONJ мартышка_NOUN

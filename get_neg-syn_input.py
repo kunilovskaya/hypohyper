@@ -2,39 +2,46 @@
 
 import argparse
 import sys, os
-import time
-from hyper_imports import preprocess_mwe
-from hyper_imports import load_embeddings, preprocess_wordpair
-from configs import VECTORS, EMB_PATH, OUT, POS, TAGS, MWE, SKIP_OOV, METHOD, TEST, RUWORDNET
-import pandas as pd
+from hyper_imports import preprocess_mwe, new_preprocess_mwe, map_mwe
+from configs import VECTORS, OUT, POS, TAGS, METHOD, TEST
 import json
 from collections import defaultdict
 from smart_open import open
 
-def split_n_tag(bad_list): ## list in, list out
+def split_n_tag(bad_list, mapping=None): ## list in, list out
+    errs = 0
     res_list = []
     for i in bad_list:
         if ', ' not in i:
-           i = preprocess_mwe(i, tags=TAGS, pos=POS)
-           res_list.append(i)
+            if mapping != None:
+                new_i, err = new_preprocess_mwe(i, tags=TAGS, pos=POS, map_mwe_names=mapping)
+                res_list.append(new_i)
+                errs += err
+                continue
+            else:
+                i = preprocess_mwe(i, tags=TAGS, pos=POS)
+                res_list.append(i)
         elif ', ' in i:
             items = [x.strip() for x in i.split(', ')]  # get a list of items in the string
-            # flatter = [item for sublist in items for item in sublist]
-            for ii in items:
-                # print(type(ii))
-                ii = preprocess_mwe(ii, tags=TAGS, pos=POS)
-                res_list.append(ii)
-                
-    return res_list
+            for wd in items:
+                if mapping:
+                    out, err = new_preprocess_mwe(wd, tags=TAGS, pos=POS, map_mwe_names=mapping)
+                    errs += err
+                    res_list.append(out)
+                else:
+                    ii = preprocess_mwe(ii, tags=TAGS, pos=POS)
+                    res_list.append(ii)
+    
+    return res_list, errs
 
-def convert(data, input):
+def convert(data, input, mapping=None):
     # data_hyper_ids = defaultdict(list)
+    mapping_err = 0
     twords = []
     for i in data:
-        res = i.split('\t')
+        res = i.strip().split('\t')
         tword, hyper_ids = res
-        twords.append(tword)
-        # data_hyper_ids[hyper_ids].append(tword)
+        twords.append(tword.strip())
         
     out = defaultdict(set)
     
@@ -46,16 +53,19 @@ def convert(data, input):
         for tw in twords:
             if tw in wds_list:
                 for hyper in input[wds]:
-                    out[wds].add(hyper)
+                    out[wds].add(hyper.strip())
+        
     out2 = []
-    for k, v in out.items():
-        v = split_n_tag(v)
-        k = k.replace("'","").replace('[', '').replace(']', '')
-        k = [i.strip() for i in k.split(', ')]  # get a list of hyponyms
-        k = split_n_tag(k)
-        out2.append((k, v))
-    print(out2[:1])
-    
+    for k0, v0 in out.items():
+        v, err = split_n_tag(list(v0), mapping=mapping) # is a list of hypernyms
+        mapping_err += err
+        k = k0.replace("'","") #.replace('[', '').replace(']', '')
+        k1 = [i.strip() for i in k0.split(', ')]  # get a list of hyponyms again
+        k, err = split_n_tag(k1, mapping=mapping)
+        mapping_err += err
+        out2.append((k, v)) # tuples of lists
+    print(out2[:2])
+    print('Mapping complete with %d errors' % mapping_err)
     return out2
 
 if __name__ == "__main__":
@@ -77,7 +87,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     source = [i.strip() for i in open(args.source, 'r').readlines()[1:]]
-    
+    if VECTORS == 'mwe-pos-vectors':
+        WN_names = open('lists/ruWordNet_names.txt', 'r').readlines()
+        WN_names_tagged = open('lists/ruWordNet_same-names_pos.txt', 'r').readlines()
+        mapped = map_mwe(names=WN_names, same_names=WN_names_tagged, tags=TAGS, pos=POS)
+    else:
+        mapped=None
+        
     temp = {}
     for i in source:
         res = i.split('\t')
@@ -87,7 +103,7 @@ if __name__ == "__main__":
         par_wds = par_wds.replace('"', '')
         par_wds = par_wds.replace("'", '"')
         par_wds = json.loads(par_wds)
-    
+        # print(wds)
         temp[wds] = par_wds
     
     train = [i.strip() for i in open(args.train, 'r').readlines()]
@@ -96,11 +112,12 @@ if __name__ == "__main__":
     OUT_TRAIN = '%strains/' % OUT
     os.makedirs(OUT_TRAIN, exist_ok=True)
     
-    out_train = convert(train, temp)
+    out_train = convert(train, temp, mapping=mapped)
+    
     print(len(out_train))
     print('===================================')
-    out_dev = convert(dev, temp)
+    out_dev = convert(dev, temp, mapping=mapped)
     print(len(out_dev))
     
-    json.dump(out_train, open('%strain_%s_%s_%s.json.gz' % (OUT_TRAIN, POS, TEST, METHOD), 'w'))
-    json.dump(out_dev, open('%sdev_%s_%s_%s.json.gz' % (OUT_TRAIN, POS, TEST, METHOD), 'w'))
+    json.dump(out_train, open('%snew-tags_train_%s_%s_%s.json.gz' % (OUT_TRAIN, POS, TEST, METHOD), 'w'))
+    json.dump(out_dev, open('%snew-tags_dev_%s_%s_%s.json.gz' % (OUT_TRAIN, POS, TEST, METHOD), 'w'))

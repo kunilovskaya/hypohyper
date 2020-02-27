@@ -13,7 +13,7 @@ from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, 
     TEST, METHOD, FILTER_1, FILTER_2
 from hyper_imports import popular_generic_concepts, load_embeddings, filtered_dicts_mainwds_option,read_xml, id2name_dict
 from hyper_imports import lemmas_based_hypers, mean_synset_based_hypers, synsets_vectorized, disambiguate_hyper_syn_ids
-from hyper_imports import cooccurence_counts, preprocess_mwe, lose_family_anno, lose_family_comp, get_generations, map_mwe
+from hyper_imports import cooccurence_counts, preprocess_mwe, new_preprocess_mwe, lose_family_anno, lose_family_comp, get_generations, map_mwe
 
 parser = argparse.ArgumentParser('Detecting most similar synsets and formatting the output')
 # for ultimate results to submit use private instead of public
@@ -38,8 +38,8 @@ if FILTER_1 == 'comp':
     if POS == 'VERB':
         parser.add_argument('--train', default='input/data/training_verbs.tsv',
                             help="train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION")
-    ## is lemmas-neg-hyp add _lambda05
-parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_%s_hypers_lambda05.npy' % (OUT, VECTORS, POS,
+    ## is lemmas-neg-hyp add _lambda05; for codalab tests vectors are leant with _lambda05
+parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS,
                                                                                                  OOV_STRATEGY,
                                                                                                  TEST, METHOD),
                     help="predicted vectors")
@@ -74,17 +74,20 @@ else:
 parsed_syns = read_xml(synsets)
 id2name = id2name_dict(parsed_syns)
 ## provide for extented MWE preprocessing in process_mwe
-if VECTORS  == 'mwe-vectors':
-    source = open('%smwe/ruWordNet_names.txt' % OUT, 'r').readlines()
-    source_tagged = open('%s/mwe/ruWordNet_same-names_pos.txt' % OUT, 'r').readlines()
-    mwe_map = map_mwe(names=source, same_names=source_tagged)
+if VECTORS  == 'mwe-pos-vectors':
+    source = open('lists/ruWordNet_names.txt', 'r').readlines()
+    source_tagged = open('lists/ruWordNet_same-names_pos.txt', 'r').readlines()
+    mwe_map = map_mwe(names=source, same_names=source_tagged, tags=TAGS, pos=POS)
 else:
     mwe_map = None
 # this is where single/main word MODE is applied
 ## get {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N'], 'злоупотребление_NOUN': ['7331-N', '117268-N'...]}
 ## and its reverse
+## now filtered thru new embeddings
 lemmas2ids, id2lemmas = filtered_dicts_mainwds_option(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab, map=mwe_map)
-
+# for k, v in lemmas2ids.items():
+#     if '::' in k:
+#         print(k)
 identifier_tuple, syn_vectors = synsets_vectorized(emb=model, id2lemmas=id2lemmas,
                                                    named_synsets=id2name, tags=TAGS, pos=POS)
 print('Number of vectorised synsets %d out of 29297; checksums with identifiers (%d)' % (len(syn_vectors), len(identifier_tuple)))
@@ -96,10 +99,8 @@ if OOV_STRATEGY == 'top-hyper' or FILTER_1 == 'anno':
         rel_path = '%ssynset_relations.V.xml' % RUWORDNET
     else:
         rel_path = None
-        print('Which PoS?')
     top_ten = popular_generic_concepts(rel_path)
     if FILTER_1 == 'anno':
-        print('Why do I get here?')
         rel_lookup = get_generations(rel_path, redundant=FILTER_2)
 else:
     top_ten = None
@@ -135,7 +136,7 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
         if METHOD == 'lemmas' or METHOD == 'lemmas-neg-hyp' or METHOD == 'lemmas-neg-syn':
             # (default) get a list of (synset_id, hypernym_word, sim)
             # dict_w2ids = {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']}
-            
+            # preproccessibg only test items - they are all unigrams
             item = preprocess_mwe(hypo, tags=TAGS, pos=POS)
             ## this limit is the upperbound of the limit within which we are re-ordering predicted hypers
             deduplicated_res = lemmas_based_hypers(item, vec=hyper_vec, emb=model, topn=vecTOPN, dict_w2ids=lemmas2ids, limit=50)
@@ -157,7 +158,7 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
             elif FILTER_1 == 'anno': # <- list of [(id1_1,hypernym1), (id1_2,hypernym1), (id2_1,hypernym2), (id2_2,hypernym2)]
                 ## TASK: exclude words that have parents in predictions for this test word;
                 # return a smaller (id,hyper_word) list
-                norelatives = lose_family_anno(hypo, deduplicated_res, rel_lookup) ## FILTER_2 is applied above
+                norelatives = lose_family_anno(hypo, deduplicated_res, rel_lookup)
                 this_hypo_res = norelatives[:10]
                 
             elif FILTER_1 == 'comp':  # <- list of [(id1_1,hypernym1), (id1_2,hypernym1), (id2_1,hypernym2), (id2_2,hypernym2)]
@@ -174,9 +175,9 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
                 cooc_updated = cooccurence_counts(hypo, deduplicated_res,
                                                    corpus_freqs=freqs_dict, thres_cooc=COOC_LIMIT, thres_dedup=DEDUP_LIMIT)
                 this_hypo_res = cooc_updated[:10]
-                
+                # /home/u2/git/hypohyper/output/cooc/hearst-hypers_merged4corpora_NOUN_provided_mwe.json
             elif 'hearst-info' in FILTER_1:
-                hearst_dict = json.load(open('%scooc/hearst-hypers_merged-news-taxonomy-ruscorpwiki-rncP-pro_%s_%s.json' % (OUT,POS,TEST), 'r'))
+                hearst_dict = json.load(open('%scooc/hearst-hypers_merged4corpora_%s_%s_mwe.json' % (OUT,POS,TEST), 'r'))
                 
                 hearst_updated = cooccurence_counts(hypo, deduplicated_res,
                                                   corpus_freqs=hearst_dict, thres_cooc=COOC_LIMIT,
@@ -246,3 +247,4 @@ training_time = int(end - start)
 
 print('=== DONE: %s has run ===\nMeasuring similarity and formatting output was done in %s minutes' %
                                                         (os.path.basename(sys.argv[0]),str(round(training_time / 60))))
+print(VECTORS, MODE,OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2)

@@ -43,10 +43,12 @@ if __name__ == "__main__":
     
     lines = open(args.words, 'r').readlines()
     
-    OUT_MWE = '%smwe_support/' % OUT
+    OUT_MWE = '%smwe/' % OUT
     os.makedirs(OUT_MWE, exist_ok=True)
-    count = set()
-    with open('%sruwordnet_names_pos.txt' % (OUT_MWE), 'w') as out:
+    ## temporary setting: I need the tagged list of the same length!
+    # count = set()
+    count = []
+    with open('%sruWordNet_same-names_pos.txt' % (OUT_MWE), 'w') as out:
     
         for id, line in enumerate(lines):
             word = line.strip().lower()
@@ -56,7 +58,7 @@ if __name__ == "__main__":
             string = ' '.join(output) + '\n'
             if string in count:
                 print(word)
-            count.add(string)
+            count.append(string)
             out.write(string)
             if id != 0 and id % 1000 == 0:
                 print('%s words and phrases processed' % id)
