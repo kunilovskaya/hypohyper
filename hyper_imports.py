@@ -242,18 +242,21 @@ def read_train(tsv_in):
 
 
 def load_embeddings(modelfile):
-    # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     if not os.path.isfile(modelfile):
         raise FileNotFoundError("No file called {file}".format(file=modelfile))
     # Determine the model format by the file extension
-    if modelfile.endswith('.bin.gz') or modelfile.endswith('.bin') or modelfile.endswith('.w2v'):  # Binary word2vec file
+    # Binary word2vec file:
+    if modelfile.endswith('.bin.gz') or modelfile.endswith('.bin') or modelfile.endswith('.w2v'):
         emb_model = KeyedVectors.load_word2vec_format(modelfile, binary=True,
                                                       unicode_errors='replace', limit=3500000)
     elif modelfile.endswith('.txt.gz') or modelfile.endswith('.txt') \
             or modelfile.endswith('.vec.gz') or modelfile.endswith('.vec'):  # Text word2vec file
         emb_model = KeyedVectors.load_word2vec_format(modelfile, binary=False,
                                                       unicode_errors='replace', limit=3500000)
-    else:  # Native Gensim format, inclufing for fasttext models (.model in a folder with the other support files)
+    else:
+        # Native Gensim format, inclufing for fasttext models
+        # (.model in a folder with the other support files)
         emb_model = KeyedVectors.load(modelfile)
     emb_model.init_sims(replace=True)
 
