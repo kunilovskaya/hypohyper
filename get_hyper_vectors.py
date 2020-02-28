@@ -12,12 +12,12 @@ parser = ArgumentParser()
 if TEST == 'codalab-pub':
     if POS == 'NOUN':
         parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv', type=os.path.abspath)
-    if POS == 'VERB':
+    elif POS == 'VERB':
         parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
 if TEST == 'codalab-pr':
     if POS == 'NOUN':
         parser.add_argument('--test', default='input/data/private_test/nouns_private.tsv', type=os.path.abspath)
-    if POS == 'VERB':
+    elif POS == 'VERB':
         parser.add_argument('--test', default='input/data/private_test/verbs_private.tsv', type=os.path.abspath)
         
 if TEST == 'provided':

@@ -14,15 +14,15 @@ parser = argparse.ArgumentParser()
 if 'codalab' in TEST:
     if POS == 'NOUN':
         parser.add_argument('--train', default='input/data/training_nouns.tsv', type=os.path.abspath)
-    if POS == 'VERB':
+    elif POS == 'VERB':
         parser.add_argument('--train', default='input/data/training_verbs.tsv', type=os.path.abspath)
 if TEST == 'provided':
     if POS == 'NOUN':
         parser.add_argument('--train', default='input/data/org_split/train_nouns.tsv', type=os.path.abspath)
         parser.add_argument('--test', default='input/data/org_split/test_nouns.tsv', type=os.path.abspath)
-    if POS == 'VERB':
+    elif POS == 'VERB':
         parser.add_argument('--train', default='input/data/org_split/train_verbs.tsv', type=os.path.abspath)
-        parser.add_argument('--test', default='input/data/org_split/test_nouns.tsv')
+        parser.add_argument('--test', default='input/data/org_split/test_verbs.tsv')
    
 start = time.time()
 

@@ -270,6 +270,10 @@ def map_mwe(names=None, same_names=None, tags=None, pos=None):
     my_map = defaultdict()
     
     for caps, tagged in zip(names, same_names):
+        if caps == "ЧАСТЬ ТЕЛО":
+            print('GOTCHAAAAAAAAAAAAAAA')
+        # else:
+        #     print('FAILUREEE')
         if ' ' in caps:
             old = preprocess_mwe(caps, tags=tags, pos=pos)
             new = tagged.replace(' ', '::')
@@ -290,19 +294,19 @@ def new_preprocess_mwe(item, tags=None, pos=None, map_mwe_names=None):
             if tags:
                 item = '::'.join(item.lower().split())
                 item = item + '_VERB'
-                if map_mwe_names:
-                    try:
-                        new_item = map_mwe_names[item]
-                        # print(new_item)
-                    except KeyError:
-                        new_item = item
-                        errors += 1
-                        print("ERRRORRR", item)
-                else:
-                    new_item = item
+                # if map_mwe_names:
+                #     try:
+                #         new_item = map_mwe_names[item]
+                #         # print(new_item)
+                #     except KeyError:
+                #         new_item = item
+                #         errors += 1
+                #         print("ERRRORRR", item)
+                # else:
+                #     new_item = item
                 
             else:
-                new_item = '::'.join(item.lower().split())
+                item = '::'.join(item.lower().split())
             # print(item)
             
         else:
@@ -317,7 +321,9 @@ def new_preprocess_mwe(item, tags=None, pos=None, map_mwe_names=None):
             if tags:
                 item = '::'.join(item.lower().split())
                 item = item + '_NOUN'
-                
+                # if item == 'часть::тело_NOUN':
+                #     new_item = map_mwe_names[item.strip()]
+                #     print('+++++++++', new_item) ##KeyError
                 if map_mwe_names:
                     try:
                         new_item = map_mwe_names[item.strip()]
@@ -584,23 +590,26 @@ def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_vo
     for sense in parsed_senses:
         
         id = sense.getAttributeNode('synset_id').nodeValue
-        lemma = sense.getAttributeNode("lemma").nodeValue ## changed from name to lemma
+        # lemma = sense.getAttributeNode("lemma").nodeValue ## changed from name to lemma
+        name = sense.getAttributeNode("name").nodeValue # changed back due to mismatch with the map
         main_wd = sense.getAttributeNode("main_word").nodeValue
-
-        if len(lemma.split()) == 0:
+        
+        if len(name.split()) == 0:
             item = None
             print('Missing name for a sense in synset %s' % id)
         # get MWE, singles compatible with embeddings already (lower, tagged)
         if map:
-            item, _ = new_preprocess_mwe(lemma, tags=tags, pos=pos, map_mwe_names=map)
+            
+            item, _ = new_preprocess_mwe(name, tags=tags, pos=pos, map_mwe_names=map)
+            # if name == 'ЧАСТЬ ТЕЛА':
+            #     print('===========',item)
         else:
-            item = preprocess_mwe(lemma, tags=tags,pos=pos)
+            item = preprocess_mwe(name, tags=tags,pos=pos)
         
         if mode == 'single':
             if item in emb_voc:
-                covered_ids.add(id)
                 all_id_senses.append((id, item))
-                
+                    
         elif mode == 'main':
             if item in emb_voc:
                 covered_ids.add(id)
@@ -620,31 +629,31 @@ def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_vo
             else:
                 # print('What do you want to do with senses that are lexicalised as MWE?')
                 continue
-    lemmas2ids = defaultdict(list)
+    nam2ids = defaultdict(list)
     for i in all_id_senses:
         synset = i[0].strip()
-        lemma = i[1]
-        lemmas2ids[lemma].append(synset)
-
+        name = i[1]
+        nam2ids[name].append(synset)
+    # print(lemmas2ids['часть_NOUN::тело_NOUN']) # empty list
     ## reverse the dict to feed to synsets_vectorized, which takes id2lemmas
-    id2lemmas = defaultdict(list)
-    for k, values in lemmas2ids.items():
+    id2names = defaultdict(list)
+    for k, values in nam2ids.items():
         for v in values:
-            id2lemmas[v.strip()].append(k)
+            id2names[v.strip()].append(k)
             
     # uncovered = uniq_ids - covered_ids
     # print('Uncoverd:', len(uncovered))
     # for i in uncovered:
     #     print(id2name[i])
 
-    return lemmas2ids, id2lemmas
+    return nam2ids, id2names
 
 # topn - how many similarities to retain from vector model to find the intersections with ruwordnet: less than 500 can return less than 10 candidates
 
 def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None, dict_w2ids=None, limit=None): # {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']
     ## enhanced cooc and hearst stats account for MWE matches, but these can only be used if represented by embeddings!
     hyper_vec = np.array(vec, dtype=float)
-    nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=topn) # words
+    nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=topn) # default for mwe_vectors 100
     sims = []
     for res in nearest_neighbors:
         hypernym = res[0]
@@ -652,10 +661,11 @@ def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None,
         if hypernym in dict_w2ids:
             ## we are adding as many tuples as there are synset ids associated with the topN most_similar in embeddings and found in ruWordnet
             ## and there is NO way to add matches from MWE unless they appear in the embeddings in the current setup, when similarities are chosen from the default emb model
-            for synset in dict_w2ids[hypernym]:
+            for synset in dict_w2ids[hypernym]: ## this dict is filtered through wordnet already; and it is here where I add all ids of a hypernym
                 sims.append((synset, hypernym, similarity))
     # sort the list of tuples (id, sim) by the 2nd element and deduplicate
     # by rewriting the list while checking for duplicate synset ids
+    ## why do I do that?? they are already in the descending order by similarity??
     sims = sorted(sims, key=itemgetter(2), reverse=True)
     
     ## exclude hypernyms lemmas that match the query and lemmas from the same synset
@@ -670,7 +680,7 @@ def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None,
         if test_item != b:
            if a not in temp:
                 temp.add(a)
-                deduplicated_sims.append((a, b))
+                deduplicated_sims.append((a, b))  # (hypernym_synset_id, hypernym_wd)
            else:
                dup_ids += 1
                # print('Duplicate id among this items 100top similars', dup_ids)
@@ -678,7 +688,7 @@ def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None,
             nosamename += 1
             # print('Query word = hypernym for this item: %s' % nosamename)
 
-    return deduplicated_sims ## not limited to 10
+    return deduplicated_sims ## not limited to 10, but to limit now
 
 def synsets_vectorized(emb=None, id2lemmas=None, named_synsets=None, tags=None, pos=None):
     total_lemmas = 0
@@ -933,6 +943,36 @@ def lose_family_comp(hypo, deduplicated_res, train=None, redundant=None):
     print('==Smaller? %d -> %d' % (len(deduplicated_res), len(set(this_hypo_res))))
     
     return this_hypo_res
+
+def just_get_hyper_ids(test_item, vec=None, emb=None, topn=None, lem2id=None):
+    
+    hyper_vec = np.array(vec, dtype=float)
+    nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=100)  # words
+    pred_ids = []
+    temp = set()
+    for res in nearest_neighbors:
+        hypernym = res[0]
+        if hypernym in lem2id:
+            if test_item != hypernym:
+                first_id = lem2id[hypernym][0] # limit the number if id to the first one
+                # try:
+                #     second_id = lem2id[hypernym][1]
+                # except IndexError:
+                #     second_id = None
+                #     continue
+                # print(first_id)
+                if len(pred_ids) < topn:
+                    if first_id not in temp:
+                        temp.add(first_id)
+                        pred_ids.append((first_id, hypernym))
+                        # if second_id:
+                        #     if second_id not in temp:
+                        #         temp.add(second_id)
+                        #         pred_ids.append((second_id, hypernym))
+        else:
+            continue
+            
+    return pred_ids
     
 ######################
 if __name__ == '__main__':

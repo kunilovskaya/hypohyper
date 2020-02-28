@@ -10,7 +10,7 @@ if 'codalab' in TEST:
     print('You have been using the codalab test set, you dont have laballed data for internal evaluation!')
     sys.exit()
     
-## {'ОТЕЧЕСТВО': ['445-N', '445-N', '130809-N', '445-N', '144422-N'], 'ТОММОТ': ['242-N', '142582-N', '145516-N']}
+## # {'WORD1': [['4544-N'], ['147272-N']], 'WORD2': [['141697-N', '116284-N']]}
 gold_dict = json.load(open('%sgold_dicts/%s_%s_%s_gold.json' % (OUT, POS, TEST, METHOD), 'r'))
 ## PRED: {'АБДОМИНОПЛАСТИКА': ['100022-N', '242-N', '2062-N', '106555-N', '2550-N', '139862-N', '106451-N', ...
 pred_dict = json.load(open('%sresults/org_split/%s_%s_%s_%s_%s_pred.json' % (OUT, POS, TEST, METHOD, FILTER_1, FILTER_2), 'r'))

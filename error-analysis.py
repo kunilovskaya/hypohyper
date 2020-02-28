@@ -44,12 +44,14 @@ for hypo, hyp_ids in gold_dict.items(): # {'WORD1': [['4544-N'], ['147272-N']], 
                 w, _ = new_preprocess_mwe(w, pos=POS, tags=TAGS, map_mwe_names=mwe_map)
                 this_comp.append(w+'_'+hyp_id)
         hyp_wds[hypo.strip()].append(this_comp)
-            
+    print()
     print(hypo, file=sys.stderr)
     try: #skipping OOV
         print('PRED:', pred_lemid[hypo.strip()], file=sys.stderr)
+        print()
         print('GOLD:', hyp_wds[hypo.strip()], file=sys.stderr)
     except KeyError:
+        print('OOOOVVVV', hypo)
         continue
     
 

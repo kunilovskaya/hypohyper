@@ -12,8 +12,8 @@ import json
 from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, FT_EMB, TAGS, vecTOPN, \
     TEST, METHOD, FILTER_1, FILTER_2
 from hyper_imports import popular_generic_concepts, load_embeddings, filtered_dicts_mainwds_option,read_xml, id2name_dict
-from hyper_imports import lemmas_based_hypers, mean_synset_based_hypers, synsets_vectorized, disambiguate_hyper_syn_ids
-from hyper_imports import cooccurence_counts, preprocess_mwe, new_preprocess_mwe, lose_family_anno, lose_family_comp, get_generations, map_mwe
+from hyper_imports import lemmas_based_hypers, mean_synset_based_hypers, synsets_vectorized, disambiguate_hyper_syn_ids, wd2id_dict, id2wds_dict
+from hyper_imports import cooccurence_counts, preprocess_mwe, just_get_hyper_ids, lose_family_anno, lose_family_comp, get_generations, map_mwe
 
 parser = argparse.ArgumentParser('Detecting most similar synsets and formatting the output')
 # for ultimate results to submit use private instead of public
@@ -73,6 +73,9 @@ else:
     
 parsed_syns = read_xml(synsets)
 id2name = id2name_dict(parsed_syns)
+id2wd = id2wds_dict(parsed_syns)
+wd2id = wd2id_dict(id2wd)
+
 ## provide for extented MWE preprocessing in process_mwe
 if VECTORS  == 'mwe-pos-vectors':
     source = open('lists/ruWordNet_names.txt', 'r').readlines()
@@ -83,14 +86,16 @@ else:
 # this is where single/main word MODE is applied
 ## get {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N'], 'злоупотребление_NOUN': ['7331-N', '117268-N'...]}
 ## and its reverse
-## now filtered thru new embeddings
-lemmas2ids, id2lemmas = filtered_dicts_mainwds_option(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model.vocab, map=mwe_map)
+## now filtered thru new embeddings, but it has no часть_NOUN::тело_NOUN
+## this is where the error originated --FIXED
+names2ids, id2lemmas = filtered_dicts_mainwds_option(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model, map=mwe_map)
 # for k, v in lemmas2ids.items():
 #     if '::' in k:
 #         print(k)
-identifier_tuple, syn_vectors = synsets_vectorized(emb=model, id2lemmas=id2lemmas,
-                                                   named_synsets=id2name, tags=TAGS, pos=POS)
-print('Number of vectorised synsets %d out of 29297; checksums with identifiers (%d)' % (len(syn_vectors), len(identifier_tuple)))
+if FILTER_1 == 'disamb' or METHOD == 'deworded':
+    identifier_tuple, syn_vectors = synsets_vectorized(emb=model, id2lemmas=id2lemmas,
+                                                       named_synsets=id2name, tags=TAGS, pos=POS)
+    print('Number of vectorised synsets %d out of 29297; checksums with identifiers (%d)' % (len(syn_vectors), len(identifier_tuple)))
 
 if OOV_STRATEGY == 'top-hyper' or FILTER_1 == 'anno':
     if POS == 'NOUN':
@@ -121,7 +126,7 @@ if 'codalab' in TEST:
 counter = 0
 pred_dict = defaultdict(list)
 pred_dict_lemmas = defaultdict(list)
-
+pred_lemid = defaultdict(list)
 monosem = 0
 polyN = 0
 tot_hypernyms = 0
@@ -132,16 +137,21 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
             if 'codalab' in TEST:
                 writer.writerow(row)
             pred_dict[hypo.strip()].append(line.strip())
+
     else:
         if METHOD == 'lemmas' or METHOD == 'lemmas-neg-hyp' or METHOD == 'lemmas-neg-syn':
             # (default) get a list of (synset_id, hypernym_word, sim)
             # dict_w2ids = {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']}
             # preproccessibg only test items - they are all unigrams
             item = preprocess_mwe(hypo, tags=TAGS, pos=POS)
-            ## this limit is the upperbound of the limit within which we are re-ordering predicted hypers
-            deduplicated_res = lemmas_based_hypers(item, vec=hyper_vec, emb=model, topn=vecTOPN, dict_w2ids=lemmas2ids, limit=50)
-            # print('This test item output is deduplicated')
-            # use FILTER disamb to retain only one, most similar component of polysemantic hypernyms, instead of grabbing the first one
+            if VECTORS == 'mwe-pos-vectors':
+                ## there was an error in the dict which was lemmas2ids, not names2ids
+                deduplicated_res = just_get_hyper_ids(item, vec=hyper_vec, emb=model, topn=vecTOPN,lem2id=names2ids) # just_get_hyper_ids(item, vec=None, emb=None, topn=None, lem2id=None)
+            else:
+                ## this limit is the upperbound of the limit within which we are re-ordering predicted hypers
+                deduplicated_res = lemmas_based_hypers(item, vec=hyper_vec, emb=model, topn=vecTOPN, dict_w2ids=names2ids, limit=50)
+                # print('This test item output is deduplicated')
+                # use FILTER disamb to retain only one, most similar component of polysemantic hypernyms, instead of grabbing the first one
             if FILTER_1 == 'disamb': # <- list of [(id1_1,hypernym1), (id1_2,hypernym1), (id2_1,hypernym2), (id2_2,hypernym2)]
                 # list of (one_id, hypernym_word) and stats
                 relevant_ids, one_comp, overN, tot_hypers = disambiguate_hyper_syn_ids(item,
@@ -170,13 +180,13 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
                 ## load the lists of hypernyms that coocur with the given hyponyms
                 freqs_dict = json.load(open('%scooc/merged5corp_%s_freq_cooc50_%s.json' % (OUT, TEST, POS), 'r'))
                 ## last options influence the performance: they regulate how much fredom of upward movement we allow for coocuring items
-                # print(COOC_LIMIT, DEDUP_LIMIT)
                 # print('Co-occurences for %d items' % len(freqs_dict))
                 cooc_updated = cooccurence_counts(hypo, deduplicated_res,
                                                    corpus_freqs=freqs_dict, thres_cooc=COOC_LIMIT, thres_dedup=DEDUP_LIMIT)
                 this_hypo_res = cooc_updated[:10]
                 # /home/u2/git/hypohyper/output/cooc/hearst-hypers_merged4corpora_NOUN_provided_mwe.json
             elif 'hearst-info' in FILTER_1:
+                
                 hearst_dict = json.load(open('%scooc/hearst-hypers_merged4corpora_%s_%s_mwe.json' % (OUT,POS,TEST), 'r'))
                 
                 hearst_updated = cooccurence_counts(hypo, deduplicated_res,
@@ -210,8 +220,10 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
                 writer.writerow(row)
             pred_dict[hypo.strip()].append(line[0])
             pred_dict_lemmas[hypo.strip()].append(line[1])
-            # if hypo in ['ЧИБИС', 'ШАШКА', 'ШАТТЛ', 'ШАТУН', 'ЧАСТУШКА']:
-            #     print(hypo, line[1])
+    ## generate the dict for error-analysis
+            if TEST == 'provided':
+                pred_lemid[hypo.strip()].append(line[1]+'_'+line[0])
+    
 if 'codalab' in TEST:
     outfile.close()
 
@@ -231,11 +243,11 @@ if TEST == 'provided':
     OUT_RES_ORG = '%sorg_split/' % OUT_RES
     os.makedirs(OUT_RES_ORG, exist_ok=True)
     json.dump(pred_dict, open('%s%s_%s_%s_%s_%s_pred.json' % (OUT_RES_ORG, POS, TEST, METHOD, FILTER_1, FILTER_2), 'w'))
-
+    json.dump(pred_lemid, open('%s_%s_%s_%s_%s_pred_lemid.json' % (POS, TEST, METHOD, FILTER_1, FILTER_2), 'w'))
 elif 'codalab' in TEST:
     print('===Look at %s predictions for OOV===' % OOV_STRATEGY)
     print('АНИСОВКА', [id2name[id] for id in pred_dict['АНИСОВКА']]) ## ВЕЙП, ДРЕСС-КОД
-    
+
     # upload this archive to the site
     archive_name = '%s_%s_%s_%s_%s_%s_%s_%s.zip' % (VECTORS, POS, MODE, OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2)
     with zipfile.ZipFile(OUT_RES + archive_name, 'w') as file:

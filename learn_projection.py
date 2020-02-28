@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 import sys, os
 import numpy as np
 import time
-from hyper_imports import preprocess_hypo, preprocess_wordpair, read_xml, id2name_dict, id2wds_dict, synsets_vectorized
+from hyper_imports import preprocess_hypo, preprocess_wordpair, read_xml, id2name_dict, synsets_vectorized
 from hyper_imports import filtered_dicts_mainwds_option
 from configs import VECTORS, EMB_PATH, OUT, POS, SKIP_OOV, METHOD, TEST, RUWORDNET, TAGS, MWE, MODE
 from collections import defaultdict
