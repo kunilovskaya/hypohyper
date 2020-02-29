@@ -26,8 +26,11 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', action='store', type=int, default=32)
     parser.add_argument('--run_name', default='test',
                         help="Human-readable name of the run. Will be used in TensorBoard logs.")
-    parser.add_argument('--epochs', action='store', type=int, default=15)
+    parser.add_argument('--epochs', action='store', type=int, default=25)
+    parser.add_argument('--freq', action='store', type=int, default=2, help="Frequency threshold for synsets")
     parser.add_argument('--split', action='store', type=float, default=0.9)
+    parser.add_argument('--test', action='store', help='path to the testing JSON')
+    parser.add_argument('--nsynsets', action='store', type=int, default=10, help='How many synsets to keep at test time')
     args = parser.parse_args()
 
     trainfile = args.path
@@ -52,7 +55,7 @@ if __name__ == '__main__':
         synsets = json.loads(target)
         train_synsets.update(synsets)
 
-    valid_synsets = set([s for s in train_synsets if train_synsets[s] > 1])
+    valid_synsets = set([s for s in train_synsets if train_synsets[s] > args.freq])
 
     for word, target in zip(train_dataset['word'], train_dataset['synsets']):
         # lemma = preprocess_mwe(word, tags=True, pos='NOUN')
@@ -78,7 +81,7 @@ if __name__ == '__main__':
 
     print('===========================')
     print('Class distribution in the training data:')
-    print(print(targets.most_common(10)))
+    print(targets.most_common(10))
     print('===========================')
 
     x_train = np.array(x_train)
@@ -100,10 +103,10 @@ if __name__ == '__main__':
     model.add(Dense(args.hidden_dim, input_shape=(embedding.vector_size,), activation='relu',
                     name="Input"))  # Specifying the input shape is important!
 
-    # model.add(Dropout(0.1))  # We will use dropout after the first hidden layer
+    model.add(Dropout(0.1))  # We will use dropout after the first hidden layer
 
     # Inserting additional hidden layers:
-    model.add(Dense(args.hidden_dim, activation='relu'))
+    # model.add(Dense(args.hidden_dim, activation='relu'))
 
     model.add(Dense(num_classes, activation='softmax', name='Output'))  # Output layer
 
@@ -114,7 +117,7 @@ if __name__ == '__main__':
 
     # We will monitor the dynamics of accuracy on the validation set during training
     # If it stops improving, we will stop training.
-    earlystopping = EarlyStopping(monitor='val_acc', min_delta=0.0001, patience=3, verbose=1,
+    earlystopping = EarlyStopping(monitor='val_acc', min_delta=0.0001, patience=4, verbose=1,
                                   mode='max')
 
     # what part of the training data will be used as a validation dataset:
@@ -141,17 +144,42 @@ if __name__ == '__main__':
     # We use sklearn function classification_report()
     # to calculate per-class F1 score on the dev set:
     predictions = model.predict(x_val)
-    predictions = np.around(predictions)  # map predictions to the binary {0, 1} range
+    # predictions = np.around(predictions)  # map predictions to the binary {0, 1} range
 
     # Convert predictions from integers back to text labels:
     y_test_real = [classes[int(np.argmax(pred))] for pred in y_val]
     predictions = [classes[int(np.argmax(pred))] for pred in predictions]
 
-    print('Classification report for the dev set:')
-    print(classification_report(y_test_real, predictions))
+    # print('Classification report for the dev set:')
+    # print(classification_report(y_test_real, predictions))
 
     fscore = precision_recall_fscore_support(y_test_real, predictions, average='macro')[2]
-    print('Macro F1 on the dev set:', fscore)
+    print('Macro F1 on the dev set:', round(fscore, 2))
+
+    if args.test:
+        gold_words = json.load(open(args.test, 'r'))
+        gold_words = [w.lower()+'_NOUN' for w in gold_words]
+        print('We have %d test words' % len(gold_words))
+        oov_counter = 0
+        test_instances = []
+        for word in gold_words:
+            if word in embedding:
+                test_instances.append(embedding[word])
+            else:
+                test_instances.append(np.zeros(embedding.vector_size))
+                # print('OOV:', word)
+                oov_counter += 1
+        print('OOV:', oov_counter)
+        test_instances = np.array(test_instances)
+        predictions = model.predict(test_instances)
+        real_predictions = [list((-pred).argsort()[:args.nsynsets]) for pred in predictions]
+        real_predictions = [[classes[s] for s in pred] for pred in real_predictions]
+        out = {}
+        for word, pred in zip(gold_words, real_predictions):
+            out[word.split('_')[0].upper()] = pred
+        with open(run_name + '_predictions.json', 'w') as f:
+            f.write(json.dumps(out, ensure_ascii=False, indent=4))
+        print('Predictions saved to', run_name + '_predictions.json')
 
     # Saving the model to file
     model_filename = run_name + '.h5'
