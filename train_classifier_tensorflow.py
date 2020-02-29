@@ -2,13 +2,13 @@
 # coding: utf-8
 
 from collections import Counter
+import random
 import json
 import time
 from argparse import ArgumentParser
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dense, Dropout
@@ -20,17 +20,15 @@ if __name__ == '__main__':
     # add command line arguments
     # this is probably the easiest way to store args for downstream
     parser = ArgumentParser()
-    parser.add_argument('--path', required=True, help="Path to the training corpus", action='store')
+    parser.add_argument('--path', required=True, help="Path to the training corpus")
     parser.add_argument('--w2v', required=True, help="Path to the embeddings")
-    parser.add_argument('--hidden_dim', action='store', type=int, default=128)
+    parser.add_argument('--hidden_dim', action='store', type=int, default=386)
     parser.add_argument('--batch_size', action='store', type=int, default=32)
-    parser.add_argument('--run_name', default='test',
-                        help="Human-readable name of the run. Will be used in TensorBoard logs.")
+    parser.add_argument('--run_name', default='test', help="Human-readable name of the run.")
     parser.add_argument('--epochs', action='store', type=int, default=25)
-    parser.add_argument('--freq', action='store', type=int, default=2, help="Frequency threshold for synsets")
+    parser.add_argument('--freq', action='store', type=int, default=5,
+                        help="Frequency threshold for synsets")
     parser.add_argument('--split', action='store', type=float, default=0.9)
-    parser.add_argument('--test', action='store', help='path to the testing JSON')
-    parser.add_argument('--nsynsets', action='store', type=int, default=10, help='How many synsets to keep at test time')
     args = parser.parse_args()
 
     trainfile = args.path
@@ -38,6 +36,11 @@ if __name__ == '__main__':
 
     # We don't need a separate dev/dalidation dataset since it is created automatically
     # by TF from the train set.
+
+    # Fix random seeds for repeatability of experiments:
+    random.seed(42)
+    np.random.seed(42)
+    tf.set_random_seed(42)
 
     print('Loading the dataset...')
     train_dataset = pd.read_csv(trainfile, sep='\t', header=0)
@@ -58,7 +61,6 @@ if __name__ == '__main__':
     valid_synsets = set([s for s in train_synsets if train_synsets[s] > args.freq])
 
     for word, target in zip(train_dataset['word'], train_dataset['synsets']):
-        # lemma = preprocess_mwe(word, tags=True, pos='NOUN')
         lemma = word
         if lemma in embedding.vocab:
             vector = embedding[lemma]
@@ -144,46 +146,19 @@ if __name__ == '__main__':
     # We use sklearn function classification_report()
     # to calculate per-class F1 score on the dev set:
     predictions = model.predict(x_val)
-    # predictions = np.around(predictions)  # map predictions to the binary {0, 1} range
 
     # Convert predictions from integers back to text labels:
     y_test_real = [classes[int(np.argmax(pred))] for pred in y_val]
     predictions = [classes[int(np.argmax(pred))] for pred in predictions]
-
-    # print('Classification report for the dev set:')
-    # print(classification_report(y_test_real, predictions))
-
     fscore = precision_recall_fscore_support(y_test_real, predictions, average='macro')[2]
     print('Macro F1 on the dev set:', round(fscore, 2))
-
-    if args.test:
-        gold_words = json.load(open(args.test, 'r'))
-        gold_words = [w.lower()+'_NOUN' for w in gold_words]
-        print('We have %d test words' % len(gold_words))
-        oov_counter = 0
-        test_instances = []
-        for word in gold_words:
-            if word in embedding:
-                test_instances.append(embedding[word])
-            else:
-                test_instances.append(np.zeros(embedding.vector_size))
-                # print('OOV:', word)
-                oov_counter += 1
-        print('OOV:', oov_counter)
-        test_instances = np.array(test_instances)
-        predictions = model.predict(test_instances)
-        real_predictions = [list((-pred).argsort()[:args.nsynsets]) for pred in predictions]
-        real_predictions = [[classes[s] for s in pred] for pred in real_predictions]
-        out = {}
-        for word, pred in zip(gold_words, real_predictions):
-            out[word.split('_')[0].upper()] = pred
-        with open(run_name + '_predictions.json', 'w') as f:
-            f.write(json.dumps(out, ensure_ascii=False, indent=4))
-        print('Predictions saved to', run_name + '_predictions.json')
 
     # Saving the model to file
     model_filename = run_name + '.h5'
     model.save(model_filename)
+    with open(run_name + '_classes.json', 'w') as f:
+        f.write(json.dumps(classes, ensure_ascii=False, indent=4))
     print('Model saved to', model_filename)
+    print('Classes saved to', run_name + '_classes.json')
     tf.keras.backend.clear_session()
     print('===========================')
