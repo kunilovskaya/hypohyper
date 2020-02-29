@@ -46,6 +46,9 @@ if __name__ == '__main__':
     train_dataset = pd.read_csv(trainfile, sep='\t', header=0)
     print('Finished loading the dataset')
 
+    BALANCED = False  # Do we want to address the issue of imbalanced class weights?
+    OVERFIT = True  # Do we want to discard early stopping and train until convergence?
+
     embedding = load_embeddings(args.w2v)
 
     x_train = []
@@ -79,6 +82,11 @@ if __name__ == '__main__':
     num_classes = len(classes)
     print(num_classes, 'classes')
 
+    if BALANCED:
+        class_weights = {}
+        for nr, synset in enumerate(classes):
+            class_weights[nr] = 1 / train_synsets[synset]
+
     targets = Counter(y_train)
 
     print('===========================')
@@ -109,6 +117,7 @@ if __name__ == '__main__':
 
     # Inserting additional hidden layers:
     # model.add(Dense(args.hidden_dim, activation='relu'))
+    # model.add(Dropout(0.1))
 
     model.add(Dense(num_classes, activation='softmax', name='Output'))  # Output layer
 
@@ -119,7 +128,10 @@ if __name__ == '__main__':
 
     # We will monitor the dynamics of accuracy on the validation set during training
     # If it stops improving, we will stop training.
-    earlystopping = EarlyStopping(monitor='val_acc', min_delta=0.0001, patience=4, verbose=1,
+    if OVERFIT:
+        earlystopping = EarlyStopping(monitor='acc', min_delta=0.0001, patience=3, verbose=1, mode='max')
+    else:
+        earlystopping = EarlyStopping(monitor='val_acc', min_delta=0.0001, patience=4, verbose=1,
                                   mode='max')
 
     # what part of the training data will be used as a validation dataset:
@@ -128,9 +140,15 @@ if __name__ == '__main__':
     # Train the compiled model on the training data
     # See more at https://keras.io/models/sequential/#sequential-model-methods
     start = time.time()
-    history = model.fit(x_train, y_train, epochs=args.epochs, verbose=1,
+    if BALANCED:
+        history = model.fit(x_train, y_train, epochs=args.epochs, verbose=1,
+                        validation_split=val_split, batch_size=args.batch_size,
+                        callbacks=[earlystopping], class_weight=class_weights)
+    else:
+        history = model.fit(x_train, y_train, epochs=args.epochs, verbose=1,
                         validation_split=val_split, batch_size=args.batch_size,
                         callbacks=[earlystopping])
+
     end = time.time()
     training_time = int(end - start)
     print('Training took:', training_time, 'seconds')
