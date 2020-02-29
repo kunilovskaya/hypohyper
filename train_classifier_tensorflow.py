@@ -40,7 +40,7 @@ if __name__ == '__main__':
     # Fix random seeds for repeatability of experiments:
     random.seed(42)
     np.random.seed(42)
-    tf.set_random_seed(42)
+    tf.compat.v1.set_random_seed(42)
 
     print('Loading the dataset...')
     train_dataset = pd.read_csv(trainfile, sep='\t', header=0)

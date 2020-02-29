@@ -24,15 +24,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     RUN_NAME = args.run_name
-    MODEL = args.w2v
+    EMB_MODEL = args.w2v
     TESTFILE = args.path
 
-    embedding = load_embeddings(args.w2v)
+    embedding = load_embeddings(EMB_MODEL)
 
     print('Loading the model...')
     with open(RUN_NAME + '_classes.json', 'r') as f:
         classes = json.load(f)
-    model = load_model(MODEL)
+    model = load_model(RUN_NAME + '.h5')
     print(model.summary())
 
     test_words = json.load(open(TESTFILE, 'r'))
