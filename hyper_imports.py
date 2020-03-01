@@ -284,7 +284,7 @@ def map_mwe(names=None, same_names=None, tags=None, pos=None):
     
     first_pairs = {k: my_map[k] for k in list(my_map)[:10]}
     print('First few matched items:', first_pairs, file=sys.stderr)
-    
+
     return my_map
 
 
@@ -296,7 +296,7 @@ def new_preprocess_mwe(item, tags=None, pos=None, map_mwe_names=None):
         if len(item.split()) > 1:
             if tags:
                 item = '::'.join(item.lower().split())
-                item = item + '_VERB'
+                new_item = item + '_VERB'
                 # if map_mwe_names:
                 #     try:
                 #         new_item = map_mwe_names[item]
@@ -307,18 +307,18 @@ def new_preprocess_mwe(item, tags=None, pos=None, map_mwe_names=None):
                 #         print("ERRRORRR", item)
                 # else:
                 #     new_item = item
-                
+
             else:
                 item = '::'.join(item.lower().split())
             # print(item)
-            
+
         else:
             if tags:
                 item = item.lower()
                 new_item = item + '_VERB'
             else:
                 new_item = item.lower()
-        
+
     elif pos == 'NOUN':
         if len(item.split()) > 1:
             if tags:
