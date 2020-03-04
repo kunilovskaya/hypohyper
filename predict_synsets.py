@@ -146,7 +146,7 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
             item = preprocess_mwe(hypo, tags=TAGS, pos=POS)
             if VECTORS == 'mwe-pos-vectors':
                 ## there was an error in the dict which was lemmas2ids, not names2ids
-                deduplicated_res = just_get_hyper_ids(item, vec=hyper_vec, emb=model, topn=vecTOPN,lem2id=names2ids) # just_get_hyper_ids(item, vec=None, emb=None, topn=None, lem2id=None)
+                deduplicated_res = just_get_hyper_ids(item, vec=hyper_vec, emb=model, topn=vecTOPN,name2id=names2ids) # just_get_hyper_ids(item, vec=None, emb=None, topn=None, lem2id=None)
             else:
                 ## this limit is the upperbound of the limit within which we are re-ordering predicted hypers
                 deduplicated_res = lemmas_based_hypers(item, vec=hyper_vec, emb=model, topn=vecTOPN, dict_w2ids=names2ids, limit=50)
@@ -242,8 +242,10 @@ first3pairs_hypers = {k: pred_dict_lemmas[k] for k in list(pred_dict_lemmas)[:3]
 if TEST == 'provided':
     OUT_RES_ORG = '%sorg_split/' % OUT_RES
     os.makedirs(OUT_RES_ORG, exist_ok=True)
+    OUT_RES_ERR = 'errors/'
+    os.makedirs(OUT_RES_ERR, exist_ok=True)
     json.dump(pred_dict, open('%s%s_%s_%s_%s_%s_pred.json' % (OUT_RES_ORG, POS, TEST, METHOD, FILTER_1, FILTER_2), 'w'))
-    json.dump(pred_lemid, open('%s_%s_%s_%s_%s_pred_lemid.json' % (POS, TEST, METHOD, FILTER_1, FILTER_2), 'w'))
+    json.dump(pred_lemid, open('%spreds_lemid_%s_%s_%s_%s_%s.json' % (OUT_RES_ERR, POS, TEST, METHOD, FILTER_1, FILTER_2), 'w'))
 elif 'codalab' in TEST:
     print('===Look at %s predictions for OOV===' % OOV_STRATEGY)
     print('АНИСОВКА', [id2name[id] for id in pred_dict['АНИСОВКА']]) ## ВЕЙП, ДРЕСС-КОД

@@ -14,7 +14,7 @@ if VECTORS == 'mwe-pos-vectors':
 else:
     mwe_map = None
 errs = 0
-with open('oldtags_all_data_nouns.tsv', 'w') as outfile:
+with open('lists/oldtags_all_data_nouns.tsv', 'w') as outfile:
     for line in input:
         item, ids = line.strip().split('\t')
         # print(ids)

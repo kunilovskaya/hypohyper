@@ -31,9 +31,9 @@ if VECTORS  == 'mwe-pos-vectors' and POS == 'NOUN':
 else:
     mwe_map = None
 
-pred_lemid = json.load(open('%s_%s_%s_%s_%s_pred_lemid.json' % (POS, TEST, METHOD, FILTER_1, FILTER_2), 'r'))
+pred_lemid = json.load(open('errors/preds_lemid_%s_%s_%s_%s_%s.json' % (POS, TEST, METHOD, FILTER_1, FILTER_2), 'r'))
 oov = []
-gold_dict = json.load(open('%sgold_dicts/%s_%s_%s_gold.json' % (OUT, POS, TEST, METHOD), 'r'))
+gold_dict = json.load(open('gold_dicts/gold_%s_%s_%s.json' % (POS, TEST, METHOD), 'r'))
 print('\nHuman-readable results for top ten test words:', file=sys.stderr)
 for hypo, hyp_ids in gold_dict.items(): # {'WORD1': [['4544-N'], ['147272-N']], 'WORD2': [['141697-N', '116284-N']]}
     hyp_wds = defaultdict(list)

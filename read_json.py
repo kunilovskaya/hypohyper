@@ -1,10 +1,9 @@
 import json
 # from smart_open import open
 from collections import defaultdict
-data = json.load(open('/home/u2/git/hypohyper/output/cooc/hearst-hypers_merged4corpora_NOUN_codalab-pub.json', 'r'))
-for k, v in data.items():
-    print(k,v)
-    
+data = json.load(open('/home/u2/git/hypohyper/output/cooc/merged5corp_codalab-pub_freq_cooc50_NOUN.json', 'r'))
+# for k, v in data.items():
+#     print(k,v)
 
 counter = 0
 mwe = 0
@@ -33,8 +32,8 @@ for k,v in new_dict.items():
 #
 # print(len(new_dict))
 #
-json.dump(new_dict, open('/home/u2/git/hypohyper/output/cooc/hearst-hypers_merged4corpora_NOUN_codalab-pub_mwe.json', 'w'))
+json.dump(new_dict, open('/home/u2/git/hypohyper/output/cooc/merged5corp_codalab-pub_freq_cooc50_NOUN_mwe.json', 'w'))
 # print('%d MWE found' % len(data))
 # print('Freq > 10: %d synset words' % counter)
 
-print('found Hearst hyponyms for %d, inc. %d MWE out of %d' % (counter, mwe, all))
+print('found cooc stats for %d, inc. %d MWE out of %d' % (counter, mwe, all))

@@ -49,7 +49,7 @@ if METHOD != 'deworded': # or METHOD != 'deworded1'
 
 OUT_TRAIN = '%strains/' % OUT
 os.makedirs(OUT_TRAIN, exist_ok=True)
-OUT_GOLD = '%sgold_dicts/' % OUT
+OUT_GOLD = 'gold_dicts/'
 os.makedirs(OUT_GOLD, exist_ok=True)
 
 print('METHOD == %s' % METHOD, file=sys.stderr)
@@ -67,7 +67,7 @@ if METHOD == 'deworded':
         json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
 
         gold_dict = get_orgtest(args.test)  # hypos are filtered for MWE
-        json.dump(gold_dict, open('%s%s_%s_%s_gold.json' % (OUT_GOLD, POS, TEST, METHOD), 'w'))
+        json.dump(gold_dict, open('%sgold_%s_%s_%s.json' % (OUT_GOLD, POS, TEST, METHOD), 'w'))
         first3pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:3]}
         with open('lists/%s_%s_WORDS.txt' % (POS, TEST), 'w') as my_testfile:
             for key in gold_dict:
@@ -93,7 +93,7 @@ else:
         json.dump(hypohyper_train, open('%s%s_%s_%s_%s_train.json' % (OUT_TRAIN, VECTORS, POS, TEST, METHOD), 'w'))
     
         gold_dict = get_orgtest(args.test)  # hypos are filtered for MWE
-        json.dump(gold_dict, open('%s%s_%s_%s_gold.json' % (OUT_GOLD, POS, TEST, METHOD), 'w'))
+        json.dump(gold_dict, open('%sgold_%s_%s_%s.json' % (OUT_GOLD, POS, TEST, METHOD), 'w'))
         first3pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:3]}
         with open('lists/%s_%s_WORDS.txt' % (POS, TEST), 'w') as my_testfile:
             for key in gold_dict:
