@@ -32,7 +32,7 @@ else:
     mwe_map = None
 
 pred_lemid = json.load(open('%s_%s_%s_%s_%s_pred_lemid.json' % (POS, TEST, METHOD, FILTER_1, FILTER_2), 'r'))
-
+oov = []
 gold_dict = json.load(open('%sgold_dicts/%s_%s_%s_gold.json' % (OUT, POS, TEST, METHOD), 'r'))
 print('\nHuman-readable results for top ten test words:', file=sys.stderr)
 for hypo, hyp_ids in gold_dict.items(): # {'WORD1': [['4544-N'], ['147272-N']], 'WORD2': [['141697-N', '116284-N']]}
@@ -52,8 +52,10 @@ for hypo, hyp_ids in gold_dict.items(): # {'WORD1': [['4544-N'], ['147272-N']], 
         print('GOLD:', hyp_wds[hypo.strip()], file=sys.stderr)
     except KeyError:
         print('OOOOVVVV', hypo)
+        oov.append(hypo)
         continue
     
 
 
 print(VECTORS, MODE,OOV_STRATEGY, TEST, METHOD, FILTER_1, FILTER_2, file=sys.stderr)
+print('OOOVV', oov)
