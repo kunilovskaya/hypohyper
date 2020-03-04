@@ -66,7 +66,8 @@ i.e. synsets that have only one hypernym synset; **Next step** fall back to rand
 - [X] retain sublists in the reference to take into account "компоненты связности"
 - [X] turn 36 K MWE from ruWordNet into tokens and learn dedicated vectors for them -- increases the training data 4 times, renders all ids accessible in producing final results
 - [ ] ~~use coocurrence for OOV in test~~ -- solved by the dedicated vectors learned on 1 billion sentence corpus
-
+- [ ] produce vectors for tokenized VERB MWE and run the classifier on VERBS
+- [ ] write up the paper (till March 15, 2020)
 
 ## RUNNING the code 
 (available for the main pipeline in full: 
