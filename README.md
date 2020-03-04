@@ -24,20 +24,22 @@ see Tables 1-3 below for models coverage and comparative results
 **(1.2) devise a strategy to fight OOV in testset**
 - get top ten most frequent hypernym synsets for OOV test items
 - get FastTest rpresentations
-- _TODO_ cooccurence statistics
+- cooccurence and/or Hearst statistics
 
 **(1.3) test alternative learning METHODs**
 * try training on avaraged synset vectors (deworded)
 * apply negative sampling (neg-hyp, neg-syn) 
 (adoptation of Ustalov's [hyperstar2017](https://arxiv.org/pdf/1707.03903) or make use of [PatternSims](https://github.com/cental/patternsim))
-* use cooccurrence statistics (corpus-informed25)
+* use cooccurrence/Hearst statistics (corpus-informed25)
+* learn a classifier to directly predict the hypernym synset id for testwords, train on hyponym vectors and the assigned hypernym ids
+* increase the training by converting MWE from ruWordNet found in a huge corpus into single tokens (ex. wild_ADJ::bird_NOUN) and learning dedicated vectors for them
 
-### (2) Finding most-similar synset in ruWordNet
+### ~~(2) Finding most-similar synset in ruWordNet~~ -- Get the first id for the words, found most similar to the predicted hypernym vector
 
 **(2.1) decide how to approach MWE in ruWordNet (1/4 of synsets don't have single word lemmas, which renders them unavailable for hypernym synset id search)**
 * limit the ruWordNet lemma search space to single-word items only
-* _IMPROVE_ for the synsets that do not have single word representations use main words of their MW lemmas
-* instead of using word vectors, get averaged synset vectors as hyponym candidates
+* for the synsets that do not have single word representations use main words of their MW lemmas
+* instead of using word vectors, get averaged synset vectors as hyponym candidates~~
 
 **(2.2) simple tricks**
 * exclude duplicates and selves in the output
@@ -57,15 +59,19 @@ i.e. synsets that have only one hypernym synset; **Next step** fall back to rand
 - [X] average synset vectors at train and hyponym-synset-detection times and for getting most_similar
 - [X] exclude same word as hypernym; **contrary to expectations, I don't get same-name candidates in testset**
 - [X] factor in cooccurence stats or 
-- [ ] Hearst patterns based on the news corpus
+- [X] Hearst patterns based on the news corpus
 - [X] **FAILED: unusable for data with no gound truth available**; cluster input following Fu et al. (2014) and Ustalov (2017)'s suggestions 
 - [X] **Results are lower than for the naive approach**: add negative sampling (based on hyponyms, synonyms) following Ustalov (2017)'s suggestions
 - [ ] choose wiser: rank synsets and get the most high ranking ones
 - [X] retain sublists in the reference to take into account "компоненты связности"
-- [ ] use coocurrence for OOV in test
+- [X] turn 36 K MWE from ruWordNet into tokens and learn dedicated vectors for them -- increases the training data 4 times, renders all ids accessible in producing final results
+- [ ] ~~use coocurrence for OOV in test~~ -- solved by the dedicated vectors learned on 1 billion sentence corpus
 
 
-## RUNNING the code
+## RUNNING the code 
+(available for the main pipeline in full: 
+- projections with negative sampling need to be learnt separately; 
+- the 3d-place-winning classifier has separate code)
 
 ### Getting the resources and setting up the parameters
 (i) download the embeddings to the input/resources folder
@@ -216,8 +222,10 @@ vectors             |  NOUNS  |  VERBS   |
 
 ================================================================
 
-
-
+Official results of the competition:
+[NOUNS](https://competitions.codalab.org/competitions/22168#results)
+A neural classifier learnt on hyponyms represented by dedicated vectors (i.e. on all training data available) beats projection-based approaches
+ 
 ========================================================================
 
 ## FYI (some stats for Nouns): 
