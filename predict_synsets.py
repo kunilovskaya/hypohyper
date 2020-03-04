@@ -78,8 +78,8 @@ wd2id = wd2id_dict(id2wd)
 
 ## provide for extented MWE preprocessing in process_mwe
 if VECTORS  == 'mwe-pos-vectors':
-    source = open('lists/ruWordNet_names.txt', 'r').readlines()
-    source_tagged = open('lists/ruWordNet_same-names_pos.txt', 'r').readlines()
+    source = open('lists/ruWordNet_%s_names.txt' % POS, 'r').readlines()
+    source_tagged = open('lists/ruWordNet_%s_same-names_pos.txt' % POS, 'r').readlines()
     mwe_map = map_mwe(names=source, same_names=source_tagged, tags=TAGS, pos=POS)
 else:
     mwe_map = None

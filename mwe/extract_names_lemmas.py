@@ -11,14 +11,17 @@ from argparse import ArgumentParser
 
 from xml.dom import minidom
 from smart_open import open
-from configs import OUT, RUWORDNET
+from configs import POS, RUWORDNET
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    
-    parser.add_argument('--senses', default='%ssenses.N.xml' % RUWORDNET, help="files with non-lemmatised names of senses")
-    parser.add_argument('--out_lemmas', default='%sruWordNet_lemmas.txt' % OUT, help="path to save extracted lemmas")
-    parser.add_argument('--out_names', default='%sruWordNet_names.txt' % OUT, help="path to save extracted words")
+    if POS == 'NOUN':
+        parser.add_argument('--senses', default='%ssenses.N.xml' % RUWORDNET, help="files with non-lemmatised names of senses")
+    elif POS == 'VERB':
+        parser.add_argument('--senses', default='%ssenses.V.xml' % RUWORDNET,
+                            help="files with non-lemmatised names of senses")
+    parser.add_argument('--out_lemmas', default='lists/ruWordNet_%s_lemmas.txt' % POS, help="path to save extracted lemmas")
+    parser.add_argument('--out_names', default='lists/ruWordNet_%s_names.txt' % POS, help="path to save extracted words")
     args = parser.parse_args()
 
     parsed_senses = read_xml(args.senses)

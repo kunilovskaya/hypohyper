@@ -7,7 +7,7 @@ sys.path.append(path1)
 from argparse import ArgumentParser
 from ufal.udpipe import Model, Pipeline
 from smart_open import open
-from configs import OUT
+from configs import OUT, POS
 
 def process(pipeline, text=None):
     
@@ -31,7 +31,7 @@ def process(pipeline, text=None):
 if __name__ == "__main__":
     parser = ArgumentParser()
     
-    parser.add_argument('--words', default='%sruWordNet_names.txt' % OUT, help="ruWORDNET words")
+    parser.add_argument('--words', default='lists/ruWordNet_%s_names.txt' % POS, help="ruWORDNET words")
     args = parser.parse_args()
 
     words = set()
@@ -43,12 +43,10 @@ if __name__ == "__main__":
     
     lines = open(args.words, 'r').readlines()
     
-    OUT_MWE = '%smwe/' % OUT
-    os.makedirs(OUT_MWE, exist_ok=True)
     ## temporary setting: I need the tagged list of the same length!
     # count = set()
     count = []
-    with open('%sruWordNet_same-names_pos.txt' % (OUT_MWE), 'w') as out:
+    with open('lists/ruWordNet_%s_same-names_pos.txt' % POS, 'w') as out:
     
         for id, line in enumerate(lines):
             word = line.strip().lower()

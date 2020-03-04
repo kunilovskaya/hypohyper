@@ -6,10 +6,10 @@ from hyper_imports import preprocess_mwe
 from configs import POS, TAGS
 import ahocorasick
 
-fixed_mwe = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/merged_mwe-glued_nofunct-punct_fixed-mwe_news-rncP5-pro.gz', 'a')
+fixed_mwe = open('output/mwe/merged_mwe-glued_nofunct-punct_fixed-mwe_news-rncP5-pro.gz', 'a')
 
-source = open('/home/rgcl-dl/Projects/hypohyper/ruWordNet_names.txt', 'r').readlines()
-source_tagged = open('/home/rgcl-dl/Projects/hypohyper/output/mwe/ruWordNet_same-names_pos.txt', 'r').readlines()
+source = open('lists/ruWordNet_%s_names.txt' % POS, 'r').readlines()
+source_tagged = open('lists/ruWordNet_%s_same-names_pos.txt' % POS, 'r').readlines()
 
 ## make a map to go from ЖРИЦА ЛЮБВИ to {'жрица::любви_NOUN' : 'жрица_NOUN::любовь_NOUN'}
 map = defaultdict()

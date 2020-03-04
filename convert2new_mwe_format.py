@@ -5,26 +5,30 @@ from configs import VECTORS, OUT, POS, TAGS, METHOD, TEST
 import json
 from collections import defaultdict
 from smart_open import open
-
-input = open('/home/u2/git/hypohyper/input/data/all_data_nouns.tsv', 'r')
+if POS == 'NOUNS':
+    input = open('input/data/all_data_nouns.tsv', 'r')
+elif POS == 'VERB': # АРЕНДОВАТЬ ЖИЛУЮ ПЛОЩАДЬ
+    input = open('input/data/all_data_verbs.tsv', 'r')
+    
 if VECTORS == 'mwe-pos-vectors':
-    source = open('lists/ruWordNet_names.txt', 'r').readlines()
-    source_tagged = open('lists/ruWordNet_same-names_pos.txt', 'r').readlines()
+    
+    source = open('lists/ruWordNet_%s_names.txt' % POS, 'r').readlines()
+    source_tagged = open('lists/ruWordNet_%s_same-names_pos.txt' % POS, 'r').readlines()
     mwe_map = map_mwe(names=source, same_names=source_tagged, tags=TAGS, pos=POS)
-else:
-    mwe_map = None
-errs = 0
-with open('lists/oldtags_all_data_nouns.tsv', 'w') as outfile:
-    for line in input:
-        item, ids = line.strip().split('\t')
-        # print(ids)
-        if mwe_map:
+
+    errs = 0
+    with open('lists/MWEtags_all_data_%s.tsv' % POS, 'w') as outfile:
+        for line in input:
+            item, ids = line.strip().split('\t')
             out, err = new_preprocess_mwe(item, tags=TAGS, pos=POS, map_mwe_names=mwe_map)
             errs += err
-            row = '\t'.join([out,ids])
+            row = '\t'.join([out, ids])
             # print(row)
             outfile.write(row + '\n')
-        else:
+else:
+    with open('lists/oldtags_all_data_%s.tsv' % POS, 'w') as outfile:
+        for line in input:
+            item, ids = line.strip().split('\t')
             out = preprocess_mwe(item, tags=TAGS, pos=POS)
             row = '\t'.join([out, ids])
             outfile.write(row + '\n')

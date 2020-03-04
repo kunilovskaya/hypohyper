@@ -14,7 +14,7 @@ from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, 
 from hyper_imports import popular_generic_concepts, load_embeddings, filtered_dicts_mainwds_option,read_xml, id2name_dict
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--tagged', default='lists/ruWordNet_names_pos.txt',
+parser.add_argument('--tagged', default='lists/ruWordNet_%s_names_pos.txt' % POS,
                     help="tagged 68K words and phrases from ruWordNet")
 args = parser.parse_args()
 

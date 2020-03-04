@@ -88,8 +88,8 @@ if __name__ == "__main__":
     
     source = [i.strip() for i in open(args.source, 'r').readlines()[1:]]
     if VECTORS == 'mwe-pos-vectors':
-        WN_names = open('lists/ruWordNet_names.txt', 'r').readlines()
-        WN_names_tagged = open('lists/ruWordNet_same-names_pos.txt', 'r').readlines()
+        WN_names = open('lists/ruWordNet_%s_names.txt' % POS, 'r').readlines()
+        WN_names_tagged = open('lists/ruWordNet_%s_same-names_pos.txt' % POS, 'r').readlines()
         mapped = map_mwe(names=WN_names, same_names=WN_names_tagged, tags=TAGS, pos=POS)
     else:
         mapped=None

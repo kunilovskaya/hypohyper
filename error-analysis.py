@@ -25,8 +25,8 @@ parsed_syns = read_xml(synsets)
 id2lemmas = id2wds_dict(parsed_syns)
 
 if VECTORS  == 'mwe-pos-vectors' and POS == 'NOUN':
-    source = open('lists/ruWordNet_names.txt', 'r').readlines()
-    source_tagged = open('lists/ruWordNet_same-names_pos.txt', 'r').readlines()
+    source = open('lists/ruWordNet_%s_names.txt' % POS, 'r').readlines()
+    source_tagged = open('lists/ruWordNet_%s_same-names_pos.txt' % POS, 'r').readlines()
     mwe_map = map_mwe(names=source, same_names=source_tagged, tags=TAGS, pos=POS)
 else:
     mwe_map = None

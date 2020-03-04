@@ -1,15 +1,15 @@
 RANDOM_SEED = 0
-# codename for emb: 'mwe-vectors', 'ft-araneum', w2v-rdt500, w2v-pos-ruscorpwiki, w2v-pos-araneum, ft-ruscorp, ft-araneum_full
+# codename for emb: 'mwe-pos-vectors', 'ft-araneum', w2v-rdt500, w2v-pos-ruscorpwiki, w2v-pos-araneum, ft-ruscorp, ft-araneum_full
 # news-pos-sk, news-pos-cbow, ft-news-sk, ft-news-cbow, w2v-tayga-fpos5
-VECTORS = 'w2v-pos-araneum' ## no full means that we filter out OOV at train time
-POS = 'NOUN' # 'VERB'
+VECTORS = 'mwe-pos-vectors' ## no full means that we filter out OOV at train time
+POS = 'VERB' # 'VERB'
 MWE = True ## always TRUE wouldn't hurt
-TEST = 'provided' # provided, codalab-pub, codalab-pr
+TEST = 'codalab-pub' # , codalab-pub, codalab-pr, provided
 
 ## strategies to improve performance
 METHOD = 'lemmas-neg-syn' # lemmas-neg-hyp, lemmas-neg-syn, deworded, lemmas
 
-MODE = 'single' # if you want to include vectors for main_words in MWE, replace single_wd with main;
+MODE = 'single' # if you want to include vectors for main_words in MWE, replace single with main;
 # this this supposed to include vectors for main components of MWE only if this synset has no single_word representation or if MWE is found in vectors
 OOV_STRATEGY = 'top-hyper' ##'ft-vector', 'top-hyper'
 
@@ -19,10 +19,10 @@ if 'ft' not in VECTORS and POS == 'VERB':
 elif 'rdt' in VECTORS:
     vecTOPN = 1000
 else:
-    vecTOPN = 500
+    vecTOPN = 100
 ## first number is how many of the hypers predicted by default to retain; second is how many top co-occuring lemmas to consider
 ## experimentally the best combination seems to be 25-25 or 15-25
-FILTER_1 = 'raw' # raw, disamb, comp, anno, corp-info25-15, corp-info50-30,corp-info25-15 corp-info15-25 hearst-info15-25
+FILTER_1 = 'hearst-info25-25' # raw, disamb, comp, anno, corp-info25-15, corp-info50-30,corp-info25-15 corp-info15-25 hearst-info25-25
 FILTER_2 = 'none' #'kid', 'parent', none (for raw, disamb)
 
 if 'pos' in VECTORS:
@@ -33,8 +33,8 @@ else:
     
 if VECTORS == 'w2v-pos-araneum':
     EMB_PATH = '/home/u2/resources/emb/araneum_upos_skipgram_300_2_2018.bin'
-elif VECTORS == 'mwe_vectors':
-    EMB_PATH = '/home/u2/resources/emb/mwe_vectors_araneum-news-ruscorpwiki-rnc5p-pro.bin'
+elif VECTORS == 'mwe-pos-vectors':
+    EMB_PATH = '/home/u2/resources/emb/mwe_vectors/big_mwe_corpus_0_2.model'
 elif VECTORS == 'w2v-pos-ruscorpwiki':
     EMB_PATH = '/home/u2/resources/emb/182_ruwikiruscorpora_upos_skipgram_300_2_2019/model.bin'
 elif VECTORS == 'w2v-tayga-fpos5':
@@ -74,6 +74,6 @@ else:
         FT_EMB = '/home/lpvoid/masha/resources/emb/hypo_news/news_lemmas_ft_0_5.model'
         
 # FT_EMB = '/home/u2/resources/emb/181_ruscorpora_fasttext/model.model'
-OUT = '/home/u2/git/hypohyper/output/'
+OUT = 'output/'
 
 

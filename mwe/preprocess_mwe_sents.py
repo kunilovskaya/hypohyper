@@ -27,7 +27,7 @@ if __name__ == "__main__":
     os.makedirs(OUT_MWE, exist_ok=True)
 
     parser = ArgumentParser()
-    parser.add_argument('--tagged', default='%sruWordNet_names_pos.txt' % OUT_MWE,
+    parser.add_argument('--tagged', default='%sruWordNet_%s_names_pos.txt' % (OUT_MWE,POS),
                         help="tagged 68K words and phrases from ruWordNet")
     args = parser.parse_args()
 
