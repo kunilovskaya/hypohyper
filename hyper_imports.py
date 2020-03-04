@@ -659,14 +659,16 @@ def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None,
         hypernym = res[0]
         similarity = res[1]
         if hypernym in dict_w2ids:
+            synset = dict_w2ids[0] # limit the number if id to the first one only
             ## we are adding as many tuples as there are synset ids associated with the topN most_similar in embeddings and found in ruWordnet
             ## and there is NO way to add matches from MWE unless they appear in the embeddings in the current setup, when similarities are chosen from the default emb model
-            for synset in dict_w2ids[hypernym]: ## this dict is filtered through wordnet already; and it is here where I add all ids of a hypernym
+            # for synset in dict_w2ids[hypernym]: ## this dict is filtered through wordnet already; and it is here where I add all ids of a hypernym
+            if len(sims) < limit:
                 sims.append((synset, hypernym, similarity))
     # sort the list of tuples (id, sim) by the 2nd element and deduplicate
     # by rewriting the list while checking for duplicate synset ids
     ## why do I do that?? they are already in the descending order by similarity??
-    sims = sorted(sims, key=itemgetter(2), reverse=True)
+    # sims = sorted(sims, key=itemgetter(2), reverse=True)
     
     ## exclude hypernyms lemmas that match the query and lemmas from the same synset
     deduplicated_sims = []
@@ -674,9 +676,9 @@ def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None,
     nosamename = 0
     dup_ids = 0
     
-    sims_limited = sims[:limit]
+    # sims_limited = sims[:limit]
     
-    for a, b, c in sims_limited:
+    for a, b, c in sims:
         if test_item != b:
            if a not in temp:
                 temp.add(a)
@@ -944,7 +946,7 @@ def lose_family_comp(hypo, deduplicated_res, train=None, redundant=None):
     
     return this_hypo_res
 
-def just_get_hyper_ids(test_item, vec=None, emb=None, topn=None, lem2id=None):
+def just_get_hyper_ids(test_item, vec=None, emb=None, topn=None, name2id=None):
     
     hyper_vec = np.array(vec, dtype=float)
     nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=100)  # words
@@ -952,9 +954,9 @@ def just_get_hyper_ids(test_item, vec=None, emb=None, topn=None, lem2id=None):
     temp = set()
     for res in nearest_neighbors:
         hypernym = res[0]
-        if hypernym in lem2id:
+        if hypernym in name2id:
             if test_item != hypernym:
-                first_id = lem2id[hypernym][0] # limit the number if id to the first one
+                first_id = name2id[hypernym][0] # limit the number if id to the first one
                 # try:
                 #     second_id = lem2id[hypernym][1]
                 # except IndexError:
