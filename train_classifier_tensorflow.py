@@ -15,16 +15,21 @@ from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import to_categorical
 from hyper_imports import load_embeddings
+from configs import POS, EMB_PATH
 
 if __name__ == '__main__':
     # add command line arguments
     # this is probably the easiest way to store args for downstream
     parser = ArgumentParser()
-    parser.add_argument('--path', required=True, help="Path to the training corpus")
-    parser.add_argument('--w2v', required=True, help="Path to the embeddings")
+    if POS == 'NOUN':
+        parser.add_argument('--path', default='input/data/newtags_all_data_nouns.tsv', help="Path to the training corpus with words formatting compatible with the vectors")
+    if POS == 'VERB':
+        parser.add_argument('--path', default='input/data/newtags_all_data_VERB.tsv', help="Path to the training corpus")
+
+    parser.add_argument('--w2v', default=EMB_PATH, help="Path to the embeddings")
     parser.add_argument('--hidden_dim', action='store', type=int, default=386)
     parser.add_argument('--batch_size', action='store', type=int, default=32)
-    parser.add_argument('--run_name', default='test', help="Human-readable name of the run.")
+    parser.add_argument('--run_name', default=POS, help="Human-readable name of the run.")
     parser.add_argument('--epochs', action='store', type=int, default=25)
     parser.add_argument('--freq', action='store', type=int, default=5,
                         help="Frequency threshold for synsets")
@@ -44,6 +49,7 @@ if __name__ == '__main__':
 
     print('Loading the dataset...')
     train_dataset = pd.read_csv(trainfile, sep='\t', header=0)
+    # print(train_dataset.head())
     print('Finished loading the dataset')
 
     BALANCED = False  # Do we want to address the issue of imbalanced class weights?
@@ -59,7 +65,7 @@ if __name__ == '__main__':
     train_synsets = Counter()
     for target in train_dataset['synsets']:
         synsets = json.loads(target)
-        train_synsets.update(synsets)
+        train_synsets.update(synsets) ## flattens the list; gets a list of all synset ids
 
     valid_synsets = set([s for s in train_synsets if train_synsets[s] > args.freq])
 
@@ -71,7 +77,7 @@ if __name__ == '__main__':
             for synset in synsets:
                 if synset in valid_synsets:
                     x_train.append(vector)
-                    y_train.append(synset)
+                    y_train.append(synset) ## word vector with each hypernym synset as the class label
         else:
             oov += 1
 

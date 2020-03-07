@@ -7,6 +7,7 @@ import sys
 import zipfile
 import os
 
+
 predictionfile = sys.argv[1]
 predictions = json.load(open(predictionfile, 'r'))
 

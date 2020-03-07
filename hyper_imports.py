@@ -273,10 +273,6 @@ def map_mwe(names=None, same_names=None, tags=None, pos=None):
     my_map = defaultdict()
     
     for caps, tagged in zip(names, same_names):
-        if caps == "ЧАСТЬ ТЕЛО":
-            print('GOTCHAAAAAAAAAAAAAAA')
-        # else:
-        #     print('FAILUREEE')
         if ' ' in caps:
             old = preprocess_mwe(caps, tags=tags, pos=pos)
             new = tagged.replace(' ', '::')
@@ -959,7 +955,7 @@ def just_get_hyper_ids(test_item, vec=None, emb=None, topn=None, name2id=None):
         hypernym = res[0]
         if hypernym in name2id:
             if test_item != hypernym:
-                first_id = name2id[hypernym][0] # limit the number if id to the first one
+                first_id = name2id[hypernym][0] # limit the number of ids to the first one
                 # try:
                 #     second_id = lem2id[hypernym][1]
                 # except IndexError:
