@@ -19,7 +19,7 @@ from collections import defaultdict
 if __name__ == "__main__":
     parser = ArgumentParser()
     # parser.add_argument('--ruthes_words', default='%sruWordNet_lemmas.txt' % OUT, help="68K words and phrases from ruWordNet")
-    parser.add_argument('--ruthes_words', default='lists/tweaked_ruWordNet_names_pos.txt',
+    parser.add_argument('--ruthes_words', default='lists/tweaked_ruWordNet_%s_names_pos.txt' % POS,
                         help="68K words and phrases from ruWordNet ex научный_ADJ учреждение_NOUN")
     if TEST == 'codalab-pub':
         if POS == 'NOUN':

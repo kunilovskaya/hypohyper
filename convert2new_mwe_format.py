@@ -5,6 +5,7 @@ from configs import VECTORS, OUT, POS, TAGS, METHOD, TEST
 import json
 from collections import defaultdict
 from smart_open import open
+
 if POS == 'NOUNS':
     input = open('input/data/all_data_nouns.tsv', 'r')
 elif POS == 'VERB': # АРЕНДОВАТЬ ЖИЛУЮ ПЛОЩАДЬ

@@ -116,7 +116,7 @@ if __name__ == "__main__":
     if TEST == 'provided':
         parser.add_argument('--test', default='lists/%s_%s_WORDS.txt' % (POS, TEST), type=os.path.abspath)
         
-    parser.add_argument('--ruthes_words', default='lists/tweaked_ruWordNet_names_pos.txt', help="path to words from WordNet")
+    parser.add_argument('--ruthes_words', default='lists/tweaked_ruWordNet_%s_names_pos.txt' % POS, help="path to words from WordNet")
     args = parser.parse_args()
 
     start = time.time()

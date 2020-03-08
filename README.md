@@ -1,7 +1,7 @@
 KuKuPl team's contribution to the shared task at Dialogue Evaluation 2020: [Taxonomy Enrichment for the Russian Language](https://competitions.codalab.org/competitions/22168)
 
 
-## tasks and solutions (last updated Feb12, 2020)
+## tasks and solutions (last updated Mar07, 2020)
 
 ### (1) Getting the hypernym vector for a test word
 
