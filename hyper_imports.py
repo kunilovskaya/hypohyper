@@ -658,12 +658,12 @@ def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None,
         hypernym = res[0]
         similarity = res[1]
         if hypernym in dict_w2ids:
-            synset = dict_w2ids[0] # limit the number if id to the first one only
+            # synset = dict_w2ids[hypernym][0] # limit the number if id to the first one only
             ## we are adding as many tuples as there are synset ids associated with the topN most_similar in embeddings and found in ruWordnet
             ## and there is NO way to add matches from MWE unless they appear in the embeddings in the current setup, when similarities are chosen from the default emb model
-            # for synset in dict_w2ids[hypernym]: ## this dict is filtered through wordnet already; and it is here where I add all ids of a hypernym
-            if len(sims) < limit:
-                sims.append((synset, hypernym, similarity))
+            for synset in dict_w2ids[hypernym]: ## this dict is filtered through wordnet already; and it is here where I add all ids of a hypernym
+                if len(sims) < limit:
+                    sims.append((synset, hypernym, similarity))
     # sort the list of tuples (id, sim) by the 2nd element and deduplicate
     # by rewriting the list while checking for duplicate synset ids
     ## why do I do that?? they are already in the descending order by similarity??
@@ -689,7 +689,7 @@ def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None,
             nosamename += 1
             # print('Query word = hypernym for this item: %s' % nosamename)
 
-    return deduplicated_sims ## not limited to 10, but to limit now
+    return deduplicated_sims ## not limited to 10 now
 
 def synsets_vectorized(emb=None, id2lemmas=None, named_synsets=None, tags=None, pos=None):
     total_lemmas = 0
@@ -945,35 +945,57 @@ def lose_family_comp(hypo, deduplicated_res, train=None, redundant=None):
     
     return this_hypo_res
 
-def just_get_hyper_ids(test_item, vec=None, emb=None, topn=None, name2id=None):
-    
-    hyper_vec = np.array(vec, dtype=float)
-    nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=100)  # words
-    pred_ids = []
-    temp = set()
-    for res in nearest_neighbors:
-        hypernym = res[0]
-        if hypernym in name2id:
-            if test_item != hypernym:
-                first_id = name2id[hypernym][0] # limit the number of ids to the first one
-                # try:
-                #     second_id = lem2id[hypernym][1]
-                # except IndexError:
-                #     second_id = None
-                #     continue
-                # print(first_id)
-                if len(pred_ids) < topn:
-                    if first_id not in temp:
-                        temp.add(first_id)
-                        pred_ids.append((first_id, hypernym))
-                        # if second_id:
-                        #     if second_id not in temp:
-                        #         temp.add(second_id)
-                        #         pred_ids.append((second_id, hypernym))
-        else:
-            continue
+# def just_get_hyper_ids(test_item, vec=None, emb=None, topn=None, name2id=None):
+#
+#     hyper_vec = np.array(vec, dtype=float)
+#     nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=100)  # words
+#     pred_ids = []
+#     temp = set()
+#     for res in nearest_neighbors:
+#         hypernym = res[0]
+#         if hypernym in name2id:
+#             if test_item != hypernym:
+#                 first_id = name2id[hypernym][0] # limit the number of ids to the first one
+#                 # try:
+#                 #     second_id = lem2id[hypernym][1]
+#                 # except IndexError:
+#                 #     second_id = None
+#                 #     continue
+#                 # print(first_id)
+#                 if len(pred_ids) < topn:
+#                     if first_id not in temp:
+#                         temp.add(first_id)
+#                         pred_ids.append((first_id, hypernym))
+#                         # if second_id:
+#                         #     if second_id not in temp:
+#                         #         temp.add(second_id)
+#                         #         pred_ids.append((second_id, hypernym))
+#         else:
+#             continue
+#
+#     ## exclude hypernyms lemmas that match the query and lemmas from the same synset
+#     deduplicated_sims = []
+#     temp = set()
+#     nosamename = 0
+#     dup_ids = 0
+#
+#     # sims_limited = sims[:limit]
+#
+#     for a, b in pred_ids:
+#         if test_item != b:
+#             if a not in temp:
+#                 temp.add(a)
+#                 deduplicated_sims.append((a, b))  # (hypernym_synset_id, hypernym_wd)
+#             else:
+#                 dup_ids += 1
+#                 # print('Duplicate id among this items 100top similars', dup_ids)
+#         else:
+#             nosamename += 1
+#             # print('Query word = hypernym for this item: %s' % nosamename)
+#
+#     return deduplicated_sims  ## not limited to 10 now
             
-    return pred_ids
+    # return pred_ids
     
 ######################
 if __name__ == '__main__':

@@ -15,21 +15,24 @@ from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import to_categorical
 from hyper_imports import load_embeddings
-from configs import POS, EMB_PATH
+from configs import POS, EMB_PATH, VECTORS
 
 if __name__ == '__main__':
     # add command line arguments
     # this is probably the easiest way to store args for downstream
     parser = ArgumentParser()
-    if POS == 'NOUN':
+    if POS == 'NOUN' and 'mwe' in VECTORS:
         parser.add_argument('--path', default='input/data/newtags_all_data_nouns.tsv', help="Path to the training corpus with words formatting compatible with the vectors")
+    if POS == 'NOUN' and 'mwe' not in VECTORS:
+        parser.add_argument('--path', default='input/data/oldtags_all_data_nouns.tsv',
+                            help="Path to the training corpus with words formatting compatible with the vectors")
     if POS == 'VERB':
         parser.add_argument('--path', default='input/data/newtags_all_data_VERB.tsv', help="Path to the training corpus")
 
     parser.add_argument('--w2v', default=EMB_PATH, help="Path to the embeddings")
     parser.add_argument('--hidden_dim', action='store', type=int, default=386)
     parser.add_argument('--batch_size', action='store', type=int, default=32)
-    parser.add_argument('--run_name', default=POS, help="Human-readable name of the run.")
+    parser.add_argument('--run_name', default=VECTORS + '_' + POS, help="Human-readable name of the run.")
     parser.add_argument('--epochs', action='store', type=int, default=25)
     parser.add_argument('--freq', action='store', type=int, default=5,
                         help="Frequency threshold for synsets")
@@ -61,6 +64,7 @@ if __name__ == '__main__':
     y_train = []
 
     oov = 0
+    mwe_oov = 0
 
     train_synsets = Counter()
     for target in train_dataset['synsets']:
@@ -80,9 +84,11 @@ if __name__ == '__main__':
                     y_train.append(synset) ## word vector with each hypernym synset as the class label
         else:
             oov += 1
+            if '::' in lemma:
+                mwe_oov += 1
 
     print(len(x_train), 'train instances')
-    print(oov, 'OOV instances')
+    print('%d OOV instances, including %d MWE' % (oov, mwe_oov))
 
     classes = sorted(list(set(y_train)))
     num_classes = len(classes)

@@ -7,6 +7,8 @@ import time
 
 from configs import VECTORS, TAGS, EMB_PATH, OUT, FT_EMB, OOV_STRATEGY, POS, METHOD, TEST
 
+
+
 parser = ArgumentParser()
 # for ultimate results use private instead of public
 if TEST == 'codalab-pub':
@@ -25,6 +27,10 @@ if TEST == 'provided':
 parser.add_argument('--projection', default='%sprojections/%s_%s_%s_%s_projection.npy' % (OUT, VECTORS, POS, TEST, METHOD))
 parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
 
+if 'neg' in METHOD:
+    print('You dont want to overwrite predictions from hyperstar. Breaking...')
+    exit()
+    
 args = parser.parse_args()
 
 start = time.time()

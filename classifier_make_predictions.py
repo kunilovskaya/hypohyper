@@ -25,9 +25,11 @@ if __name__ == '__main__':
             parser.add_argument('--test', default='input/data/private_test/nouns_private.tsv', type=os.path.abspath, action='store')
         if POS == 'VERB':
             parser.add_argument('--test', default='input/data/private_test/verbs_private.tsv', type=os.path.abspath, action='store')
+    if TEST == 'provided':
+        parser.add_argument('--test', default='lists/%s_%s_WORDS.txt' % (POS, TEST), type=os.path.abspath)
             
     parser.add_argument('--w2v', default=EMB_PATH, help="Path to the embeddings")
-    parser.add_argument('--run_name', default=POS,
+    parser.add_argument('--run_name', default=VECTORS + '_' + POS,
                         help="Human-readable name of the run. "
                              "Will be used to find the model file and classes file")
     parser.add_argument('--nsynsets', action='store', type=int, default=10,

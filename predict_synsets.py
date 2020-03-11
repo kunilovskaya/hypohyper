@@ -13,7 +13,7 @@ from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, 
     TEST, METHOD, FILTER_1, FILTER_2
 from hyper_imports import popular_generic_concepts, load_embeddings, filtered_dicts_mainwds_option,read_xml, id2name_dict
 from hyper_imports import lemmas_based_hypers, mean_synset_based_hypers, synsets_vectorized, disambiguate_hyper_syn_ids, wd2id_dict, id2wds_dict
-from hyper_imports import cooccurence_counts, preprocess_mwe, just_get_hyper_ids, lose_family_anno, lose_family_comp, get_generations, map_mwe
+from hyper_imports import cooccurence_counts, preprocess_mwe, lose_family_anno, lose_family_comp, get_generations, map_mwe #just_get_hyper_ids
 
 parser = argparse.ArgumentParser('Detecting most similar synsets and formatting the output')
 # for ultimate results to submit use private instead of public
@@ -22,6 +22,7 @@ if TEST == 'codalab-pub':
         parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv', type=os.path.abspath)
     if POS == 'VERB':
         parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
+
 if TEST == 'codalab-pr':
     if POS == 'NOUN':
         parser.add_argument('--test', default='input/data/private_test/nouns_private.tsv', type=os.path.abspath)
@@ -30,7 +31,11 @@ if TEST == 'codalab-pr':
         
 if TEST == 'provided':
         parser.add_argument('--test', default='lists/%s_%s_WORDS.txt' % (POS, TEST), type=os.path.abspath)
-
+## for all tests vectors are leant with _lambda05
+parser.add_argument('--hyper_vectors',default='%spredicted_hypers/%s_%s_%s_%s_%s_hypers.npy' % (OUT,
+                                                                                                   VECTORS, POS,
+                                                                                                   OOV_STRATEGY, TEST,
+                                                                                                   METHOD))
 if FILTER_1 == 'comp':
     if POS == 'NOUN':
         parser.add_argument('--train', default='input/data/training_nouns.tsv',
@@ -38,14 +43,10 @@ if FILTER_1 == 'comp':
     if POS == 'VERB':
         parser.add_argument('--train', default='input/data/training_verbs.tsv',
                             help="train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION")
-    ## is lemmas-neg-hyp add _lambda05; for codalab tests vectors are leant with _lambda05
-parser.add_argument('--hyper_vectors', default='%spredicted_hypers/%s_%s_%s_%s_%s_hypers.npy' % (OUT, VECTORS, POS,
-                                                                                                 OOV_STRATEGY,
-                                                                                                 TEST, METHOD),
-                    help="predicted vectors")
+    
 
 args = parser.parse_args()
-
+print('====MY VECTOR FILE:', args.hyper_vectors)
 start = time.time()
     
 print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
@@ -144,12 +145,13 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
             # dict_w2ids = {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']}
             # preproccessibg only test items - they are all unigrams
             item = preprocess_mwe(hypo, tags=TAGS, pos=POS)
-            if VECTORS == 'mwe-pos-vectors':
+            # if VECTORS == 'mwe-pos-vectors':
                 ## there was an error in the dict which was lemmas2ids, not names2ids
-                deduplicated_res = just_get_hyper_ids(item, vec=hyper_vec, emb=model, topn=vecTOPN,name2id=names2ids) # just_get_hyper_ids(item, vec=None, emb=None, topn=None, lem2id=None)
-            else:
+                ## I don't see any dedup in this function!
+            #     deduplicated_res = just_get_hyper_ids(item, vec=hyper_vec, emb=model, topn=vecTOPN,name2id=names2ids) # just_get_hyper_ids(item, vec=None, emb=None, topn=None, lem2id=None)
+            # else:
                 ## this limit is the upperbound of the limit within which we are re-ordering predicted hypers
-                deduplicated_res = lemmas_based_hypers(item, vec=hyper_vec, emb=model, topn=vecTOPN, dict_w2ids=names2ids, limit=50)
+            deduplicated_res = lemmas_based_hypers(item, vec=hyper_vec, emb=model, topn=vecTOPN, dict_w2ids=names2ids, limit=50)
                 # print('This test item output is deduplicated')
                 # use FILTER disamb to retain only one, most similar component of polysemantic hypernyms, instead of grabbing the first one
             if FILTER_1 == 'disamb': # <- list of [(id1_1,hypernym1), (id1_2,hypernym1), (id2_1,hypernym2), (id2_2,hypernym2)]
@@ -186,9 +188,10 @@ for hypo, hyper_vec in zip(test, hyper_vecs):
                 this_hypo_res = cooc_updated[:10]
                 # /home/u2/git/hypohyper/output/cooc/hearst-hypers_merged4corpora_NOUN_provided_mwe.json
             elif 'hearst-info' in FILTER_1:
-                
-                hearst_dict = json.load(open('%scooc/hearst-hypers_merged4corpora_%s_%s_mwe.json' % (OUT,POS,TEST), 'r'))
-                
+                if 'mwe' in VECTORS:
+                    hearst_dict = json.load(open('%scooc/hearst-hypers_merged4corpora_%s_%s_mwe.json' % (OUT,POS,TEST), 'r'))
+                else:
+                    hearst_dict = json.load(open('%scooc/hearst-hypers_merged4corpora_%s_%s.json' % (OUT, POS, TEST), 'r'))
                 hearst_updated = cooccurence_counts(hypo, deduplicated_res,
                                                   corpus_freqs=hearst_dict, thres_cooc=COOC_LIMIT,
                                                   thres_dedup=DEDUP_LIMIT)
