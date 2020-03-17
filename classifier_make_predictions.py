@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 import numpy as np
 from smart_open import open
 from tensorflow.keras.models import load_model
-from configs import OUT, POS, TEST, VECTORS, EMB_PATH
+from configs import OUT, POS, TEST, VECTORS, EMB_PATH, METHOD, FILTER_1, FILTER_2
 import zipfile
 
 from hyper_imports import load_embeddings
@@ -29,7 +29,7 @@ if __name__ == '__main__':
         parser.add_argument('--test', default='lists/%s_%s_WORDS.txt' % (POS, TEST), type=os.path.abspath)
             
     parser.add_argument('--w2v', default=EMB_PATH, help="Path to the embeddings")
-    parser.add_argument('--run_name', default=VECTORS + '_' + POS,
+    parser.add_argument('--run_name', default='notest_' + VECTORS + '_' + POS,
                         help="Human-readable name of the run. "
                              "Will be used to find the model file and classes file")
     parser.add_argument('--nsynsets', action='store', type=int, default=10,
@@ -41,11 +41,14 @@ if __name__ == '__main__':
     TESTFILE = args.test
 
     embedding = load_embeddings(EMB_MODEL)
-
+    
+    OUT_RES = '%sclassifier/' % OUT
+    os.makedirs(OUT_RES, exist_ok=True)
+    
     print('Loading the model...')
-    with open(RUN_NAME + '_classes.json', 'r') as f:
+    with open(OUT_RES + RUN_NAME + '_classes.json', 'r') as f:
         classes = json.load(f)
-    model = load_model(RUN_NAME + '.h5')
+    model = load_model(OUT_RES + RUN_NAME + '.h5')
     print(model.summary())
 
     test_words = open(TESTFILE, 'r').readlines()
@@ -58,7 +61,6 @@ if __name__ == '__main__':
         if word in embedding:
             test_instances.append(embedding[word])
         else:
-            print('OOOOOOV', word)
             test_instances.append(np.zeros(embedding.vector_size))
             oov_counter += 1
     print('OOV:', oov_counter)
@@ -70,16 +72,24 @@ if __name__ == '__main__':
     for word, pred in zip(test_words, real_predictions):
         out[word.split('_')[0].upper()] = pred
         
-    OUT_RES = '%sresults/' % OUT
-    os.makedirs(OUT_RES, exist_ok=True)
-    
-    outname = '%s%s_%s_classif_%s.json' % (OUT_RES, TEST, POS, VECTORS)
+    if 'codelab' in TEST:
+        OUT_RES = '%sresults/' % OUT
+        os.makedirs(OUT_RES, exist_ok=True)
+        outname = '%s%s_%s_%s_%s_%s_pred.json' % (OUT_RES, POS, TEST, METHOD, FILTER_1, FILTER_2)
+    elif TEST == 'provided':
+        OUT_RES = '%sresults/org_split/' % OUT
+        os.makedirs(OUT_RES, exist_ok=True)
+        outname = '%s%s_%s_%s_%s_%s_pred.json' % (OUT_RES, POS, TEST, METHOD, FILTER_1, FILTER_2)
+    else:
+        OUT_RES = '%sresults/org_split/' % OUT
+        os.makedirs(OUT_RES, exist_ok=True)
+        outname = None
     
     with open(outname, 'w') as f:
         f.write(json.dumps(out, ensure_ascii=False, indent=4))
     print('Predictions saved to', outname)
 
-    predictions = json.load(open('%s%s_%s_classif_%s.json' % (OUT_RES, TEST, POS, VECTORS), 'r'))
+    predictions = json.load(open('%s%s_%s_%s_%s_%s_pred.json' % (OUT_RES, POS, TEST, METHOD, FILTER_1, FILTER_2), 'r'))
     
     submission = outname.replace('.json', '.tsv')
 
@@ -89,10 +99,10 @@ if __name__ == '__main__':
                 f.write('\t'.join([word, synset, 'whatever']) + '\n')
     print('Inspect submission:', submission)
     # upload this archive to the site
-    archive_name = '%s_%s_classif_%s.zip' % (TEST, POS, VECTORS)
+    archive_name = '%s_%s_%s_%s_%s_pred.zip' % (POS, TEST, METHOD, FILTER_1, FILTER_2)
     with zipfile.ZipFile(OUT_RES + archive_name, 'w') as file:
         file.write(submission,
-                   '%s_%s_classif_%s.tsv' % (TEST, POS, VECTORS))
+                   '%s_%s_%s_%s_%s_pred.tsv' % (POS, TEST, METHOD, FILTER_1, FILTER_2))
 
     print('Submit to codalab:', submission.replace('.tsv', '.zip'))
     # os.remove(outfile)

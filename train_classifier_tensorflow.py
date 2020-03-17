@@ -2,6 +2,7 @@
 # coding: utf-8
 
 from collections import Counter
+import os
 import random
 import json
 import time
@@ -15,24 +16,32 @@ from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import to_categorical
 from hyper_imports import load_embeddings
-from configs import POS, EMB_PATH, VECTORS
+from configs import OUT, POS, EMB_PATH, VECTORS, TEST
 
 if __name__ == '__main__':
     # add command line arguments
     # this is probably the easiest way to store args for downstream
     parser = ArgumentParser()
     if POS == 'NOUN' and 'mwe' in VECTORS:
-        parser.add_argument('--path', default='input/data/newtags_all_data_nouns.tsv', help="Path to the training corpus with words formatting compatible with the vectors")
+        if TEST == 'provided':
+            parser.add_argument('--path', default='input/data/notest_newtags_all_data_nouns.tsv', help="Path to the training corpus compatible with the vectors")
+        else:
+            parser.add_argument('--path', default='input/data/newtags_all_data_nouns.tsv',
+                                help="Path to the training corpus compatible with vectors format")
     if POS == 'NOUN' and 'mwe' not in VECTORS:
-        parser.add_argument('--path', default='input/data/oldtags_all_data_nouns.tsv',
-                            help="Path to the training corpus with words formatting compatible with the vectors")
+        if TEST == 'provided':
+            parser.add_argument('--path', default='input/data/notest_oldtags_all_data_nouns.tsv',
+                            help="Path to the training corpus compatible with the vectors")
+        else:
+            parser.add_argument('--path', default='input/data/oldtags_all_data_nouns.tsv',
+                                help="Path to the training corpus compatible with the vectors")
     if POS == 'VERB':
         parser.add_argument('--path', default='input/data/newtags_all_data_VERB.tsv', help="Path to the training corpus")
 
     parser.add_argument('--w2v', default=EMB_PATH, help="Path to the embeddings")
     parser.add_argument('--hidden_dim', action='store', type=int, default=386)
     parser.add_argument('--batch_size', action='store', type=int, default=32)
-    parser.add_argument('--run_name', default=VECTORS + '_' + POS, help="Human-readable name of the run.")
+    parser.add_argument('--run_name', default='notest_' + VECTORS + '_' + POS, help="Human-readable name of the run.")
     parser.add_argument('--epochs', action='store', type=int, default=25)
     parser.add_argument('--freq', action='store', type=int, default=5,
                         help="Frequency threshold for synsets")
@@ -184,9 +193,12 @@ if __name__ == '__main__':
     print('Macro F1 on the dev set:', round(fscore, 2))
 
     # Saving the model to file
-    model_filename = run_name + '.h5'
+    OUT_RES = '%sclassifier/' % OUT
+    os.makedirs(OUT_RES, exist_ok=True)
+    
+    model_filename = OUT_RES + run_name + '.h5'
     model.save(model_filename)
-    with open(run_name + '_classes.json', 'w') as f:
+    with open(OUT_RES + run_name + '_classes.json', 'w') as f:
         f.write(json.dumps(classes, ensure_ascii=False, indent=4))
     print('Model saved to', model_filename)
     print('Classes saved to', run_name + '_classes.json')
