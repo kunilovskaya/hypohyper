@@ -19,29 +19,30 @@ from hyper_imports import load_embeddings
 from configs import OUT, POS, EMB_PATH, VECTORS, TEST
 
 if __name__ == '__main__':
-    # add command line arguments
-    # this is probably the easiest way to store args for downstream
     parser = ArgumentParser()
     if POS == 'NOUN' and 'mwe' in VECTORS:
         if TEST == 'provided':
-            parser.add_argument('--path', default='input/data/notest_newtags_all_data_nouns.tsv', help="Path to the training corpus compatible with the vectors")
+            parser.add_argument('--path', default='input/data/notest_newtags_all_data_nouns.tsv',
+                                help="Path to the training corpus compatible with the vectors")
         else:
             parser.add_argument('--path', default='input/data/newtags_all_data_nouns.tsv',
                                 help="Path to the training corpus compatible with vectors format")
     if POS == 'NOUN' and 'mwe' not in VECTORS:
         if TEST == 'provided':
             parser.add_argument('--path', default='input/data/notest_oldtags_all_data_nouns.tsv',
-                            help="Path to the training corpus compatible with the vectors")
+                                help="Path to the training corpus compatible with the vectors")
         else:
             parser.add_argument('--path', default='input/data/oldtags_all_data_nouns.tsv',
                                 help="Path to the training corpus compatible with the vectors")
     if POS == 'VERB':
-        parser.add_argument('--path', default='input/data/newtags_all_data_VERB.tsv', help="Path to the training corpus")
+        parser.add_argument('--path', default='input/data/newtags_all_data_VERB.tsv',
+                            help="Path to the training corpus")
 
     parser.add_argument('--w2v', default=EMB_PATH, help="Path to the embeddings")
     parser.add_argument('--hidden_dim', action='store', type=int, default=386)
     parser.add_argument('--batch_size', action='store', type=int, default=32)
-    parser.add_argument('--run_name', default='notest_' + VECTORS + '_' + POS, help="Human-readable name of the run.")
+    parser.add_argument('--run_name', default='notest_' + VECTORS + '_' + POS,
+                        help="Human-readable name of the run.")
     parser.add_argument('--epochs', action='store', type=int, default=25)
     parser.add_argument('--freq', action='store', type=int, default=5,
                         help="Frequency threshold for synsets")
@@ -61,7 +62,6 @@ if __name__ == '__main__':
 
     print('Loading the dataset...')
     train_dataset = pd.read_csv(trainfile, sep='\t', header=0)
-    # print(train_dataset.head())
     print('Finished loading the dataset')
 
     BALANCED = False  # Do we want to address the issue of imbalanced class weights?
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     train_synsets = Counter()
     for target in train_dataset['synsets']:
         synsets = json.loads(target)
-        train_synsets.update(synsets) ## flattens the list; gets a list of all synset ids
+        train_synsets.update(synsets)  # flattens the list; gets a list of all synset ids
 
     valid_synsets = set([s for s in train_synsets if train_synsets[s] > args.freq])
 
@@ -89,8 +89,9 @@ if __name__ == '__main__':
             synsets = json.loads(target)
             for synset in synsets:
                 if synset in valid_synsets:
+                    # word vector with each hypernym synset as the class label:
                     x_train.append(vector)
-                    y_train.append(synset) ## word vector with each hypernym synset as the class label
+                    y_train.append(synset)
         else:
             oov += 1
             if '::' in lemma:
@@ -103,8 +104,8 @@ if __name__ == '__main__':
     num_classes = len(classes)
     print(num_classes, 'classes')
 
+    class_weights = {}
     if BALANCED:
-        class_weights = {}
         for nr, synset in enumerate(classes):
             class_weights[nr] = 1 / train_synsets[synset]
 
@@ -122,12 +123,12 @@ if __name__ == '__main__':
     # Converting text labels to indexes
     y_train = [classes.index(i) for i in y_train]
 
-    # Convert indexes to binary class matrix (for use with categorical_crossentropy loss)
+    # Convert indexes to binary class matrix (for use with categorical crossentropy loss)
     y_train = to_categorical(y_train, num_classes)
     print('Train labels shape:', y_train.shape)
 
     print('Building a model with 1 hidden layer...')
-    model = Sequential()  # Basic type of TensorFlow models: a sequential stack of layers
+    model = Sequential()  # Basic type of TensorFlow Keras models: a sequential stack of layers
 
     # We now start adding layers.
     # 'Dense' here means 'fully-connected':
@@ -136,24 +137,21 @@ if __name__ == '__main__':
 
     model.add(Dropout(0.1))  # We will use dropout after the first hidden layer
 
-    # Inserting additional hidden layers:
-    # model.add(Dense(args.hidden_dim, activation='relu'))
-    # model.add(Dropout(0.1))
-
     model.add(Dense(num_classes, activation='softmax', name='Output'))  # Output layer
 
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-    # Print out the model architecture and save it as a figure
+    # Print out the model architecture
     print(model.summary())
 
-    # We will monitor the dynamics of accuracy on the validation set during training
+    # We will monitor the dynamics of accuracy during training
     # If it stops improving, we will stop training.
     if OVERFIT:
-        earlystopping = EarlyStopping(monitor='acc', min_delta=0.0001, patience=3, verbose=1, mode='max')
+        earlystopping = EarlyStopping(monitor='acc', min_delta=0.0001, patience=3, verbose=1,
+                                      mode='max')
     else:
         earlystopping = EarlyStopping(monitor='val_acc', min_delta=0.0001, patience=4, verbose=1,
-                                  mode='max')
+                                      mode='max')
 
     # what part of the training data will be used as a validation dataset:
     val_split = 1 - args.split
@@ -163,12 +161,12 @@ if __name__ == '__main__':
     start = time.time()
     if BALANCED:
         history = model.fit(x_train, y_train, epochs=args.epochs, verbose=1,
-                        validation_split=val_split, batch_size=args.batch_size,
-                        callbacks=[earlystopping], class_weight=class_weights)
+                            validation_split=val_split, batch_size=args.batch_size,
+                            callbacks=[earlystopping], class_weight=class_weights)
     else:
         history = model.fit(x_train, y_train, epochs=args.epochs, verbose=1,
-                        validation_split=val_split, batch_size=args.batch_size,
-                        callbacks=[earlystopping])
+                            validation_split=val_split, batch_size=args.batch_size,
+                            callbacks=[earlystopping])
 
     end = time.time()
     training_time = int(end - start)
@@ -182,8 +180,7 @@ if __name__ == '__main__':
     print('Validation loss:', round(score[0], 4))
     print('Validation accuracy:', round(score[1], 4))
 
-    # We use sklearn function classification_report()
-    # to calculate per-class F1 score on the dev set:
+    # We calculate F1 score on the dev set:
     predictions = model.predict(x_val)
 
     # Convert predictions from integers back to text labels:
@@ -195,7 +192,7 @@ if __name__ == '__main__':
     # Saving the model to file
     OUT_RES = '%sclassifier/' % OUT
     os.makedirs(OUT_RES, exist_ok=True)
-    
+
     model_filename = OUT_RES + run_name + '.h5'
     model.save(model_filename)
     with open(OUT_RES + run_name + '_classes.json', 'w') as f:

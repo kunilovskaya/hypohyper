@@ -12,21 +12,24 @@ import zipfile
 from hyper_imports import load_embeddings
 
 if __name__ == '__main__':
-    # add command line arguments
-    # this is probably the easiest way to store args for downstream
     parser = ArgumentParser()
     if TEST == 'codalab-pub':
         if POS == 'NOUN':
-            parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv', type=os.path.abspath, action='store')
+            parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv',
+                                type=os.path.abspath, action='store')
         if POS == 'VERB':
-            parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath, action='store')
+            parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv',
+                                type=os.path.abspath, action='store')
     if TEST == 'codalab-pr':
         if POS == 'NOUN':
-            parser.add_argument('--test', default='input/data/private_test/nouns_private.tsv', type=os.path.abspath, action='store')
+            parser.add_argument('--test', default='input/data/private_test/nouns_private.tsv',
+                                type=os.path.abspath, action='store')
         if POS == 'VERB':
-            parser.add_argument('--test', default='input/data/private_test/verbs_private.tsv', type=os.path.abspath, action='store')
+            parser.add_argument('--test', default='input/data/private_test/verbs_private.tsv',
+                                type=os.path.abspath, action='store')
     if TEST == 'provided':
-        parser.add_argument('--test', default='lists/%s_%s_WORDS.txt' % (POS, TEST), type=os.path.abspath)
+        parser.add_argument('--test', default='lists/%s_%s_WORDS.txt' % (POS, TEST),
+                            type=os.path.abspath)
             
     parser.add_argument('--w2v', default=EMB_PATH, help="Path to the embeddings")
     parser.add_argument('--run_name', default='notest_' + VECTORS + '_' + POS,
@@ -89,7 +92,8 @@ if __name__ == '__main__':
         f.write(json.dumps(out, ensure_ascii=False, indent=4))
     print('Predictions saved to', outname)
 
-    predictions = json.load(open('%s%s_%s_%s_%s_%s_pred.json' % (OUT_RES, POS, TEST, METHOD, FILTER_1, FILTER_2), 'r'))
+    predictions = json.load(open('%s%s_%s_%s_%s_%s_pred.json' % (OUT_RES, POS, TEST, METHOD,
+                                                                 FILTER_1, FILTER_2), 'r'))
     
     submission = outname.replace('.json', '.tsv')
 
@@ -105,4 +109,4 @@ if __name__ == '__main__':
                    '%s_%s_%s_%s_%s_pred.tsv' % (POS, TEST, METHOD, FILTER_1, FILTER_2))
 
     print('Submit to codalab:', submission.replace('.tsv', '.zip'))
-    # os.remove(outfile)
+
