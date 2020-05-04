@@ -8,12 +8,12 @@ sys.path.append(path1)
 
 from argparse import ArgumentParser
 from smart_open import open
-from hyper_imports import preprocess_mwe
+from trials_errors.hyper_imports import preprocess_mwe
 import json
 import time
 import re
 from collections import defaultdict
-from configs import VECTORS, OUT, TAGS, POS, TEST, METHOD
+from trials_errors.configs import OUT, TAGS, POS, TEST
 import ahocorasick
 
 def hearst_hyper2(testword, sent, pat2, hyper_nr=2):

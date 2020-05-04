@@ -6,11 +6,11 @@ path1 = '../hypohyper/'
 path1 = os.path.abspath(str(path1))
 sys.path.append(path1)
 
-from hyper_imports import read_xml, id2wds_dict, preprocess_mwe
+from trials_errors.hyper_imports import read_xml, id2wds_dict, preprocess_mwe
 from argparse import ArgumentParser
 
 from smart_open import open
-from configs import OUT, RUWORDNET
+from trials_errors.configs import OUT, RUWORDNET
 
 if __name__ == "__main__":
     parser = ArgumentParser()

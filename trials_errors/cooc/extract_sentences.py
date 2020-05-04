@@ -9,7 +9,7 @@ sys.path.append(path1)
 from argparse import ArgumentParser
 import sys
 from smart_open import open
-from hyper_imports import preprocess_mwe
+from trials_errors.hyper_imports import preprocess_mwe
 
 
 if __name__ == "__main__":

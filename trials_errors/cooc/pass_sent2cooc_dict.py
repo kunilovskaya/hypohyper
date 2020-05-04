@@ -9,8 +9,8 @@ sys.path.append(path1)
 from argparse import ArgumentParser
 
 from smart_open import open
-from hyper_imports import preprocess_mwe
-from configs import VECTORS, OUT, POS, TEST, METHOD, TAGS
+from trials_errors.hyper_imports import preprocess_mwe
+from trials_errors.configs import OUT, POS, TEST, TAGS
 import ahocorasick
 import time
 import json
