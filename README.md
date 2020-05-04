@@ -10,4 +10,4 @@ Trained on:
 - Russian National Corpus (both the main and newspaper parts)
 - Russian news corpus
 
-In all the corpora, multi-word entities from ruWordNet were tokenized together.
+In all the corpora, multi-word entities from ruWordNet were represented as one token. For example, *ящик_NOUN::из_ADP::картон_NOUN* and *давать_VERB::возможность_NOUN*

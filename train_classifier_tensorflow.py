@@ -15,8 +15,8 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import to_categorical
-from hyper_imports import load_embeddings
-from configs import OUT, POS, EMB_PATH, VECTORS, TEST
+from trials_errors.hyper_imports import load_embeddings
+from trials_errors.configs import OUT, POS, EMB_PATH, VECTORS, TEST
 
 if __name__ == '__main__':
     parser = ArgumentParser()

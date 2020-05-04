@@ -7,11 +7,12 @@ __pycache__/
 *.so
 
 # Distribution / packaging
-misc/
-dev/
+trials_errors/misc/
+trials_errors/dev/
+trials_errors/errors/
 output/
 .idea
-configs.py
+trials_errors/configs.py
 .Python
 build/
 develop-eggs/
