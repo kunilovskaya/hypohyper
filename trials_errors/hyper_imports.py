@@ -10,11 +10,10 @@ import numpy as np
 from gensim.matutils import unitvec
 from smart_open import open
 from itertools import repeat
-from operator import itemgetter
 import itertools
 import json
 
-from get_reference_format import get_data, get_words
+from get_reference_format import get_data
 
 
 # parse ruwordnet

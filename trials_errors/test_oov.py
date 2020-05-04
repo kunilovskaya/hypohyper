@@ -1,7 +1,7 @@
 #! python3
 # coding: utf-8
 
-from hyper_imports import load_embeddings
+from trials_errors.hyper_imports import load_embeddings
 from argparse import ArgumentParser
 import sys
 from smart_open import open

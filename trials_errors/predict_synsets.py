@@ -19,18 +19,18 @@ parser = argparse.ArgumentParser('Detecting most similar synsets and formatting 
 # for ultimate results to submit use private instead of public
 if TEST == 'codalab-pub':
     if POS == 'NOUN':
-        parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='../input/data/public_test/nouns_public.tsv', type=os.path.abspath)
     if POS == 'VERB':
-        parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='../input/data/public_test/verbs_public.tsv', type=os.path.abspath)
 
 if TEST == 'codalab-pr':
     if POS == 'NOUN':
-        parser.add_argument('--test', default='input/data/private_test/nouns_private.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='../input/data/private_test/nouns_private.tsv', type=os.path.abspath)
     if POS == 'VERB':
-        parser.add_argument('--test', default='input/data/private_test/verbs_private.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='../input/data/private_test/verbs_private.tsv', type=os.path.abspath)
         
 if TEST == 'provided':
-        parser.add_argument('--test', default='lists/%s_%s_WORDS.txt' % (POS, TEST), type=os.path.abspath)
+        parser.add_argument('--test', default='../lists/%s_%s_WORDS.txt' % (POS, TEST), type=os.path.abspath)
 ## for all tests vectors are leant with _lambda05
 parser.add_argument('--hyper_vectors',default='%spredicted_hypers/%s_%s_%s_%s_%s_hypers.npy' % (OUT,
                                                                                                    VECTORS, POS,
@@ -38,10 +38,10 @@ parser.add_argument('--hyper_vectors',default='%spredicted_hypers/%s_%s_%s_%s_%s
                                                                                                    METHOD))
 if FILTER_1 == 'comp':
     if POS == 'NOUN':
-        parser.add_argument('--train', default='input/data/training_nouns.tsv',
+        parser.add_argument('--train', default='../input/data/training_nouns.tsv',
                             help="train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION")
     if POS == 'VERB':
-        parser.add_argument('--train', default='input/data/training_verbs.tsv',
+        parser.add_argument('--train', default='../input/data/training_verbs.tsv',
                             help="train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION")
     
 
@@ -79,8 +79,8 @@ wd2id = wd2id_dict(id2wd)
 
 ## provide for extented MWE preprocessing in process_mwe
 if VECTORS  == 'mwe-pos-vectors':
-    source = open('lists/ruWordNet_%s_names.txt' % POS, 'r').readlines()
-    source_tagged = open('lists/ruWordNet_%s_same-names_pos.txt' % POS, 'r').readlines()
+    source = open('../lists/ruWordNet_%s_names.txt' % POS, 'r').readlines()
+    source_tagged = open('../lists/ruWordNet_%s_same-names_pos.txt' % POS, 'r').readlines()
     mwe_map = map_mwe(names=source, same_names=source_tagged, tags=TAGS, pos=POS)
 else:
     mwe_map = None

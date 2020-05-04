@@ -71,15 +71,15 @@ def convert(data, input, mapping=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     if TEST == 'provided':
-        parser.add_argument('--source', default='input/data/training_nouns.tsv', type=os.path.abspath,
+        parser.add_argument('--source', default='../input/data/training_nouns.tsv', type=os.path.abspath,
                             help='train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION')
         if POS == 'NOUN':
-            parser.add_argument('--train', default='input/data/org_split/train_nouns.tsv', type=os.path.abspath)
-            parser.add_argument('--dev', default='input/data/org_split/dev_nouns.tsv', type=os.path.abspath)
+            parser.add_argument('--train', default='../input/data/org_split/train_nouns.tsv', type=os.path.abspath)
+            parser.add_argument('--dev', default='../input/data/org_split/dev_nouns.tsv', type=os.path.abspath)
     
         if POS == 'VERB':
-            parser.add_argument('--train', default='input/data/org_split/train_verbs.tsv', type=os.path.abspath)
-            parser.add_argument('--dev', default='input/data/org_split/dev_verbs.tsv', type=os.path.abspath)
+            parser.add_argument('--train', default='../input/data/org_split/train_verbs.tsv', type=os.path.abspath)
+            parser.add_argument('--dev', default='../input/data/org_split/dev_verbs.tsv', type=os.path.abspath)
     
     else:
         print('Select "provided" for TEST in configs.py (train-dev-test split)', file=sys.stderr)
@@ -88,8 +88,8 @@ if __name__ == "__main__":
     
     source = [i.strip() for i in open(args.source, 'r').readlines()[1:]]
     if VECTORS == 'mwe-pos-vectors':
-        WN_names = open('lists/ruWordNet_%s_names.txt' % POS, 'r').readlines()
-        WN_names_tagged = open('lists/ruWordNet_%s_same-names_pos.txt' % POS, 'r').readlines()
+        WN_names = open('../lists/ruWordNet_%s_names.txt' % POS, 'r').readlines()
+        WN_names_tagged = open('../lists/ruWordNet_%s_same-names_pos.txt' % POS, 'r').readlines()
         mapped = map_mwe(names=WN_names, same_names=WN_names_tagged, tags=TAGS, pos=POS)
     else:
         mapped=None

@@ -82,7 +82,7 @@ def write_data(words, word2parents, out_file):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('input', default='input/data/training_nouns.tsv', help='train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION')
+    parser.add_argument('input', default='../input/data/training_nouns.tsv', help='train data in format SYNSET<TAB>SENSES<TAB>PARENTS<TAB>DEFINITION')
     parser.add_argument('output', default='/home/u2/proj/hypohyper/train.tsv /home/u2/proj/hypohyper/dev.tsv /home/u2/proj/hypohyper/test.tsv', nargs='+', help='new file(s) to store the data')
     parser.add_argument('--split', default='0.8 0.1 0.1', nargs='+', help='size of train/dev/test splits. Has to sum to 1, e.g. "0.8 0.1 0.1"')
     args = parser.parse_args()

@@ -2,10 +2,10 @@ import argparse
 import time
 import os
 import sys
-from hyper_imports import process_tsv, process_tsv_deworded_hypers
-from hyper_imports import wd2id_dict, id2wds_dict, read_xml, get_orgtest, get_orgtrain_deworded, get_orgtrain
+from trials_errors.hyper_imports import process_tsv, process_tsv_deworded_hypers
+from trials_errors.hyper_imports import wd2id_dict, id2wds_dict, read_xml, get_orgtest, get_orgtrain_deworded, get_orgtrain
 import json
-from configs import VECTORS, RUWORDNET, OUT, POS, TEST, METHOD
+from trials_errors.configs import VECTORS, RUWORDNET, OUT, POS, TEST, METHOD
 
 ## postpone filtering thru embedding and respective CAPS conversion and TAGS-attaching to learning and testing time
 
@@ -13,16 +13,16 @@ parser = argparse.ArgumentParser()
 
 if 'codalab' in TEST:
     if POS == 'NOUN':
-        parser.add_argument('--train', default='input/data/training_nouns.tsv', type=os.path.abspath)
+        parser.add_argument('--train', default='../input/data/training_nouns.tsv', type=os.path.abspath)
     elif POS == 'VERB':
-        parser.add_argument('--train', default='input/data/training_verbs.tsv', type=os.path.abspath)
+        parser.add_argument('--train', default='../input/data/training_verbs.tsv', type=os.path.abspath)
 if TEST == 'provided':
     if POS == 'NOUN':
-        parser.add_argument('--train', default='input/data/org_split/train_nouns.tsv', type=os.path.abspath)
-        parser.add_argument('--test', default='input/data/org_split/test_nouns.tsv', type=os.path.abspath)
+        parser.add_argument('--train', default='../input/data/org_split/train_nouns.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='../input/data/org_split/test_nouns.tsv', type=os.path.abspath)
     elif POS == 'VERB':
-        parser.add_argument('--train', default='input/data/org_split/train_verbs.tsv', type=os.path.abspath)
-        parser.add_argument('--test', default='input/data/org_split/test_verbs.tsv')
+        parser.add_argument('--train', default='../input/data/org_split/train_verbs.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='../input/data/org_split/test_verbs.tsv')
    
 start = time.time()
 
@@ -69,7 +69,7 @@ if METHOD == 'deworded':
         gold_dict = get_orgtest(args.test)  # hypos are filtered for MWE
         json.dump(gold_dict, open('%sgold_%s_%s_%s.json' % (OUT_GOLD, POS, TEST, METHOD), 'w'))
         first3pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:3]}
-        with open('lists/%s_%s_WORDS.txt' % (POS, TEST), 'w') as my_testfile:
+        with open('../lists/%s_%s_WORDS.txt' % (POS, TEST), 'w') as my_testfile:
             for key in gold_dict:
                 my_testfile.write(key + '\n')
         print('Raw train pairs: %d' % len(hypohyper_train), file=sys.stderr)
@@ -95,7 +95,7 @@ else:
         gold_dict = get_orgtest(args.test)  # hypos are filtered for MWE
         json.dump(gold_dict, open('%sgold_%s_%s_%s.json' % (OUT_GOLD, POS, TEST, METHOD), 'w'))
         first3pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:3]}
-        with open('lists/%s_%s_WORDS.txt' % (POS, TEST), 'w') as my_testfile:
+        with open('../lists/%s_%s_WORDS.txt' % (POS, TEST), 'w') as my_testfile:
             for key in gold_dict:
                 my_testfile.write(key + '\n')
         print('Raw train pairs: %d' % len(hypohyper_train), file=sys.stderr)

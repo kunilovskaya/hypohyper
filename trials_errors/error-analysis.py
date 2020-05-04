@@ -1,14 +1,13 @@
 ## look at lists of golden and returned lists: are my predicted words within the first 50?
-import os
 import sys
 from smart_open import open
 from collections import defaultdict
 import json
 
-from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, TAGS, \
+from trials_errors.configs import VECTORS, RUWORDNET, OOV_STRATEGY, POS, MODE, TAGS, \
     TEST, METHOD, FILTER_1, FILTER_2
-from hyper_imports import id2wds_dict, read_xml
-from hyper_imports import map_mwe, new_preprocess_mwe
+from trials_errors.hyper_imports import id2wds_dict, read_xml
+from trials_errors.hyper_imports import map_mwe, new_preprocess_mwe
 
     
 # print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)
@@ -33,7 +32,7 @@ else:
 
 pred_lemid = json.load(open('errors/preds_lemid_%s_%s_%s_%s_%s.json' % (POS, TEST, METHOD, FILTER_1, FILTER_2), 'r'))
 oov = []
-gold_dict = json.load(open('gold_dicts/gold_%s_%s_%s.json' % (POS, TEST, METHOD), 'r'))
+gold_dict = json.load(open('../gold_dicts/gold_%s_%s_%s.json' % (POS, TEST, METHOD), 'r'))
 print('\nHuman-readable results for top ten test words:', file=sys.stderr)
 for hypo, hyp_ids in gold_dict.items(): # {'WORD1': [['4544-N'], ['147272-N']], 'WORD2': [['141697-N', '116284-N']]}
     hyp_wds = defaultdict(list)

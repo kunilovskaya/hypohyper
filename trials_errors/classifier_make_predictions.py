@@ -15,20 +15,20 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     if TEST == 'codalab-pub':
         if POS == 'NOUN':
-            parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv',
+            parser.add_argument('--test', default='../input/data/public_test/nouns_public.tsv',
                                 type=os.path.abspath, action='store')
         if POS == 'VERB':
-            parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv',
+            parser.add_argument('--test', default='../input/data/public_test/verbs_public.tsv',
                                 type=os.path.abspath, action='store')
     if TEST == 'codalab-pr':
         if POS == 'NOUN':
-            parser.add_argument('--test', default='input/data/private_test/nouns_private.tsv',
+            parser.add_argument('--test', default='../input/data/private_test/nouns_private.tsv',
                                 type=os.path.abspath, action='store')
         if POS == 'VERB':
-            parser.add_argument('--test', default='input/data/private_test/verbs_private.tsv',
+            parser.add_argument('--test', default='../input/data/private_test/verbs_private.tsv',
                                 type=os.path.abspath, action='store')
     if TEST == 'provided':
-        parser.add_argument('--test', default='lists/%s_%s_WORDS.txt' % (POS, TEST),
+        parser.add_argument('--test', default='../lists/%s_%s_WORDS.txt' % (POS, TEST),
                             type=os.path.abspath)
             
     parser.add_argument('--w2v', default=EMB_PATH, help="Path to the embeddings")

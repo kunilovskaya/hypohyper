@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
 __author__ = 'Dmitry Ustalov'
+import os,sys
+# path1 = '../projlearn/'
+# path1 = os.path.abspath(str(path1))
+sys.path.append('/home/u2/git/hypohyper/hyperstar/projlearn')
 
 import datetime
 import glob
-import os
 import pickle
 import random
-import sys
 from smart_open import open
 import numpy as np
 import tensorflow as tf

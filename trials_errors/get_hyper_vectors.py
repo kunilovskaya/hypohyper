@@ -1,4 +1,4 @@
-from hyper_imports import load_embeddings, predict
+from trials_errors.hyper_imports import load_embeddings, predict
 from argparse import ArgumentParser
 import os, sys
 from smart_open import open
@@ -13,17 +13,17 @@ parser = ArgumentParser()
 # for ultimate results use private instead of public
 if TEST == 'codalab-pub':
     if POS == 'NOUN':
-        parser.add_argument('--test', default='input/data/public_test/nouns_public.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='../input/data/public_test/nouns_public.tsv', type=os.path.abspath)
     elif POS == 'VERB':
-        parser.add_argument('--test', default='input/data/public_test/verbs_public.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='../input/data/public_test/verbs_public.tsv', type=os.path.abspath)
 if TEST == 'codalab-pr':
     if POS == 'NOUN':
-        parser.add_argument('--test', default='input/data/private_test/nouns_private.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='../input/data/private_test/nouns_private.tsv', type=os.path.abspath)
     elif POS == 'VERB':
-        parser.add_argument('--test', default='input/data/private_test/verbs_private.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='../input/data/private_test/verbs_private.tsv', type=os.path.abspath)
         
 if TEST == 'provided':
-        parser.add_argument('--test', default='lists/%s_%s_WORDS.txt' % (POS, TEST), type=os.path.abspath)
+        parser.add_argument('--test', default='../lists/%s_%s_WORDS.txt' % (POS, TEST), type=os.path.abspath)
 parser.add_argument('--projection', default='%sprojections/%s_%s_%s_%s_projection.npy' % (OUT, VECTORS, POS, TEST, METHOD))
 parser.add_argument('--nr', type=int, default=10, help='Number of candidates')
 

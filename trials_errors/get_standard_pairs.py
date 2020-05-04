@@ -3,20 +3,20 @@ import sys, os
 import time
 from hyper_imports import wd2id_dict, id2wds_dict, read_xml, get_orgtest, get_orgtrain
 from hyper_imports import load_embeddings, preprocess_wordpair
-from configs import VECTORS, EMB_PATH, OUT, POS, TAGS, MWE, SKIP_OOV, METHOD, TEST, RUWORDNET
+from configs import VECTORS, EMB_PATH, OUT, POS, TAGS, MWE, METHOD, TEST, RUWORDNET
 
 import json
 
 parser = argparse.ArgumentParser()
 if TEST == 'provided':
     if POS == 'NOUN':
-        parser.add_argument('--train', default='input/data/org_split/train_nouns.tsv', type=os.path.abspath)
-        parser.add_argument('--dev', default='input/data/org_split/dev_nouns.tsv', type=os.path.abspath)
-        parser.add_argument('--test', default='input/data/org_split/test_nouns.tsv', type=os.path.abspath)
+        parser.add_argument('--train', default='../input/data/org_split/train_nouns.tsv', type=os.path.abspath)
+        parser.add_argument('--dev', default='../input/data/org_split/dev_nouns.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='../input/data/org_split/test_nouns.tsv', type=os.path.abspath)
     if POS == 'VERB':
-        parser.add_argument('--train', default='input/data/org_split/train_verbs.tsv', type=os.path.abspath)
-        parser.add_argument('--dev', default='input/data/org_split/dev_verbs.tsv', type=os.path.abspath)
-        parser.add_argument('--test', default='input/data/org_split/test_nouns.tsv')
+        parser.add_argument('--train', default='../input/data/org_split/train_verbs.tsv', type=os.path.abspath)
+        parser.add_argument('--dev', default='../input/data/org_split/dev_verbs.tsv', type=os.path.abspath)
+        parser.add_argument('--test', default='../input/data/org_split/test_nouns.tsv')
 else:
     print('Select provided train-dev-test split', file=sys.stderr)
 args = parser.parse_args()
@@ -58,7 +58,7 @@ hypohyper_test = get_orgtrain(args.test, map=synset_words)
 gold_dict = get_orgtest(args.test)  # hypos are filtered for MWE
 
 first3pairs_gold = {k: gold_dict[k] for k in list(gold_dict)[:3]}
-with open('lists/%s_%s_WORDS.txt' % (POS, TEST), 'w') as my_testfile:
+with open('../lists/%s_%s_WORDS.txt' % (POS, TEST), 'w') as my_testfile:
     for key in gold_dict:
         my_testfile.write(key + '\n')
         

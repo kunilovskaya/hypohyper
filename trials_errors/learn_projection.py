@@ -1,4 +1,4 @@
-from hyper_imports import learn_projection, load_embeddings, estimate_sims
+from trials_errors.hyper_imports import learn_projection, load_embeddings
 from argparse import ArgumentParser
 import sys, os
 import numpy as np
