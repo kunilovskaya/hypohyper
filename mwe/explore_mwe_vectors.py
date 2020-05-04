@@ -1,17 +1,9 @@
 import argparse
-import csv
-import os
 import sys
-import time
-import zipfile
-import numpy as np
 from smart_open import open
-from collections import defaultdict
-import json
 
-from configs import VECTORS, OUT, RUWORDNET, OOV_STRATEGY, POS, MODE, EMB_PATH, FT_EMB, TAGS, vecTOPN, \
-    TEST, METHOD, FILTER_1, FILTER_2
-from hyper_imports import popular_generic_concepts, load_embeddings, filtered_dicts_mainwds_option,read_xml, id2name_dict
+from trials_errors.configs import POS, EMB_PATH
+from trials_errors.hyper_imports import load_embeddings
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--tagged', default='lists/ruWordNet_%s_names_pos.txt' % POS,

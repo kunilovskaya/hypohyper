@@ -2,8 +2,8 @@ import sys
 from collections import defaultdict
 from smart_open import open
 import json
-from hyper_imports import preprocess_mwe
-from configs import POS, TAGS
+from trials_errors.hyper_imports import preprocess_mwe
+from trials_errors.configs import POS, TAGS
 import ahocorasick
 
 fixed_mwe = open('output/mwe/merged_mwe-glued_nofunct-punct_fixed-mwe_news-rncP5-pro.gz', 'a')

@@ -7,7 +7,7 @@ sys.path.append(path1)
 from argparse import ArgumentParser
 from ufal.udpipe import Model, Pipeline
 from smart_open import open
-from configs import OUT, POS
+from trials_errors.configs import POS
 
 def process(pipeline, text=None):
     

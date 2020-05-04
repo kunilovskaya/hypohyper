@@ -5,11 +5,12 @@
 # | python3 mwe/preprocess_mwe_sents.py
 import os
 import sys
+
 path1 = '../hypohyper/'
 path1 = os.path.abspath(str(path1))
 sys.path.append(path1)
 
-from configs import OUT, POS
+from trials_errors.configs import OUT, POS
 
 
 

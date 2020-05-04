@@ -1,15 +1,11 @@
-import argparse
-import sys, os
-from hyper_imports import preprocess_mwe, new_preprocess_mwe, map_mwe
-from configs import VECTORS, OUT, POS, TAGS, METHOD, TEST
-import json
-from collections import defaultdict
+from trials_errors.hyper_imports import preprocess_mwe, new_preprocess_mwe, map_mwe
+from trials_errors.configs import VECTORS, POS, TAGS
 from smart_open import open
 
 if POS == 'NOUNS':
-    input = open('input/data/all_data_nouns.tsv', 'r')
+    input = open('../input/data/all_data_nouns.tsv', 'r')
 elif POS == 'VERB': # АРЕНДОВАТЬ ЖИЛУЮ ПЛОЩАДЬ
-    input = open('input/data/all_data_verbs.tsv', 'r')
+    input = open('../input/data/all_data_verbs.tsv', 'r')
     
 if 'mwe' in VECTORS:
     
