@@ -6,4 +6,4 @@ gensim==0.13.4.1
 tqdm
 psutil
 conditional
-tensorflow==0.12.1
+tensorflow==1.15.2
