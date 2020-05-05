@@ -44,7 +44,7 @@ if __name__ == '__main__':
     print('Finished loading the dataset')
 
     BALANCED = False  # Do we want to address the issue of imbalanced class weights?
-    OVERFIT = False  # Do we want to discard early stopping and train until convergence?
+    OVERFIT = TRUE  # Do we want to discard early stopping and train until convergence?
 
     print('Loading word embeddings...')
     embedding = load_embeddings(args.w2v)
