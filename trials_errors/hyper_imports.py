@@ -1,19 +1,22 @@
 import csv
-import os, sys, re
-from xml.dom import minidom
-from collections import defaultdict
-from collections import Counter
-import pandas as pd
-import logging
-from gensim.models import KeyedVectors
-import numpy as np
-from gensim.matutils import unitvec
-from smart_open import open
-from itertools import repeat
 import itertools
 import json
-
-from get_reference_format import get_data
+import logging
+import os
+import re
+import sys
+import zipfile
+from collections import Counter
+from collections import defaultdict
+from itertools import repeat
+from xml.dom import minidom
+import numpy as np
+import pandas as pd
+from gensim.matutils import unitvec
+from gensim.models import KeyedVectors
+from smart_open import open
+from trials_errors.get_reference_format import get_data
+import logging
 
 
 # parse ruwordnet
@@ -28,6 +31,7 @@ def read_xml(xml_file):
 
     return parsed  # a list of xml entities
 
+
 def id2wds_dict(synsets):
     id2wds = defaultdict(list)
     for syn in synsets:
@@ -38,6 +42,7 @@ def id2wds_dict(synsets):
             id2wds[identifier].append(wd)
 
     return id2wds  # get a dict of format 144031-N:[АУТИЗМ, АУТИСТИЧЕСКОЕ МЫШЛЕНИЕ]
+
 
 # map synset ids to synset names from synsets.N.xml (ex. ruthes_name="УЛЫБКА")
 def id2name_dict(synsets):
@@ -50,7 +55,7 @@ def id2name_dict(synsets):
     return id2name
 
 
-def wd2id_dict(id2dict): # input: id2wds
+def wd2id_dict(id2dict):  # input: id2wds
     wd2ids = defaultdict(list)
     for k, values in id2dict.items():
         for v in values:
@@ -60,7 +65,7 @@ def wd2id_dict(id2dict): # input: id2wds
 
 
 # FYI: distribution of relations annotated in ruwordnet
-def get_all_rels(relations): # <- parsed_rels = read_xml(args.relations) <- synset_relations.N.xml
+def get_all_rels(relations):  # <- parsed_rels = read_xml(args.relations) <- synset_relations.N.xml
     my_list = []
     for rel in relations:
         rel_name = rel.getAttributeNode('name').nodeValue
@@ -96,6 +101,7 @@ def get_rel_by_name(relations, word, wds2ids, id2wds, name=None):
 
     return related_wds, related_ids
 
+
 # relations: # <- parsed_rels = read_xml(args.relations) <- synset_relations.N.xml
 # name: hypernym, hyponym, domain, POS-synonymy, instance hypernym, instance hyponym:
 def get_rel_by_synset_id(relations, identifier, id2wds, name=None):
@@ -123,27 +129,27 @@ def process_tsv(filepath):
 
     df_train = df_train.replace(to_replace=r"[\[\]']", value='', regex=True)
 
-    my_TEXTS = df_train['TEXT'].tolist()
-    my_PARENT_TEXTS = df_train['PARENT_TEXTS'].tolist()
-    
+    my_texts = df_train['TEXT'].tolist()
+    my_parent_texts = df_train['PARENT_TEXTS'].tolist()
+
     all_pairs = []
-    
-    for hypo, hyper in zip(my_TEXTS, my_PARENT_TEXTS):
+
+    for hypo, hyper in zip(my_texts, my_parent_texts):
         hypo = hypo.replace(r'"', '')
         hyper = hyper.replace(r'"', '')
         hypo = hypo.split(', ')
         hyper = hyper.split(', ')
-        
+
         for i in hypo:
             wd_tuples = list(zip(repeat(i), hyper))
             all_pairs.append(wd_tuples)
     all_pairs = [item for sublist in all_pairs for item in sublist]  # flatten the list
-    
-    return all_pairs # ('ИХТИОЛОГ', 'УЧЕНЫЙ')
+
+    return all_pairs  # ('ИХТИОЛОГ', 'УЧЕНЫЙ')
 
 
 def process_tsv_deworded_hypers(filepath):
-    ## open the original training data (or part of it) with json
+    # open the original training data (or part of it) with json
     lines = open(filepath, 'r').readlines()
     temp_dict = {}
     synset_pairs = []
@@ -152,23 +158,25 @@ def process_tsv_deworded_hypers(filepath):
         if i == 0:
             continue
         res = line.split('\t')
-        
+
         _, wds, par_ids, _ = res
         par_ids = par_ids.replace("'", '"')  # to meet the json requirements
-        
+
         wds = wds.split(', ')  # this column is not a json format!
         for w in wds:
             w = w.replace(r'"', '')  # get rid of dangerous quotes in МАШИНА "ЖИГУЛИ"
-            temp_dict[w] = json.loads(par_ids)  # {'WORD': ['4544-N', '147272-N'], '120440-N': ['141697-N', '116284-N']}
-    
+            # {'WORD': ['4544-N', '147272-N'], '120440-N': ['141697-N', '116284-N']}
+            temp_dict[w] = json.loads(par_ids)
+
     for hypo_w, hypers_ids in temp_dict.items():
         id_tuples = list(zip(repeat(hypo_w), hypers_ids))
         synset_pairs.append(id_tuples)
-    
+
     synset_pairs = [item for sublist in synset_pairs for item in sublist]  # flatten the list
     print('Number of wd-to-synset pairs in training_data: ', len(synset_pairs))
-    
+
     return synset_pairs  # ('ИХТИОЛОГ', '9033-N')
+
 
 def get_orgtrain_deworded(filepath):
     lines = open(filepath, 'r').readlines()
@@ -178,10 +186,11 @@ def get_orgtrain_deworded(filepath):
         res = line.split('\t')
         wd, par_ids = res
         wd = wd.replace(r'"', '')  # get rid of dangerous quotes in МАШИНА "ЖИГУЛИ"
-        par_ids = par_ids.replace("'", '"')  ## to meet the json requirements
+        par_ids = par_ids.replace("'", '"')  # to meet the json requirements
         id_list = json.loads(par_ids)
-        for id in id_list:
-            temp_dict[wd].append(id)  # {'WORD': [['4544-N'], ['147272-N']], 'WORD': ['141697-N', '116284-N']}
+        for identifier in id_list:
+            # {'WORD': [['4544-N'], ['147272-N']], 'WORD': ['141697-N', '116284-N']}
+            temp_dict[wd].append(identifier)
 
     for hypo_w, hypers_ids in temp_dict.items():
         id_tuples = list(zip(repeat(hypo_w), hypers_ids))
@@ -189,11 +198,11 @@ def get_orgtrain_deworded(filepath):
 
     org_pairs = [item for sublist in org_pairs for item in sublist]  # flatten the list
     print('Number of wd-to-synset pairs in training_data: ', len(org_pairs))
-    
-    return org_pairs # ('ИХТИОЛОГ', '9033-N')
+
+    return org_pairs  # ('ИХТИОЛОГ', '9033-N')
 
 
-def get_orgtrain(filepath, map=None): # map = synset_words
+def get_orgtrain(filepath, mapping=None):  # mapping = synset_words
     lines = open(filepath, 'r').readlines()
     temp_dict = defaultdict(list)
     org_pairs = []
@@ -203,8 +212,8 @@ def get_orgtrain(filepath, map=None): # map = synset_words
         wd = wd.replace(r'"', '')  # get rid of dangerous quotes in МАШИНА "ЖИГУЛИ"
         par_ids = par_ids.replace("'", '"')  # to meet the json requirements
         id_list = json.loads(par_ids)
-        for id in id_list:
-            wd_list = map[id]
+        for identifier in id_list:
+            wd_list = mapping[identifier]
             for i in wd_list:
                 temp_dict[wd].append(i)
     for hypo_w, hypers_wds in temp_dict.items():
@@ -212,8 +221,9 @@ def get_orgtrain(filepath, map=None): # map = synset_words
         org_pairs.append(wd_tuples)
     org_pairs = [item for sublist in org_pairs for item in sublist]  # flatten the list
     print('Number of wd-to-synset pairs in training_data: ', len(org_pairs))
-    
-    return org_pairs  ## ('ИХТИОЛОГ', '9033-N')
+
+    return org_pairs  # ('ИХТИОЛОГ', '9033-N')
+
 
 def get_orgtest(filepath):
     mwe = []
@@ -222,16 +232,16 @@ def get_orgtest(filepath):
     for line in lines:
         res = line.split('\t')
         wd, par_ids = res
-        wd = wd.replace(r'"', '') # get rid of dangerous quotes in МАШИНА "ЖИГУЛИ"
-        
-        if len(wd.split()) != 1 or bool(re.search('[a-zA-Z]', wd)): ## skip MWE
+        wd = wd.replace(r'"', '')  # get rid of dangerous quotes in МАШИНА "ЖИГУЛИ"
+
+        if len(wd.split()) != 1 or bool(re.search('[a-zA-Z]', wd)):  # skip MWE
             mwe.append(wd)
             continue
-        par_ids = par_ids.replace("'", '"') # to meet the json requirements
+        par_ids = par_ids.replace("'", '"')  # to meet the json requirements
         id_list = json.loads(par_ids)
+        # {'WORD1': [['4544-N'], ['147272-N']], 'WORD2': [['141697-N', '116284-N']]}
+        gold_dict[wd].append(id_list)
 
-        gold_dict[wd].append(id_list)  # {'WORD1': [['4544-N'], ['147272-N']], 'WORD2': [['141697-N', '116284-N']]}
-    
     return gold_dict
 
 
@@ -253,6 +263,19 @@ def load_embeddings(modelfile):
             or modelfile.endswith('.vec.gz') or modelfile.endswith('.vec'):  # Text word2vec file
         emb_model = KeyedVectors.load_word2vec_format(modelfile, binary=False,
                                                       unicode_errors='replace', limit=3500000)
+    # ZIP archive from the NLPL vector repository:
+    elif modelfile.endswith('.zip'):
+        with zipfile.ZipFile(modelfile, "r") as archive:
+            # Loading and showing the metadata of the model:
+            # metafile = archive.open('meta.json')
+            # metadata = json.loads(metafile.read())
+            # for key in metadata:
+            #    print(key, metadata[key])
+            # print('============')
+            # Loading the model itself:
+            stream = archive.open("model.bin")  # or model.txt, if you want to look at the model
+            emb_model = KeyedVectors.load_word2vec_format(
+                stream, binary=True, unicode_errors='replace')
     else:
         # Native Gensim format, inclufing for fasttext models
         # (.model in a folder with the other support files)
@@ -261,22 +284,22 @@ def load_embeddings(modelfile):
 
     return emb_model
 
+
 # def get_vector(word, emb=None):
 #     if not emb:
 #         return None
 #     vector = emb[word]
 #     return vector
 def map_mwe(names=None, same_names=None, tags=None, pos=None):
-    
-    ## make a map to go from ЖРИЦА ЛЮБВИ to {'жрица::любви_NOUN' : 'жрица_NOUN::любовь_NOUN'}
+    # make a map to go from ЖРИЦА ЛЮБВИ to {'жрица::любви_NOUN' : 'жрица_NOUN::любовь_NOUN'}
     my_map = defaultdict()
-    
+
     for caps, tagged in zip(names, same_names):
         if ' ' in caps:
             old = preprocess_mwe(caps, tags=tags, pos=pos)
             new = tagged.replace(' ', '::')
             my_map[old.strip()] = new.strip()
-    
+
     first_pairs = {k: my_map[k] for k in list(my_map)[:10]}
     print('First few matched items:', first_pairs, file=sys.stderr)
 
@@ -287,6 +310,7 @@ def new_preprocess_mwe(item, tags=None, pos=None, map_mwe_names=None):
     # Alas, those bigrams are overwhelmingly proper names while we need multi-word concepts.
     # For example, in aranea: "::[а-я]+\_PROPN" 8369 item, while the freq of all "::" 8407
     errors = 0
+    new_item = None
     if pos == 'VERB':
         if len(item.split()) > 1:
             if tags:
@@ -304,7 +328,7 @@ def new_preprocess_mwe(item, tags=None, pos=None, map_mwe_names=None):
                 #     new_item = item
 
             else:
-                item = '::'.join(item.lower().split())
+                pass
             # print(item)
 
         else:
@@ -352,18 +376,18 @@ def preprocess_mwe(item, tags=None, pos=None):
             if tags:
                 item = '::'.join(item.lower().split())
                 item = item + '_VERB'
-            
+
             else:
                 item = '::'.join(item.lower().split())
             # print(item)
-        
+
         else:
             if tags:
                 item = item.lower()
                 item = item + '_VERB'
             else:
                 item = item.lower()
-    
+
     elif pos == 'NOUN':
         if len(item.split()) > 1:
             if tags:
@@ -371,20 +395,22 @@ def preprocess_mwe(item, tags=None, pos=None):
                 item = item + '_NOUN'
             else:
                 item = '::'.join(item.lower().split())
-        
+
         else:
             if tags:
                 item = item.lower()
                 item = item + '_NOUN'
             else:
                 item = item.lower()
-    
+
     return item
+
 
 def convert_item_format(caps_word, tags=None, mwe=None, pos=None):
     if tags:
         if mwe:
-            item = preprocess_mwe(caps_word, tags=tags, pos=pos) # this returns lowercased and tagged single words ot MWE
+            # this returns lowercased and tagged single words ot MWE
+            item = preprocess_mwe(caps_word, tags=tags, pos=pos)
         else:
             if pos == 'VERB':
                 item = caps_word.lower() + '_VERB'
@@ -394,19 +420,22 @@ def convert_item_format(caps_word, tags=None, mwe=None, pos=None):
                 item = caps_word.lower()
     else:
         if mwe:
-            item = preprocess_mwe(caps_word, tags=tags, pos=pos) # this returns lowercased words
+            item = preprocess_mwe(caps_word, tags=tags, pos=pos)  # this returns lowercased words
         else:
             item = caps_word.lower()
-            
+
     return item
-    
-## now this function stores lowercased word pairs regardless of the combination of tags/mwe boolean options)
+
+
+# now this function stores lowercased word pairs regardless of the combination
+# of tags/mwe boolean options)
 def preprocess_wordpair(pairs, tags=None, mwe=None, pos=None):
     preprocessed_train = []
     for hypo, hyper in pairs:
         if tags:
             if mwe:
-                hypo = preprocess_mwe(hypo, tags=tags, pos=pos) # this returns lowercased and tagged single words ot MWE
+                # this returns lowercased and tagged single words ot MWE
+                hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
                 hyper = preprocess_mwe(hyper, tags=tags, pos=pos)
                 preprocessed_train.append((hypo, hyper))
             else:
@@ -418,13 +447,14 @@ def preprocess_wordpair(pairs, tags=None, mwe=None, pos=None):
                     hypo = hypo.lower() + '_NOUN'
                     hyper = hyper.lower() + '_NOUN'
                     preprocessed_train.append((hypo, hyper))
-                            
-        ## this is only when I can afford to retain all items with untagged fasttext
+
+        # this is only when I can afford to retain all items with untagged fasttext
         else:
-            if mwe: ## this returns lowercased words
+            if mwe:  # this returns lowercased words
                 hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
                 hyper = preprocess_mwe(hyper, tags=tags, pos=pos)
-                preprocessed_train.append((hypo, hyper)) ## preprocess_mwe returns lowercased items already
+                # preprocess_mwe returns lowercased items already
+                preprocessed_train.append((hypo, hyper))
             else:
                 preprocessed_train.append((hypo.lower(), hyper.lower()))
 
@@ -435,7 +465,8 @@ def preprocess_hypo(pairs, tags=None, mwe=None, pos=None):
     preprocessed_train = []
     for hypo, hyper in pairs:
         if tags:
-            if mwe:  # this returns lowercased and tagged single words or MWE of type жрица::любовь_NOUN
+            # this returns lowercased and tagged single words or MWE of type жрица::любовь_NOUN
+            if mwe:
                 hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
                 preprocessed_train.append((hypo, hyper))
             else:
@@ -445,19 +476,21 @@ def preprocess_hypo(pairs, tags=None, mwe=None, pos=None):
                 elif pos == 'NOUN':
                     hypo = hypo.lower() + '_NOUN'
                     preprocessed_train.append((hypo, hyper))
-        ## this is only when I can afford to retain all items with untagged fasttext
+        # this is only when I can afford to retain all items with untagged fasttext
         else:
             if mwe:  # this returns lowercased words
                 hypo = preprocess_mwe(hypo, tags=tags, pos=pos)
                 preprocessed_train.append((hypo, hyper))
             else:
                 preprocessed_train.append((hypo.lower(), hyper))
-    
+
     return preprocessed_train
+
 
 def write_hyp_pairs(data, filename):
     with open(filename, 'w') as f:
-        writer = csv.writer(f, dialect='unix', delimiter='\t', lineterminator='\n', escapechar='\\', quoting=csv.QUOTE_NONE)
+        writer = csv.writer(f, dialect='unix', delimiter='\t', lineterminator='\n',
+                            escapechar='\\', quoting=csv.QUOTE_NONE)
         writer.writerow(['hyponym', 'hypernym'])
         for pair in data:
             writer.writerow(pair)
@@ -469,7 +502,7 @@ def learn_projection(dataset, embedding, lmbd=1.0, from_df=False):
         source_vectors = dataset['hyponym'].T
         target_vectors = dataset['hypernym'].T
     else:
-        ## gets two lists of vectors
+        # gets two lists of vectors
         source_vectors = dataset[0]
         target_vectors = dataset[1]
     source_vectors = np.mat([[i for i in vec] for vec in source_vectors])
@@ -521,7 +554,7 @@ def predict(source, embedding, projection, topn=10):
         test = np.mat(embedding[source])
     except KeyError:
         return None
-        
+
     test = np.c_[1.0, test]  # Adding bias term
     predicted_vector = np.dot(projection, test.T)
     predicted_vector = np.squeeze(np.asarray(predicted_vector))
@@ -535,7 +568,7 @@ def star_predict(source, embedding, projection, topn=10):
         test = np.mat(embedding[source])
     except KeyError:
         return None
-    
+
     test = np.c_[1.0, test]  # Adding bias term
     predicted_vector = np.dot(projection, test.T)
     predicted_vector = np.squeeze(np.asarray(predicted_vector))
@@ -545,85 +578,91 @@ def star_predict(source, embedding, projection, topn=10):
 
 
 def popular_generic_concepts(relations_path):
-    ## how often an id has a name="hypernym" or "domain" when "child" in synset_relations.N.xml (aim for the ratio hypernym/hyponym > 1)
+    # how often an id has a name="hypernym" or "domain" when "child" in synset_relations.N.xml
+    # (aim for the ratio hypernym/hyponym > 1)
     parsed_rels = read_xml(relations_path)
     freq_hypo = defaultdict(int)
     freq_hyper = defaultdict(int)
     for rel in parsed_rels:
-        ## in synset_relations the name of relations is assigned wrt the child, it is the name of a child twds the parent, it seems
-        id = rel.getAttributeNode('child_id').nodeValue
+        # in synset_relations the name of relations is assigned wrt the child,
+        # it is the name of a child twds the parent, it seems
+        identifier = rel.getAttributeNode('child_id').nodeValue
         name = rel.getAttributeNode('name').nodeValue
-        if name == 'hypernym':# or name == 'domain':
-            freq_hyper[id] += 1
+        if name == 'hypernym':  # or name == 'domain':
+            freq_hyper[identifier] += 1
         elif name == 'hyponym':
-            freq_hypo[id] += 1
-    
+            freq_hypo[identifier] += 1
+
     all_ids = list(freq_hypo.keys()) + list(freq_hyper.keys())
-    
+
     ratios = defaultdict(int)
-    for id in all_ids:
+    for identifier in all_ids:
         try:
-            ratios[id] = freq_hyper[id] / freq_hypo[id]
+            ratios[identifier] = freq_hyper[identifier] / freq_hypo[identifier]
         except ZeroDivisionError:
             continue
-    
+
     sort_it = {k: v for k, v in sorted(ratios.items(), key=lambda item: item[1], reverse=True)}
 
     my_ten = []
     for i, (k, v) in enumerate(sort_it.items()):
         if i < 10:
             my_ten.append(k)
-    
-    return my_ten # synset ids
+
+    return my_ten  # synset ids
 
 
-####### parse ruwordnet and get a list of (synset_id, word) tuples for both one word and heads in MWE)
-def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_voc=None, map=None):  # mode 'main'
-    ## this is where I want to include support for averaged MWE,
+# parse ruwordnet and get a list of (synset_id, word) tuples for both one word and heads in MWE)
+# mode 'main'
+def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_voc=None,
+                                  mapping=None):
+    # this is where I want to include support for averaged MWE,
     doc = minidom.parse(senses)
     parsed_senses = doc.getElementsByTagName("sense")
     all_id_senses = []
     covered_ids = set()
 
     for sense in parsed_senses:
-        
-        id = sense.getAttributeNode('synset_id').nodeValue
+
+        identifier = sense.getAttributeNode('synset_id').nodeValue
         # lemma = sense.getAttributeNode("lemma").nodeValue ## changed from name to lemma
-        name = sense.getAttributeNode("name").nodeValue # changed back due to mismatch with the map
+        name = sense.getAttributeNode("name").nodeValue  # changed back due to mismatch with the map
         main_wd = sense.getAttributeNode("main_word").nodeValue
-        
+
         if len(name.split()) == 0:
-            item = None
-            print('Missing name for a sense in synset %s' % id)
+            print('Missing name for a sense in synset %s' % identifier)
         # get MWE, singles compatible with embeddings already (lower, tagged)
-        if map:
-            
-            item, _ = new_preprocess_mwe(name, tags=tags, pos=pos, map_mwe_names=map)
+        if mapping:
+
+            item, _ = new_preprocess_mwe(name, tags=tags, pos=pos, map_mwe_names=mapping)
             # if name == 'ЧАСТЬ ТЕЛА':
             #     print('===========',item)
         else:
-            item = preprocess_mwe(name, tags=tags,pos=pos)
-        
+            item = preprocess_mwe(name, tags=tags, pos=pos)
+
         if mode == 'single':
             if item in emb_voc:
-                all_id_senses.append((id, item))
-                    
+                all_id_senses.append((identifier, item))
+
         elif mode == 'main':
             if item in emb_voc:
-                covered_ids.add(id)
-                all_id_senses.append((id, item))
-                    
+                covered_ids.add(identifier)
+                all_id_senses.append((identifier, item))
+
             if '::' in item:
-                if id not in covered_ids: # get the main word
-                    if map:
-                        item, _ = new_preprocess_mwe(main_wd, tags=tags, pos=pos, map_mwe_names=map)
+                if identifier not in covered_ids:  # get the main word
+                    if mapping:
+                        item, _ = new_preprocess_mwe(main_wd, tags=tags, pos=pos,
+                                                     map_mwe_names=mapping)
                     else:
                         item = preprocess_mwe(main_wd, tags=tags, pos=pos)
                     if item in emb_voc:
-                        ## only if the respective synset has not been covered already in the unconditional single word crawl
-                        ## activate if you want just one head word added from a non-singleword synset, not all of them (probably duplicates)
-                        covered_ids.add(id)
-                        all_id_senses.append((id, item))
+                        # only if the respective synset has not been covered already in the
+                        # unconditional single word crawl
+                        # activate if you want just one head word added from a non-singleword
+                        # synset, not all of them (probably duplicates)
+                        covered_ids.add(identifier)
+                        all_id_senses.append((identifier, item))
             else:
                 # print('What do you want to do with senses that are lexicalised as MWE?')
                 continue
@@ -633,12 +672,12 @@ def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_vo
         name = i[1]
         nam2ids[name].append(synset)
     # print(lemmas2ids['часть_NOUN::тело_NOUN']) # empty list
-    ## reverse the dict to feed to synsets_vectorized, which takes id2lemmas
+    # reverse the dict to feed to synsets_vectorized, which takes id2lemmas
     id2names = defaultdict(list)
     for k, values in nam2ids.items():
         for v in values:
             id2names[v.strip()].append(k)
-            
+
     # uncovered = uniq_ids - covered_ids
     # print('Uncoverd:', len(uncovered))
     # for i in uncovered:
@@ -646,57 +685,71 @@ def filtered_dicts_mainwds_option(senses, tags=None, pos=None, mode=None, emb_vo
 
     return nam2ids, id2names
 
-# topn - how many similarities to retain from vector model to find the intersections with ruwordnet: less than 500 can return less than 10 candidates
 
-def lemmas_based_hypers(test_item, vec=None, emb=None, ft_model=None, topn=None, dict_w2ids=None, limit=None): # {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']
-    ## enhanced cooc and hearst stats account for MWE matches, but these can only be used if represented by embeddings!
+# topn - how many similarities to retain from vector model to find the intersections
+# with ruwordnet: less than 500 can return less than 10 candidates
+
+# {'родитель_NOUN': ['147272-N', '136129-N', '5099-N', '2655-N']
+def lemmas_based_hypers(test_item, vec=None, emb=None, topn=None, dict_w2ids=None,
+                        limit=None):
+    # enhanced cooc and hearst stats account for MWE matches,
+    # but these can only be used if represented by embeddings!
     hyper_vec = np.array(vec, dtype=float)
-    nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=topn) # default for mwe_vectors 100
+    # default for mwe_vectors 100
+    nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=topn)
     sims = []
     for res in nearest_neighbors:
         hypernym = res[0]
         similarity = res[1]
         if hypernym in dict_w2ids:
             # synset = dict_w2ids[hypernym][0] # limit the number if id to the first one only
-            ## we are adding as many tuples as there are synset ids associated with the topN most_similar in embeddings and found in ruWordnet
-            ## and there is NO way to add matches from MWE unless they appear in the embeddings in the current setup, when similarities are chosen from the default emb model
-            for synset in dict_w2ids[hypernym]: ## this dict is filtered through wordnet already; and it is here where I add all ids of a hypernym
+            # we are adding as many tuples as there are synset ids associated with the topN
+            # most_similar in embeddings and found in ruWordnet
+            # and there is NO way to add matches from MWE unless they appear in the embeddings
+            # in the current setup, when similarities are chosen from the default emb model
+            # this dict is filtered through wordnet already; and it is here
+            # where I add all ids of a hypernym
+            for synset in dict_w2ids[hypernym]:
                 if len(sims) < limit:
                     sims.append((synset, hypernym, similarity))
     # sort the list of tuples (id, sim) by the 2nd element and deduplicate
     # by rewriting the list while checking for duplicate synset ids
-    ## why do I do that?? they are already in the descending order by similarity??
+    # why do I do that?? they are already in the descending order by similarity??
     # sims = sorted(sims, key=itemgetter(2), reverse=True)
-    
-    ## exclude hypernyms lemmas that match the query and lemmas from the same synset
+
+    # exclude hypernyms lemmas that match the query and lemmas from the same synset
     deduplicated_sims = []
     temp = set()
     nosamename = 0
     dup_ids = 0
-    
+
     # sims_limited = sims[:limit]
-    
+
     for a, b, c in sims:
         if test_item != b:
-           if a not in temp:
+            if a not in temp:
                 temp.add(a)
                 deduplicated_sims.append((a, b))  # (hypernym_synset_id, hypernym_wd)
-           else:
-               dup_ids += 1
-               # print('Duplicate id among this items 100top similars', dup_ids)
+            else:
+                dup_ids += 1
+                # print('Duplicate id among this items 100top similars', dup_ids)
         else:
             nosamename += 1
             # print('Query word = hypernym for this item: %s' % nosamename)
 
-    return deduplicated_sims ## not limited to 10 now
+    return deduplicated_sims  # not limited to 10 now
 
-def synsets_vectorized(emb=None, id2lemmas=None, named_synsets=None, tags=None, pos=None):
+
+def synsets_vectorized(emb=None, id2lemmas=None, named_synsets=None):
     total_lemmas = 0
     ruthes_oov = 0
     mean_synset_vecs = []
     synset_ids_names = []
-    ## 26312 in main for news_pos
-    for id, wordlist in id2lemmas.items(): # 144031-N:[аутизм_NOUN, аутическое::мышление_NOUN] filtered thru emb already and getting main words to represent synsets if desired
+    # 26312 in main for news_pos
+    # 144031-N:[аутизм_NOUN, аутическое::мышление_NOUN] filtered thru emb already
+    # and getting main words to represent synsets if desired
+    this_mean_vec = None
+    for identifier, wordlist in id2lemmas.items():
         # print('==', id, named_synsets[id], wordlist)
         current_vector_list = []
         for w in wordlist:
@@ -705,40 +758,42 @@ def synsets_vectorized(emb=None, id2lemmas=None, named_synsets=None, tags=None, 
                 # print('++', w, emb[w])
                 current_vector_list.append(emb[w])
                 current_array = np.array(current_vector_list)
-                this_mean_vec = np.mean(current_array,axis=0)  # average column-wise, getting a new row=vector of size 300
+                # average column-wise, getting a new row=vector of size 300
+                this_mean_vec = np.mean(current_array, axis=0)
             else:
                 ruthes_oov += 1
                 this_mean_vec = None
-                
-        mean_synset_vecs.append(this_mean_vec) # <class 'numpy.ndarray'> [ 0.031227    0.04932501  0.0154615   0.04967201
-        synset_ids_names.append((id, named_synsets[id]))
-        
 
-    ## synset_ids_names has (134530-N, КУНГУР)
+        # <class 'numpy.ndarray'> [ 0.031227    0.04932501  0.0154615   0.04967201
+        mean_synset_vecs.append(this_mean_vec)
+        synset_ids_names.append((identifier, named_synsets[identifier]))
+
+    # synset_ids_names has (134530-N, КУНГУР)
     return synset_ids_names, mean_synset_vecs
 
+
 def mean_synset_based_hypers(test_item, vec=None, syn_ids=None, syn_vecs=None):
-    sims = []
     temp = set()
     deduplicated_sims = []
     nosamename = 0
-    
+
     hyper_vec = np.array(vec, dtype=float)
     syn_vecs_arr = np.array(syn_vecs)
-    
+
     sims = np.dot(hyper_vec, syn_vecs_arr.T)
-    ## sorting in the reverse descending order
+    # sorting in the reverse descending order
     my_top_idx = (np.argsort(sims, axis=0)[::-1])[:50]
-    
-    my_top_syn_ids_name = [syn_ids[hyper] for hyper in my_top_idx] ## list of tuples (id, name) ex. (134530-N, КУНГУР)
-    
-    my_top_syn_ids = [id[0] for id in my_top_syn_ids_name]
-    my_top_syn_names = [id[1] for id in my_top_syn_ids_name]
-    
-    my_top_sims = [sims[ind] for ind in my_top_idx] ##actual similarity values
+    # list of tuples (id, name) ex. (134530-N, КУНГУР)
+    my_top_syn_ids_name = [syn_ids[hyper] for hyper in my_top_idx]
+
+    my_top_syn_ids = [identifier[0] for identifier in my_top_syn_ids_name]
+    my_top_syn_names = [identifier[1] for identifier in my_top_syn_ids_name]
+
+    my_top_sims = [sims[ind] for ind in my_top_idx]  # actual similarity values
 
     for a, b, c in zip(my_top_syn_ids, my_top_syn_names, my_top_sims):
-        # exclude same word as the name of the hypernym synset (many of these names are strangely VERBs)
+        # exclude same word as the name of the hypernym synset
+        # (many of these names are strangely VERBs)
         if test_item != b:
             if a not in temp:
                 temp.add(a)
@@ -747,25 +802,28 @@ def mean_synset_based_hypers(test_item, vec=None, syn_ids=None, syn_vecs=None):
             nosamename += 1
 
     this_hypo_res = deduplicated_sims  # list of (synset_id, hypernym_word, sim)
-    
+
     return this_hypo_res  # list of (synset_id, hypernym_synset_name, sim)
 
 
-## dict_w2ids = кунгур_NOUN:[['134530-N']], corpus_freqs = агностик_NOUN ["атеист_NOUN", "человек_NOUN", "религия_NOUN", ...]
-def cooccurence_counts(test_item, deduplicated_res, corpus_freqs=None, thres_cooc=None, thres_dedup=None):
+# dict_w2ids = кунгур_NOUN:[['134530-N']], corpus_freqs = агностик_NOUN
+# ["атеист_NOUN", "человек_NOUN", "религия_NOUN", ...]
+def cooccurence_counts(test_item, deduplicated_res, corpus_freqs=None, thres_cooc=None,
+                       thres_dedup=None):
     # print('This is before factoring in the cooccurence stats\n', deduplicated_res[:10])
-    test_item = test_item.lower()+'_NOUN'
+    test_item = test_item.lower() + '_NOUN'
     # print('%s co-occured with\n%s' % (test_item, corpus_freqs[test_item]))
-    
+
     new_list = []
-    ## cooc_dict has all items; hearst_dict does not
+    # cooc_dict has all items; hearst_dict does not
     try:
-        if len(corpus_freqs[test_item]) != 0: ## is this silently ignores items that are not in dict??
-            ## avoid rewriting the dict with cooc-predicted hypers
+        # is this silently ignores items that are not in dict?
+        if len(corpus_freqs[test_item]) != 0:
+            # avoid rewriting the dict with cooc-predicted hypers
             for i in corpus_freqs[test_item][:thres_cooc]:  # [word_NOUN, word_NOUN, word_NOUN]
                 i = i.strip()
-                for tup in deduplicated_res[
-                           :thres_dedup]:  # <- list of [(id1_1,hypernym1_NOUN), (id1_2,hypernym1), (id2_1,hypernym2)]
+                # <- list of [(id1_1,hypernym1_NOUN), (id1_2,hypernym1), (id2_1,hypernym2)]
+                for tup in deduplicated_res[:thres_dedup]:
                     if i == tup[1]:
                         new_list.append(tup)
         else:
@@ -775,47 +833,47 @@ def cooccurence_counts(test_item, deduplicated_res, corpus_freqs=None, thres_coo
     except KeyError:
         # print('NOCOOCCURRENCE:', test_item)
         new_list = deduplicated_res[:10]
-        
+
     if len(new_list) < 10:
         for tup in deduplicated_res:
             if tup not in new_list:
                 new_list.append(tup)
-                
+
     # print('New order of hypernyms\n%s' % new_list[:10])
     return new_list  # list of (synset_id, hypernym_synset_name)
 
 
 # for each test word FILTER1
-def disambiguate_hyper_syn_ids(hypo, list_to_filter=None, emb=None, ft_model=None, index_tuples=None,
-                               mean_syn_vectors=None, tags=None, pos=None):
+def disambiguate_hyper_syn_ids(hypo, list_to_filter=None, emb=None, ft_model=None,
+                               index_tuples=None, mean_syn_vectors=None, tags=None, pos=None):
     one_comp = 0
     over_n = 0
     lemma2id_vec_dict = defaultdict(list)
     lemma2id_dict = defaultdict(list)
     item = preprocess_mwe(hypo, tags=tags, pos=pos)
-    
+
     if item in emb.vocab:
-        hypo_vec = emb[item]  ## for top-hyper all OOV are already taken care of
+        hypo_vec = emb[item]  # for top-hyper all OOV are already taken care of
     else:
-        ## falling to FT representation
+        # falling to FT representation
         if '_' in item:
             item = item[:-5]
         hypo_vec = ft_model[item]
         print('Alert if not ft-vector OOV-strategy!')
-        
-        ## id-based lookup dict for mean synset vectors
+
+        # id-based lookup dict for mean synset vectors
     syn_vectors_dict = defaultdict()
     for (syn, name), vec in zip(index_tuples, mean_syn_vectors):
-        syn_vectors_dict[syn] = vec  ## values are synsets averaged vectors, stored as ndarrays
-    
+        syn_vectors_dict[syn] = vec  # values are synsets averaged vectors, stored as ndarrays
+
     for tup in list_to_filter:
         hyper_id = tup[0]
         hyper_lemma = tup[1]
         hyper_id_mean_vec = syn_vectors_dict[hyper_id]
-        
-        lemma2id_dict[hyper_lemma].append(hyper_id)  ## from hyper_lemma to hyper_ids lists
+
+        lemma2id_dict[hyper_lemma].append(hyper_id)  # from hyper_lemma to hyper_ids lists
         lemma2id_vec_dict[hyper_lemma].append(hyper_id_mean_vec)
-    
+
     this_hypo_bestids = []
     for lemma, vecs in lemma2id_vec_dict.items():
         sims = [np.dot(hypo_vec, np.squeeze(np.asarray(vec)).T) for vec in vecs]
@@ -827,175 +885,119 @@ def disambiguate_hyper_syn_ids(hypo, list_to_filter=None, emb=None, ft_model=Non
         bestid = lemma2id_dict[lemma][int(my_top_idx)]
         this_hypo_bestids.append((bestid, lemma))
         # print(int(my_top_idx), len(lemma2id_dict[lemma]))
-    
+
     tot = len(lemma2id_dict)
-    
+
     return this_hypo_bestids, one_comp, over_n, tot  # list of (synset_id, hypernym_word) and stats
 
 
 def get_generations(relations, redundant=None):
-    parsed_rels = read_xml(relations)  ## relations are defined wrt child
+    parsed_rels = read_xml(relations)  # relations are defined wrt child
     rel_lookup = []
-    rel_lookup2 = []
     for rel in parsed_rels:
         parent = rel.getAttributeNode('parent_id').nodeValue
         child = rel.getAttributeNode('child_id').nodeValue
         rel_name = rel.getAttributeNode('name').nodeValue
         if redundant == 'kid':
             if rel_name == 'hyponym':
-                rel_lookup.append((child, parent)) ## first order parents
+                rel_lookup.append((child, parent))  # first order parents
         elif redundant == 'parent':
             if rel_name == 'hypernym':
-                rel_lookup.append((child, parent)) ## reverse order of rel i.e child==parent
+                rel_lookup.append((child, parent))  # reverse order of rel i.e child==parent
         else:
             rel_lookup = None
             print("Do you want to lose kids or parents?")
-            
-    print('All child-parent', len(rel_lookup)) # including parent-grandparent
-    # for rel in parsed_rels:
-    #     parent = rel.getAttributeNode('parent_id').nodeValue
-    #     child = rel.getAttributeNode('child_id').nodeValue
-    #     rel_name = rel.getAttributeNode('name').nodeValue
-    #     if redundant == 'kid':
-    #         if child in [i[1] for i in rel_lookup] and rel_name == 'hyponym':
-    #             rel_lookup2.append((child, parent)) ## sublist of rel_lookup with (parents,grandparents)
-    #     if redundant == 'parent':
-    #         if child in [i[1] for i in rel_lookup] and rel_name == 'hypernym':
-    #             rel_lookup2.append((child, parent))
-    # print('Parent-grandparent', len(rel_lookup2))  # only parent-grandparent relative to first list
 
-    return rel_lookup #, rel_lookup2
+    print('All child-parent', len(rel_lookup))  # including parent-grandparent
+
+    return rel_lookup  # , rel_lookup2
+
 
 def lose_family_anno(hypo, deduplicated_res, rel_lookup):
-    this_hypo_res = []
-    ## get a list of ids from the list of tuples (id, hyper_word)
+    # get a list of ids from the list of tuples (id, hyper_word)
     predicted_ids = [i[0] for i in deduplicated_res]
     combos = []  # get all combinations of predicted ids
     for i in itertools.combinations(predicted_ids, 2):
         combos.append(i)
-    
-    ## find combinations where one el is a child of the other and delete this child
+
+    # find combinations where one el is a child of the other and delete this child
     hits = []
     for combo in combos:
-        ## PROBLEM: retain dog if all three are in the output
-        # preds for poodle: collie - dog - animal, but this assumes the relatedness of predicted synsets
+        # PROBLEM: retain dog if all three are in the output
+        # preds for poodle: collie - dog - animal,
+        # but this assumes the relatedness of predicted synsets
         if combo in rel_lookup:
-            for (id, word) in deduplicated_res:
-                if id == combo[0]:
+            for (identifier, word) in deduplicated_res:
+                if identifier == combo[0]:
                     print('Pruned child:', hypo, (word, combo[0]))
-                    hits.append((id, word))
-                
+                    hits.append((identifier, word))
+
     this_hypo_res = [x for x in deduplicated_res if x not in hits]
-    
+
     print('Pruned kids:', len(hits))
     print('==Smaller? %d -> %d' % (len(deduplicated_res), len(set(this_hypo_res))))
-    
+
     return this_hypo_res
 
 
 def lose_family_comp(hypo, deduplicated_res, train=None, redundant=None):
     this_hypo_res = []
-    
-    ## build a graph, get the list of connected components (hm, not exaustive! does not account for same-id components)
+
+    # build a graph, get the list of connected components
+    # (hm, not exaustive! does not account for same-id components)
     components, synset2word, _, synset2parents = get_data(train)
-    
-    ## get a list of ids from the list of tuples (id, hyper_word)
+
+    # get a list of ids from the list of tuples (id, hyper_word)
     predicted_ids = [i[0] for i in deduplicated_res]
     combos = []  # get all combinations of predicted ids
     for i in itertools.combinations(predicted_ids, 2):
         combos.append(i)
-    
+
     hits = []
-    ## iterate over all components (the list of components is not exaustive it seems, but parents include all parents of hypo synset)
-    ## in effect it is iteration over hyponym ids!
-    for i in range(len(components)): # all hyponym ids that have associated lists of hypernyms corresponding to lines in the training data
+    # iterate over all components (the list of components is not exaustive it seems,
+    # but parents include all parents of hypo synset)
+    # in effect it is iteration over hyponym ids!
+    # all hyponym ids that have associated lists of hypernyms corresponding to
+    # lines in the training data
+    for i in range(len(components)):
         # if i == 1:
         #     print(components[i])
         out = []
         parents_ids = []
-        for id in components[i]:  ## iterate over synsets in this component
-            for parents in synset2parents[id]:  # синсеты-родители синсетов-гипонимов (с учетом второго порядка) в этом компоненте
+        for identifier in components[i]:  # iterate over synsets in this component
+            # синсеты-родители синсетов-гипонимов (с учетом второго порядка) в этом компоненте
+            for parents in synset2parents[identifier]:
                 parents_ids.extend(parents)
-        ## find combinations where one el is a child of the other in this component and delete this child
+        # find combinations where one el is a child of the other in this component
+        # and delete this child
         for combo in combos:
             if combo[0] in components[i] and combo[1] in parents_ids:
-                for (id, word) in deduplicated_res:
+                for (identifier, word) in deduplicated_res:
                     if redundant == 'kid':
-                        if id == combo[0]:
-                            out.append(id)
+                        if identifier == combo[0]:
+                            out.append(identifier)
                             print('Prune child:', hypo, (word, combo))
                     elif redundant == 'parent':
-                        if id == combo[1]:
-                            out.append(id)
+                        if identifier == combo[1]:
+                            out.append(identifier)
                             print('Prune parent:', hypo, (word, combo))
                     else:
                         out = None
                         print("Do you want to lose kids or parents?")
-        ## deleting by re-writing the list
+        # deleting by re-writing the list
         for res in deduplicated_res:
-            for id in out:
-                if id != res[0]:
+            for identifier in out:
+                if identifier != res[0]:
                     this_hypo_res.append(res)
                 else:
                     hits.append(res)
-                    
+
     print('Pruned kids:', len(hits))
     print('==Smaller? %d -> %d' % (len(deduplicated_res), len(set(this_hypo_res))))
-    
+
     return this_hypo_res
 
-# def just_get_hyper_ids(test_item, vec=None, emb=None, topn=None, name2id=None):
-#
-#     hyper_vec = np.array(vec, dtype=float)
-#     nearest_neighbors = emb.most_similar(positive=[hyper_vec], topn=100)  # words
-#     pred_ids = []
-#     temp = set()
-#     for res in nearest_neighbors:
-#         hypernym = res[0]
-#         if hypernym in name2id:
-#             if test_item != hypernym:
-#                 first_id = name2id[hypernym][0] # limit the number of ids to the first one
-#                 # try:
-#                 #     second_id = lem2id[hypernym][1]
-#                 # except IndexError:
-#                 #     second_id = None
-#                 #     continue
-#                 # print(first_id)
-#                 if len(pred_ids) < topn:
-#                     if first_id not in temp:
-#                         temp.add(first_id)
-#                         pred_ids.append((first_id, hypernym))
-#                         # if second_id:
-#                         #     if second_id not in temp:
-#                         #         temp.add(second_id)
-#                         #         pred_ids.append((second_id, hypernym))
-#         else:
-#             continue
-#
-#     ## exclude hypernyms lemmas that match the query and lemmas from the same synset
-#     deduplicated_sims = []
-#     temp = set()
-#     nosamename = 0
-#     dup_ids = 0
-#
-#     # sims_limited = sims[:limit]
-#
-#     for a, b in pred_ids:
-#         if test_item != b:
-#             if a not in temp:
-#                 temp.add(a)
-#                 deduplicated_sims.append((a, b))  # (hypernym_synset_id, hypernym_wd)
-#             else:
-#                 dup_ids += 1
-#                 # print('Duplicate id among this items 100top similars', dup_ids)
-#         else:
-#             nosamename += 1
-#             # print('Query word = hypernym for this item: %s' % nosamename)
-#
-#     return deduplicated_sims  ## not limited to 10 now
-            
-    # return pred_ids
-    
+
 ######################
 if __name__ == '__main__':
     print('=== This is a modules script, it is not supposed to run as main ===')

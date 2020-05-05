@@ -89,13 +89,13 @@ else:
 ## and its reverse
 ## now filtered thru new embeddings, but it has no часть_NOUN::тело_NOUN
 ## this is where the error originated --FIXED
-names2ids, id2lemmas = filtered_dicts_mainwds_option(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model, map=mwe_map)
+names2ids, id2lemmas = filtered_dicts_mainwds_option(senses, tags=TAGS, pos=POS, mode=MODE, emb_voc=model, mapping=mwe_map)
 # for k, v in lemmas2ids.items():
 #     if '::' in k:
 #         print(k)
 if FILTER_1 == 'disamb' or METHOD == 'deworded':
     identifier_tuple, syn_vectors = synsets_vectorized(emb=model, id2lemmas=id2lemmas,
-                                                       named_synsets=id2name, tags=TAGS, pos=POS)
+                                                       named_synsets=id2name)
     print('Number of vectorised synsets %d out of 29297; checksums with identifiers (%d)' % (len(syn_vectors), len(identifier_tuple)))
 
 if OOV_STRATEGY == 'top-hyper' or FILTER_1 == 'anno':

@@ -56,7 +56,7 @@ if METHOD == 'deworded': # or METHOD != 'deworded1'
     # synset_words = id2wds_dict(parsed_syns) # a dict of format 144031-N:[АУТИЗМ, АУТИСТИЧЕСКОЕ МЫШЛЕНИЕ]
 
     identifier_tuple, syn_vectors = synsets_vectorized(emb=model, id2lemmas=id2lemmas,
-                                                       named_synsets=synsets_names, tags=TAGS, pos=POS)
+                                                       named_synsets=synsets_names)
     print('Number of vectorised synsets', len(syn_vectors))
     lookup = defaultdict()
     for (id,name), vect in zip(identifier_tuple, syn_vectors):

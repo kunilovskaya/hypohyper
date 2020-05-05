@@ -1,12 +1,11 @@
 #! python
 # coding: utf-8
 
-from collections import Counter
-import os
-import random
 import json
+import random
 import time
 from argparse import ArgumentParser
+from collections import Counter
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -16,32 +15,15 @@ from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import to_categorical
 from trials_errors.hyper_imports import load_embeddings
-from trials_errors.configs import OUT, POS, EMB_PATH, VECTORS, TEST
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    if POS == 'NOUN' and 'mwe' in VECTORS:
-        if TEST == 'provided':
-            parser.add_argument('--path', default='input/data/notest_newtags_all_data_nouns.tsv',
-                                help="Path to the training corpus compatible with the vectors")
-        else:
-            parser.add_argument('--path', default='input/data/newtags_all_data_nouns.tsv',
-                                help="Path to the training corpus compatible with vectors format")
-    if POS == 'NOUN' and 'mwe' not in VECTORS:
-        if TEST == 'provided':
-            parser.add_argument('--path', default='input/data/notest_oldtags_all_data_nouns.tsv',
-                                help="Path to the training corpus compatible with the vectors")
-        else:
-            parser.add_argument('--path', default='input/data/oldtags_all_data_nouns.tsv',
-                                help="Path to the training corpus compatible with the vectors")
-    if POS == 'VERB':
-        parser.add_argument('--path', default='input/data/newtags_all_data_VERB.tsv',
-                            help="Path to the training corpus")
-
-    parser.add_argument('--w2v', default=EMB_PATH, help="Path to the embeddings")
+    parser.add_argument('--path', default='input/data/newtags_all_data_nouns.tsv',
+                        help="Path to the training corpus compatible with vectors format")
+    parser.add_argument('--w2v', default='204.zip', help="Path to the embeddings")
     parser.add_argument('--hidden_dim', action='store', type=int, default=386)
     parser.add_argument('--batch_size', action='store', type=int, default=32)
-    parser.add_argument('--run_name', default='notest_' + VECTORS + '_' + POS,
+    parser.add_argument('--run_name', default='my_model',
                         help="Human-readable name of the run.")
     parser.add_argument('--epochs', action='store', type=int, default=25)
     parser.add_argument('--freq', action='store', type=int, default=5,
@@ -51,9 +33,6 @@ if __name__ == '__main__':
 
     trainfile = args.path
     run_name = args.run_name
-
-    # We don't need a separate dev/dalidation dataset since it is created automatically
-    # by TF from the train set.
 
     # Fix random seeds for repeatability of experiments:
     random.seed(42)
@@ -65,8 +44,9 @@ if __name__ == '__main__':
     print('Finished loading the dataset')
 
     BALANCED = False  # Do we want to address the issue of imbalanced class weights?
-    OVERFIT = True  # Do we want to discard early stopping and train until convergence?
+    OVERFIT = False  # Do we want to discard early stopping and train until convergence?
 
+    print('Loading word embeddings...')
     embedding = load_embeddings(args.w2v)
 
     x_train = []
@@ -112,7 +92,7 @@ if __name__ == '__main__':
     targets = Counter(y_train)
 
     print('===========================')
-    print('Class distribution in the training data:')
+    print('Top 10 classes (synsets) in the training data:')
     print(targets.most_common(10))
     print('===========================')
 
@@ -190,12 +170,9 @@ if __name__ == '__main__':
     print('Macro F1 on the dev set:', round(fscore, 2))
 
     # Saving the model to file
-    OUT_RES = '%sclassifier/' % OUT
-    os.makedirs(OUT_RES, exist_ok=True)
-
-    model_filename = OUT_RES + run_name + '.h5'
+    model_filename = run_name + '.h5'
     model.save(model_filename)
-    with open(OUT_RES + run_name + '_classes.json', 'w') as f:
+    with open(run_name + '_classes.json', 'w') as f:
         f.write(json.dumps(classes, ensure_ascii=False, indent=4))
     print('Model saved to', model_filename)
     print('Classes saved to', run_name + '_classes.json')
