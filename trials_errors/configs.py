@@ -9,8 +9,10 @@ TEST = 'provided' # , codalab-pub, codalab-pr, provided
 ## strategies to improve performance
 METHOD = 'lemmas-neg-syn' # lemmas-neg-syn, lemmas-neg-syn, deworded, lemmas, classifier
 
+# this this supposed to include vectors for main components of MWE only
+# if this synset has no single_word representation or if MWE is found in vectors
 MODE = 'single' # if you want to include vectors for main_words in MWE, replace single with main;
-# this this supposed to include vectors for main components of MWE only if this synset has no single_word representation or if MWE is found in vectors
+
 OOV_STRATEGY = 'top-hyper' ##'ft-vector', 'top-hyper'
 
 # limit the number of similarities from vector model
@@ -26,7 +28,7 @@ if METHOD == 'classifier':
     FILTER_1 = 'raw'  # raw, disamb, comp, anno, corp-info25-15, corp-info50-30,corp-info25-15 corp-info15-25 hearst-info25-25 hearst-info50-25
     FILTER_2 = 'none'
 else: # select filteres
-    FILTER_1 = 'hearst-info15-25' # raw, disamb, comp, anno, corp-info25-15, corp-info50-30,corp-info25-15 corp-info15-25 hearst-info25-25 hearst-info50-25
+    FILTER_1 = 'corp-info25-25' # raw, disamb, comp, anno, corp-info25-15, corp-info50-30,corp-info25-15 corp-info15-25 hearst-info25-25 hearst-info50-25
     FILTER_2 = 'none' #'kid', 'parent', none (for raw, disamb)
 
 ALL_EMB = '/home/u2/resources/emb/'

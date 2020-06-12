@@ -4,10 +4,10 @@ from smart_open import open
 from collections import defaultdict
 import json
 
-from trials_errors.configs import VECTORS, RUWORDNET, OOV_STRATEGY, POS, MODE, TAGS, \
+from configs import VECTORS, RUWORDNET, OOV_STRATEGY, POS, MODE, TAGS, \
     TEST, METHOD, FILTER_1, FILTER_2
-from trials_errors.hyper_imports import id2wds_dict, read_xml
-from trials_errors.hyper_imports import map_mwe, new_preprocess_mwe
+from hyper_imports import id2wds_dict, read_xml
+from hyper_imports import map_mwe, new_preprocess_mwe
 
     
 # print('Current embedding model:', EMB_PATH.split('/')[-1], file=sys.stderr)

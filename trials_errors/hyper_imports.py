@@ -15,7 +15,7 @@ import pandas as pd
 from gensim.matutils import unitvec
 from gensim.models import KeyedVectors
 from smart_open import open
-from trials_errors.get_reference_format import get_data
+from get_reference_format import get_data
 import logging
 
 
